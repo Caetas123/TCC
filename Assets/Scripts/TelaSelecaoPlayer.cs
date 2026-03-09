@@ -4,7 +4,6 @@ using UnityEngine.SceneManagement;
 using System.Collections;
 using TMPro;
 
-
 public class TelaSelecaoPlayer : MonoBehaviour
 {
     [Header("Player 1")]
@@ -24,8 +23,8 @@ public class TelaSelecaoPlayer : MonoBehaviour
     public Button botaoVoltar;
 
     [Header("Avisos na tela")]
-    public GameObject painelAviso;        // Fundo branco (objeto de UI com Image)
-    public TextMeshProUGUI textoAviso;    // Texto vermelho dentro do painel
+    public GameObject painelAviso;
+    public TextMeshProUGUI textoAviso;
 
     private int indiceSelecionadoP1 = -1;
     private int indiceSelecionadoP2 = -1;
@@ -48,11 +47,9 @@ public class TelaSelecaoPlayer : MonoBehaviour
             botoesPlayer2[i].onClick.AddListener(() => SelecionarPersonagemP2(index));
         }
 
-        // Botões principais
         botaoIniciar.onClick.AddListener(IniciarJogo);
         botaoVoltar.onClick.AddListener(Voltar);
 
-        // Garante que o painel de aviso comece oculto
         if (painelAviso != null)
             painelAviso.SetActive(false);
     }
@@ -81,7 +78,19 @@ public class TelaSelecaoPlayer : MonoBehaviour
             return;
         }
 
-        SceneManager.LoadScene("cena1");
+        // Lê a arena escolhida
+        string arena = PlayerPrefs.GetString("ArenaEscolhida", "cena1");
+
+        // Se for aleatória sorteia
+        if (arena == "aleatoria")
+        {
+            int sorteio = Random.Range(1, 3);
+            arena = (sorteio == 1) ? "cena1" : "cena2";
+        }
+
+        Debug.Log("Arena carregada: " + arena);
+
+        SceneManager.LoadScene(arena);
     }
 
     void Voltar()
@@ -96,7 +105,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
             painelAviso.SetActive(true);
             textoAviso.text = mensagem;
             StopAllCoroutines();
-            StartCoroutine(EsconderAvisoDepois(3f)); // some após 3 segundos
+            StartCoroutine(EsconderAvisoDepois(3f));
         }
     }
 
