@@ -43,8 +43,4 @@ public class PauseManager : MonoBehaviour
         SceneManager.LoadScene("TelaInicial");
     }
 
-    public void SairJogo()
-    {
-        Application.Quit();
-    }
 }

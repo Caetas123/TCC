@@ -7,16 +7,16 @@ using TMPro;
 public class TelaSelecaoPlayer : MonoBehaviour
 {
     [Header("Player 1")]
-    public Image imagemPlayer1;              
-    public Sprite[] rostosPlayer1;           
-    public Sprite[] corposPlayer1;           
-    public Button[] botoesPlayer1;           
+    public Image imagemPlayer1;
+    public Sprite[] rostosPlayer1;
+    public Sprite[] corposPlayer1;
+    public Button[] botoesPlayer1;
 
     [Header("Player 2")]
-    public Image imagemPlayer2;              
-    public Sprite[] rostosPlayer2;           
-    public Sprite[] corposPlayer2;           
-    public Button[] botoesPlayer2;           
+    public Image imagemPlayer2;
+    public Sprite[] rostosPlayer2;
+    public Sprite[] corposPlayer2;
+    public Button[] botoesPlayer2;
 
     [Header("Botões principais")]
     public Button botaoIniciar;
@@ -58,6 +58,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
     {
         indiceSelecionadoP1 = indice;
         imagemPlayer1.sprite = corposPlayer1[indice];
+
         PlayerPrefs.SetInt("PersonagemP1", indice);
         PlayerPrefs.Save();
     }
@@ -66,6 +67,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
     {
         indiceSelecionadoP2 = indice;
         imagemPlayer2.sprite = corposPlayer2[indice];
+
         PlayerPrefs.SetInt("PersonagemP2", indice);
         PlayerPrefs.Save();
     }
@@ -78,19 +80,10 @@ public class TelaSelecaoPlayer : MonoBehaviour
             return;
         }
 
-        // Lê a arena escolhida
-        string arena = PlayerPrefs.GetString("ArenaEscolhida", "cena1");
+        Debug.Log("Personagens escolhidos. Indo para seleção de arena.");
 
-        // Se for aleatória sorteia
-        if (arena == "aleatoria")
-        {
-            int sorteio = Random.Range(1, 3);
-            arena = (sorteio == 1) ? "cena1" : "cena2";
-        }
-
-        Debug.Log("Arena carregada: " + arena);
-
-        SceneManager.LoadScene(arena);
+        // Agora vai para a tela de arena
+        SceneManager.LoadScene("SelecaoArena");
     }
 
     void Voltar()
@@ -104,6 +97,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
         {
             painelAviso.SetActive(true);
             textoAviso.text = mensagem;
+
             StopAllCoroutines();
             StartCoroutine(EsconderAvisoDepois(3f));
         }
