@@ -1,12 +1,13 @@
 using UnityEngine;
-using UnityEngine.SceneManagement; // pra trocar de cena
-using UnityEngine.UI; // pra usar botões
+using UnityEngine.SceneManagement; 
+using UnityEngine.UI;
 
 public class MenuInicial : MonoBehaviour
 {
     [Header("Painéis")]
     public GameObject painelCreditos;
     public GameObject painelConfirmacao;
+    public GameObject painelConfiguracoes;
 
     [Header("Botões")]
     public Button botaoCreditos;
@@ -15,12 +16,15 @@ public class MenuInicial : MonoBehaviour
     public Button botaoSair;
     public Button botaoSim;
     public Button botaoNao;
+    public Button botaoConfiguracoes;
+    public Button botaoFecharConfiguracoes;
 
     void Start()
     {
         // Garante que os painéis começam invisíveis
         painelCreditos.SetActive(false);
         painelConfirmacao.SetActive(false);
+        painelConfiguracoes.SetActive(false);
 
         // Liga os botões às funções
         botaoCreditos.onClick.AddListener(AbrirCreditos);
@@ -29,6 +33,10 @@ public class MenuInicial : MonoBehaviour
         botaoSair.onClick.AddListener(AbrirConfirmacao);
         botaoSim.onClick.AddListener(SairDoJogo);
         botaoNao.onClick.AddListener(FecharConfirmacao);
+
+        // Configurações
+        botaoConfiguracoes.onClick.AddListener(AbrirConfiguracoes);
+        botaoFecharConfiguracoes.onClick.AddListener(FecharConfiguracoes);
     }
 
     void AbrirCreditos()
@@ -43,7 +51,6 @@ public class MenuInicial : MonoBehaviour
 
     void IniciarJogo()
     {
-        // Troca pra cena principal (coloca o nome da cena que quiser abrir)
         SceneManager.LoadScene("ModoJogador");
     }
 
@@ -61,5 +68,15 @@ public class MenuInicial : MonoBehaviour
     {
         Debug.Log("Saindo do jogo...");
         Application.Quit();
+    }
+
+    void AbrirConfiguracoes()
+    {
+        painelConfiguracoes.SetActive(true);
+    }
+
+    void FecharConfiguracoes()
+    {
+        painelConfiguracoes.SetActive(false);
     }
 }

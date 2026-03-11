@@ -57,33 +57,39 @@ public class LutadorController2D : MonoBehaviour
 
         if (jogador1)
         {
-            if (Input.GetKey(KeyCode.A)) movimento = -1f;
-            if (Input.GetKey(KeyCode.D)) movimento = 1f;
+            // Movimento (teclado + controle)
+            movimento = Input.GetAxis("Horizontal");
 
-            if (Input.GetKeyDown(KeyCode.W))
+            // Pulo
+            if (Input.GetButtonDown("Jump"))
             {
-                Debug.Log("P1 apertou W | estaNoChao = " + estaNoChao);
                 if (estaNoChao)
                     Pular();
             }
 
-            if (Input.GetKey(KeyCode.S))
+            // Defesa
+            if (Input.GetKey(KeyCode.S) || Input.GetAxis("Vertical") < -0.5f)
                 defendendo = true;
 
-            if (Input.GetKeyDown(KeyCode.F))
+            // Ataque normal
+            if (Input.GetButtonDown("Fire1"))
                 AtaqueNormal();
 
-            if (Input.GetKeyDown(KeyCode.G))
+            // Especial
+            if (Input.GetButtonDown("Fire2"))
                 AtaqueEspecial();
         }
         else
         {
+            // PLAYER 2 TECLADO
             if (Input.GetKey(KeyCode.LeftArrow)) movimento = -1f;
             if (Input.GetKey(KeyCode.RightArrow)) movimento = 1f;
 
-            if (Input.GetKeyDown(KeyCode.UpArrow))
+            // PLAYER 2 CONTROLE (segundo controle)
+            movimento += Input.GetAxis("Horizontal2");
+
+            if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetButtonDown("Jump2"))
             {
-                Debug.Log("P2 apertou UP | estaNoChao = " + estaNoChao);
                 if (estaNoChao)
                     Pular();
             }
@@ -91,10 +97,10 @@ public class LutadorController2D : MonoBehaviour
             if (Input.GetKey(KeyCode.DownArrow))
                 defendendo = true;
 
-            if (Input.GetKeyDown(KeyCode.K))
+            if (Input.GetKeyDown(KeyCode.K) || Input.GetButtonDown("Fire3"))
                 AtaqueNormal();
 
-            if (Input.GetKeyDown(KeyCode.L))
+            if (Input.GetKeyDown(KeyCode.L) || Input.GetButtonDown("Fire4"))
                 AtaqueEspecial();
         }
     }
@@ -176,7 +182,6 @@ public class LutadorController2D : MonoBehaviour
         if (collision.gameObject.layer == LayerMask.NameToLayer("Chao"))
         {
             estaNoChao = true;
-            Debug.Log(gameObject.name + " tocou no chão");
         }
     }
 
@@ -193,7 +198,6 @@ public class LutadorController2D : MonoBehaviour
         if (collision.gameObject.layer == LayerMask.NameToLayer("Chao"))
         {
             estaNoChao = false;
-            Debug.Log(gameObject.name + " saiu do chão");
         }
     }
 }

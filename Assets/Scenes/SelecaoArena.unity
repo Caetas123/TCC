@@ -656,8 +656,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: -0.213}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -0.1434, y: 0.1398}
-  m_SizeDelta: {x: 1929.5214, y: 1083.2356}
+  m_AnchoredPosition: {x: 2.5742, y: 4.9541}
+  m_SizeDelta: {x: 1984.0355, y: 1131.4832}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &751165999
 MonoBehaviour:
@@ -672,7 +672,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 1}
+  m_Color: {r: 0.49685526, g: 0.4327953, b: 0.4327953, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1053,7 +1053,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1005579279}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1876791792}
+        m_TargetAssemblyTypeName: TelaSelecaoArena, Assembly-CSharp
+        m_MethodName: EscolherArena2
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1005579279
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1174,7 +1186,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1079206184}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1876791792}
+        m_TargetAssemblyTypeName: TelaSelecaoArena, Assembly-CSharp
+        m_MethodName: Voltar
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1079206184
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1349,6 +1373,50 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1216620434}
   m_CullTransparentMesh: 1
+--- !u!1 &1379813447
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1379813449}
+  - component: {fileID: 1379813448}
+  m_Layer: 0
+  m_Name: GameManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1379813448
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1379813447}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae428fcbd22f97e4ea5839be32ca159d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &1379813449
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1379813447}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1082.8021, y: 454.1905, z: 18.277042}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1577268299
 GameObject:
   m_ObjectHideFlags: 0
@@ -1431,7 +1499,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1577268302}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1876791792}
+        m_TargetAssemblyTypeName: TelaSelecaoArena, Assembly-CSharp
+        m_MethodName: EscolherArena1
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1577268302
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1482,7 +1562,7 @@ GameObject:
   - component: {fileID: 1876791791}
   - component: {fileID: 1876791790}
   - component: {fileID: 1876791789}
-  - component: {fileID: 1876791794}
+  - component: {fileID: 1876791792}
   m_Layer: 0
   m_Name: Canvas
   m_TagString: Untagged
@@ -1580,7 +1660,7 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
---- !u!114 &1876791794
+--- !u!114 &1876791792
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1589,16 +1669,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 1876791787}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a6ad2d6e82b74c9458df54b0ffa9b963, type: 3}
+  m_Script: {fileID: 11500000, guid: c1f6b6ee0f536944288486f468bd49fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  btnPVP: {fileID: 0}
-  btnPVC: {fileID: 0}
-  btnCVC: {fileID: 0}
-  btnArenaAleatoria: {fileID: 1931027910}
-  btnArena1: {fileID: 1577268301}
-  btnArena2: {fileID: 1005579278}
-  botaoVoltar: {fileID: 1079206183}
+  imagemArena1: {fileID: 123115116}
+  imagemArena2: {fileID: 596635101}
 --- !u!1 &1931027908
 GameObject:
   m_ObjectHideFlags: 0
@@ -1681,7 +1756,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1931027911}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1876791792}
+        m_TargetAssemblyTypeName: TelaSelecaoArena, Assembly-CSharp
+        m_MethodName: ArenaAleatoria
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1931027911
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1862,3 +1949,4 @@ SceneRoots:
   m_Roots:
   - {fileID: 519420032}
   - {fileID: 307350527}
+  - {fileID: 1379813449}

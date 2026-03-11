@@ -3,8 +3,16 @@ using UnityEngine.SceneManagement;
 
 public class PauseManager : MonoBehaviour
 {
+    [Header("Painel de Pause")]
     public GameObject painelPause;
+
     private bool pausado = false;
+
+    void Start()
+    {
+        if (painelPause != null)
+            painelPause.SetActive(false);
+    }
 
     void Update()
     {
@@ -19,14 +27,18 @@ public class PauseManager : MonoBehaviour
 
     public void Pausar()
     {
-        painelPause.SetActive(true);
+        if (painelPause != null)
+            painelPause.SetActive(true);
+
         Time.timeScale = 0f;
         pausado = true;
     }
 
     public void Continuar()
     {
-        painelPause.SetActive(false);
+        if (painelPause != null)
+            painelPause.SetActive(false);
+
         Time.timeScale = 1f;
         pausado = false;
     }
@@ -43,4 +55,17 @@ public class PauseManager : MonoBehaviour
         SceneManager.LoadScene("TelaInicial");
     }
 
+    // Volta para seleção de personagens
+    public void VoltarSelecaoPersonagem()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene("SelecaoPlayer");
+    }
+
+    // NOVO BOTÃO - abrir configurações
+    public void AbrirConfiguracoes()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene("Configuracoes");
+    }
 }

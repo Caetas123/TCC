@@ -1,10 +1,16 @@
 fileFormatVersion: 2
-guid: ea82bd2778b9f8848ad017856d460f52
+guid: e2e1396c3fcd2034fb7d4bb28bbba76c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -5302077670582265769
-    second: sinal_voltar_0
+      213: 624324671051048672
+    second: engrenagem_0
+  - first:
+      213: 2983933036757557381
+    second: engrenagem_1
+  - first:
+      213: -7407036200143513732
+    second: engrenagem_2
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -100,23 +106,67 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: sinal_voltar_0
+      name: engrenagem_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 670
-        height: 373
+        x: 8
+        y: 7
+        width: 237
+        height: 250
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 758d961437c3b66b0800000000000000
-      internalID: -5302077670582265769
+      spriteID: 0e6a2820bfb0aa800800000000000000
+      internalID: 624324671051048672
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: engrenagem_1
+      rect:
+        serializedVersion: 2
+        x: 50
+        y: 235
+        width: 237
+        height: 251
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 580ac71994f096920800000000000000
+      internalID: 2983933036757557381
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: engrenagem_2
+      rect:
+        serializedVersion: 2
+        x: 264
+        y: 180
+        width: 237
+        height: 250
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c779cf3f1dbe43990800000000000000
+      internalID: -7407036200143513732
       vertices: []
       indices: 
       edges: []
@@ -125,7 +175,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 2be7fc96b3b78b741ac2557d514fab85
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -135,7 +185,9 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      sinal_voltar_0: -5302077670582265769
+      engrenagem_0: 624324671051048672
+      engrenagem_1: 2983933036757557381
+      engrenagem_2: -7407036200143513732
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
