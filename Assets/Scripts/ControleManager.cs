@@ -1,68 +1,135 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 public class ControleManager : MonoBehaviour
 {
-    // Botões do jogador 1 e 2
-    public Button p1Esquerda, p1Direita, p1Pular, p1Ataque, p1Especial;
-    public Button p2Esquerda, p2Direita, p2Pular, p2Ataque, p2Especial;
+    [Header("Player 1")]
+    [SerializeField] private Button p1Esquerda;
+    [SerializeField] private Button p1Direita;
+    [SerializeField] private Button p1Pular;
+    [SerializeField] private Button p1Ataque;
+    [SerializeField] private Button p1Especial;
 
-    public Button voltar; // Botão voltar
-    public GameObject painelPrincipal; // Painel principal
+    [Header("Player 2")]
+    [SerializeField] private Button p2Esquerda;
+    [SerializeField] private Button p2Direita;
+    [SerializeField] private Button p2Pular;
+    [SerializeField] private Button p2Ataque;
+    [SerializeField] private Button p2Especial;
 
-    private string teclaAtual = "";
+    private string teclaAtual = string.Empty;
+    private Button botaoAtual;
     private bool esperandoTecla = false;
 
-    void Start()
+    private void Start()
     {
-        // Configuração dos botões de alterar tecla
-        p1Esquerda.onClick.AddListener(() => AlterarTecla("P1_Esquerda"));
-        p1Direita.onClick.AddListener(() => AlterarTecla("P1_Direita"));
-        p1Pular.onClick.AddListener(() => AlterarTecla("P1_Pular"));
-        p1Ataque.onClick.AddListener(() => AlterarTecla("P1_Ataque"));
-        p1Especial.onClick.AddListener(() => AlterarTecla("P1_Especial"));
-
-        p2Esquerda.onClick.AddListener(() => AlterarTecla("P2_Esquerda"));
-        p2Direita.onClick.AddListener(() => AlterarTecla("P2_Direita"));
-        p2Pular.onClick.AddListener(() => AlterarTecla("P2_Pular"));
-        p2Ataque.onClick.AddListener(() => AlterarTecla("P2_Ataque"));
-        p2Especial.onClick.AddListener(() => AlterarTecla("P2_Especial"));
-
+        RegistrarBotoes();
         AtualizarTexto();
-
-        // Botão voltar
-        voltar.onClick.AddListener(VoltarParaPrincipal);
     }
 
-    void Update()
+    private void Update()
     {
-        if (!esperandoTecla) return;
+        if (!esperandoTecla)
+            return;
 
-        if (Input.anyKeyDown)
+        if (!Input.anyKeyDown)
+            return;
+
+        foreach (KeyCode tecla in System.Enum.GetValues(typeof(KeyCode)))
         {
-            foreach (KeyCode tecla in System.Enum.GetValues(typeof(KeyCode)))
-            {
-                if (Input.GetKeyDown(tecla))
-                {
-                    PlayerPrefs.SetString(teclaAtual, tecla.ToString());
-                    PlayerPrefs.Save();
+            if (!Input.GetKeyDown(tecla))
+                continue;
 
-                    esperandoTecla = false;
-                    AtualizarTexto();
-                    break;
-                }
+            if (tecla == KeyCode.Escape)
+            {
+                CancelarRemapeamento();
+                return;
             }
+
+            if (TeclaJaEmUso(tecla.ToString(), teclaAtual))
+            {
+                Debug.LogWarning("Essa tecla já está em uso por outra ação.");
+                CancelarRemapeamento();
+                AtualizarTexto();
+                return;
+            }
+
+            PlayerPrefs.SetString(teclaAtual, tecla.ToString());
+            PlayerPrefs.Save();
+
+            esperandoTecla = false;
+            teclaAtual = string.Empty;
+            botaoAtual = null;
+
+            AtualizarTexto();
+            return;
         }
     }
 
-    void AlterarTecla(string nome)
+    private void RegistrarBotoes()
     {
-        teclaAtual = nome;
-        esperandoTecla = true;
+        RegistrarBotao(p1Esquerda, "P1_Esquerda");
+        RegistrarBotao(p1Direita, "P1_Direita");
+        RegistrarBotao(p1Pular, "P1_Pular");
+        RegistrarBotao(p1Ataque, "P1_Ataque");
+        RegistrarBotao(p1Especial, "P1_Especial");
+
+        RegistrarBotao(p2Esquerda, "P2_Esquerda");
+        RegistrarBotao(p2Direita, "P2_Direita");
+        RegistrarBotao(p2Pular, "P2_Pular");
+        RegistrarBotao(p2Ataque, "P2_Ataque");
+        RegistrarBotao(p2Especial, "P2_Especial");
     }
 
-    void AtualizarTexto()
+    private void RegistrarBotao(Button botao, string chave)
+    {
+        if (botao == null)
+            return;
+
+        botao.onClick.AddListener(() => AlterarTecla(chave, botao));
+    }
+
+    private void AlterarTecla(string nomeChave, Button botao)
+    {
+        teclaAtual = nomeChave;
+        botaoAtual = botao;
+        esperandoTecla = true;
+
+        TextMeshProUGUI textoBotao = botaoAtual.GetComponentInChildren<TextMeshProUGUI>();
+        if (textoBotao != null)
+            textoBotao.text = "Pressione uma tecla...";
+    }
+
+    private void CancelarRemapeamento()
+    {
+        esperandoTecla = false;
+        teclaAtual = string.Empty;
+        botaoAtual = null;
+    }
+
+    private bool TeclaJaEmUso(string tecla, string chaveAtual)
+    {
+        string[] chaves =
+        {
+            "P1_Esquerda", "P1_Direita", "P1_Pular", "P1_Ataque", "P1_Especial",
+            "P2_Esquerda", "P2_Direita", "P2_Pular", "P2_Ataque", "P2_Especial"
+        };
+
+        foreach (string chave in chaves)
+        {
+            if (chave == chaveAtual)
+                continue;
+
+            string valor = PlayerPrefs.GetString(chave, ObterPadrao(chave));
+            if (valor == tecla)
+                return true;
+        }
+
+        return false;
+    }
+
+    private void AtualizarTexto()
     {
         AtualizarBotao(p1Esquerda, "Mover Esquerda: ", "P1_Esquerda", "A");
         AtualizarBotao(p1Direita, "Mover Direita: ", "P1_Direita", "D");
@@ -77,15 +144,34 @@ public class ControleManager : MonoBehaviour
         AtualizarBotao(p2Especial, "Especial: ", "P2_Especial", "L");
     }
 
-    void AtualizarBotao(Button botao, string texto, string chave, string padrao)
+    private void AtualizarBotao(Button botao, string prefixo, string chave, string padrao)
     {
+        if (botao == null)
+            return;
+
+        TextMeshProUGUI texto = botao.GetComponentInChildren<TextMeshProUGUI>();
+        if (texto == null)
+            return;
+
         string tecla = PlayerPrefs.GetString(chave, padrao);
-        botao.GetComponentInChildren<TextMeshProUGUI>().text = texto + tecla;
+        texto.text = prefixo + tecla;
     }
 
-    void VoltarParaPrincipal()
+    private string ObterPadrao(string chave)
     {
-        this.gameObject.SetActive(false);
-        painelPrincipal.SetActive(true);
+        switch (chave)
+        {
+            case "P1_Esquerda": return "A";
+            case "P1_Direita": return "D";
+            case "P1_Pular": return "W";
+            case "P1_Ataque": return "F";
+            case "P1_Especial": return "G";
+            case "P2_Esquerda": return "LeftArrow";
+            case "P2_Direita": return "RightArrow";
+            case "P2_Pular": return "UpArrow";
+            case "P2_Ataque": return "K";
+            case "P2_Especial": return "L";
+            default: return string.Empty;
+        }
     }
 }

@@ -1,73 +1,51 @@
 ﻿using UnityEngine;
-using UnityEngine.UI;
 
 public class ConfiguracoesManager : MonoBehaviour
 {
-    [Header("BotÃµes Principais")]
-    public Button botaoSair;
-    public Button botaoVoltar;
-
-    [Header("BotÃµes de Subpainel")]
-    public Button botaoVideo;
-    public Button botaoAudio;
-    public Button botaoControle;
-
-    [Header("SubpainÃ©is")]
-    public GameObject painelVideo;
+    public GameObject painelConfiguracoes;
+    public GameObject painelPrincipal;
     public GameObject painelAudio;
-    public GameObject painelControle;
+    public GameObject painelVideo;
+    public GameObject painelControles;
 
-    [Header("Menu Anterior (Opcional)")]
-    public GameObject painelMenuAnterior;
-
-    void Start()
+    public void AbrirPainelPrincipal()
     {
-        // BotÃµes principais
-        botaoSair.onClick.AddListener(SairAplicacao);
-        botaoVoltar.onClick.AddListener(VoltarAoMenu);
-
-        // BotÃµes que abrem subpainÃ©is
-        botaoVideo.onClick.AddListener(() => AbrirSubPainel(painelVideo));
-        botaoAudio.onClick.AddListener(() => AbrirSubPainel(painelAudio));
-        botaoControle.onClick.AddListener(() => AbrirSubPainel(painelControle));
-
-        // ComeÃ§a com todos os subpainÃ©is fechados
-        FecharTodosSubPainel();
-    }
-
-    // Abre apenas o subpainel desejado
-    void AbrirSubPainel(GameObject painel)
-    {
-        FecharTodosSubPainel();
-        painel.SetActive(true);
-        // Esconde o painel principal de configuraÃ§Ãµes enquanto o subpainel estÃ¡ aberto
-        gameObject.SetActive(false);
-    }
-
-    // Fecha todos os subpainÃ©is
-    void FecharTodosSubPainel()
-    {
-        painelVideo.SetActive(false);
+        painelConfiguracoes.SetActive(true);
+        painelPrincipal.SetActive(true);
         painelAudio.SetActive(false);
-        painelControle.SetActive(false);
+        painelVideo.SetActive(false);
+        painelControles.SetActive(false);
     }
 
-    // FunÃ§Ã£o do botÃ£o sair
-    void SairAplicacao()
+    public void AbrirPainelAudio()
     {
-        Debug.Log("Saindo da aplicaÃ§Ã£o...");
-        Application.Quit();
+        painelConfiguracoes.SetActive(true);
+        painelPrincipal.SetActive(true);
+        painelAudio.SetActive(true);
+        painelVideo.SetActive(false);
+        painelControles.SetActive(false);
     }
 
-    // FunÃ§Ã£o do botÃ£o voltar
-    void VoltarAoMenu()
+    public void AbrirPainelVideo()
     {
-        Debug.Log("Voltando ao menu principal...");
-        FecharTodosSubPainel();
-        gameObject.SetActive(false);
-        if (painelMenuAnterior != null)
-        {
-            painelMenuAnterior.SetActive(true);
-        }
+        painelConfiguracoes.SetActive(true);
+        painelPrincipal.SetActive(true);
+        painelAudio.SetActive(false);
+        painelVideo.SetActive(true);
+        painelControles.SetActive(false);
+    }
+
+    public void AbrirPainelControles()
+    {
+        painelConfiguracoes.SetActive(true);
+        painelPrincipal.SetActive(true);
+        painelAudio.SetActive(false);
+        painelVideo.SetActive(false);
+        painelControles.SetActive(true);
+    }
+
+    public void FecharConfiguracoes()
+    {
+        painelConfiguracoes.SetActive(false);
     }
 }
