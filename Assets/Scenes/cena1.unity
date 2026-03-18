@@ -1364,6 +1364,9 @@ MonoBehaviour:
   p2Pular: {fileID: 36493460}
   p2Ataque: {fileID: 36493464}
   p2Especial: {fileID: 36493459}
+  painelAviso: {fileID: 0}
+  textoAviso: {fileID: 0}
+  tempoAviso: 2
 --- !u!1 &318619213
 GameObject:
   m_ObjectHideFlags: 0
@@ -1488,8 +1491,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aeb1d2de63ef4c24b87cffb1e038e90f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  resolucaoDropdown: {fileID: 0}
-  modoTelaDropdown: {fileID: 0}
+  resolucaoDropdown: {fileID: 1010388628}
+  modoTelaDropdown: {fileID: 1010388627}
+  botaoAplicar: {fileID: 1010388626}
+  botaoRestaurar: {fileID: 1010388625}
 --- !u!1 &466592960
 GameObject:
   m_ObjectHideFlags: 0
@@ -1878,6 +1883,112 @@ Transform:
   - {fileID: 468763479}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &737366374
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 737366376}
+  - component: {fileID: 737366375}
+  - component: {fileID: 737366377}
+  m_Layer: 0
+  m_Name: Teto
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 2147483647
+  m_IsActive: 1
+--- !u!61 &737366375
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 737366374}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 6200000, guid: 252bebca57edcd041a9fb16b9ea4e61a, type: 2}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 205.81165, y: 953.0533}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 3398.3025, y: 257.20886}
+  m_EdgeRadius: 0
+--- !u!4 &737366376
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 737366374}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 916.0584, y: 475.29916, z: 861.5053}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!50 &737366377
+Rigidbody2D:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 737366374}
+  m_BodyType: 2
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_GravityScale: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 0
+  m_Constraints: 0
 --- !u!1 &784348175
 GameObject:
   m_ObjectHideFlags: 0
@@ -2741,6 +2852,50 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 6568693919140347166, guid: d01f928fa4eabe1459846f9d29d93e4c, type: 3}
   m_PrefabInstance: {fileID: 36493457}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1010388625 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3419140111456511690, guid: d01f928fa4eabe1459846f9d29d93e4c, type: 3}
+  m_PrefabInstance: {fileID: 36493457}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1010388626 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 569224469331320197, guid: d01f928fa4eabe1459846f9d29d93e4c, type: 3}
+  m_PrefabInstance: {fileID: 36493457}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1010388627 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 467516274641892151, guid: d01f928fa4eabe1459846f9d29d93e4c, type: 3}
+  m_PrefabInstance: {fileID: 36493457}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b743370ac3e4ec2a1668f5455a8ef8a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1010388628 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 464148696897356214, guid: d01f928fa4eabe1459846f9d29d93e4c, type: 3}
+  m_PrefabInstance: {fileID: 36493457}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b743370ac3e4ec2a1668f5455a8ef8a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1089833376
 GameObject:
   m_ObjectHideFlags: 0
@@ -2842,7 +2997,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 252bebca57edcd041a9fb16b9ea4e61a, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -2893,7 +3048,7 @@ Rigidbody2D:
   m_Mass: 1
   m_LinearDamping: 0
   m_AngularDamping: 0.05
-  m_GravityScale: 4
+  m_GravityScale: 3.5
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -2903,7 +3058,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 1
   m_SleepingMode: 2
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 4
 --- !u!114 &1089833381
 MonoBehaviour:
@@ -2918,8 +3073,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   jogador1: 0
-  velocidade: 45
-  forcaPulo: 52
+  velocidade: 86
+  forcaPulo: 70
   vidaMax: 100
   vidaAtual: 100
   energiaMax: 100
@@ -2931,6 +3086,12 @@ MonoBehaviour:
   alcanceEspecial: 2.5
   rb: {fileID: 1089833380}
   oponente: {fileID: 1379144100}
+  teclaEsquerda: 0
+  teclaDireita: 0
+  teclaPular: 0
+  teclaAtaque: 0
+  teclaEspecial: 0
+  teclaDefender: 0
 --- !u!1 &1142598913
 GameObject:
   m_ObjectHideFlags: 0
@@ -3046,7 +3207,7 @@ GameObject:
   - component: {fileID: 1158769224}
   - component: {fileID: 1158769223}
   - component: {fileID: 1158769222}
-  m_Layer: 3
+  m_Layer: 0
   m_Name: ParedeDireita
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3090,7 +3251,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 252bebca57edcd041a9fb16b9ea4e61a, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -3686,7 +3847,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 252bebca57edcd041a9fb16b9ea4e61a, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -3737,7 +3898,7 @@ Rigidbody2D:
   m_Mass: 1
   m_LinearDamping: 0
   m_AngularDamping: 0.05
-  m_GravityScale: 4
+  m_GravityScale: 3.5
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -3747,7 +3908,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 1
   m_SleepingMode: 2
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 4
 --- !u!114 &1379144100
 MonoBehaviour:
@@ -3762,8 +3923,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   jogador1: 1
-  velocidade: 45
-  forcaPulo: 52
+  velocidade: 86
+  forcaPulo: 72
   vidaMax: 100
   vidaAtual: 100
   energiaMax: 100
@@ -3775,6 +3936,12 @@ MonoBehaviour:
   alcanceEspecial: 2.5
   rb: {fileID: 1379144099}
   oponente: {fileID: 1089833381}
+  teclaEsquerda: 0
+  teclaDireita: 0
+  teclaPular: 0
+  teclaAtaque: 0
+  teclaEspecial: 0
+  teclaDefender: 0
 --- !u!1 &1571369402
 GameObject:
   m_ObjectHideFlags: 0
@@ -4190,7 +4357,7 @@ GameObject:
   - component: {fileID: 1816637159}
   - component: {fileID: 1816637158}
   - component: {fileID: 1816637157}
-  m_Layer: 3
+  m_Layer: 0
   m_Name: ParedeEsquerda
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4234,7 +4401,7 @@ BoxCollider2D:
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 6200000, guid: 252bebca57edcd041a9fb16b9ea4e61a, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -4518,6 +4685,7 @@ SceneRoots:
   - {fileID: 888043736}
   - {fileID: 1158769225}
   - {fileID: 1816637160}
+  - {fileID: 737366376}
   - {fileID: 1379144097}
   - {fileID: 1089833378}
   - {fileID: 1169278382}

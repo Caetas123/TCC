@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,14 +19,24 @@ public class ControleManager : MonoBehaviour
     [SerializeField] private Button p2Ataque;
     [SerializeField] private Button p2Especial;
 
+    [Header("Aviso")]
+    [SerializeField] private GameObject painelAviso;
+    [SerializeField] private TextMeshProUGUI textoAviso;
+    [SerializeField] private float tempoAviso = 2f;
+
     private string teclaAtual = string.Empty;
     private Button botaoAtual;
     private bool esperandoTecla = false;
+    private Coroutine rotinaAviso;
 
     private void Start()
     {
+        GarantirPadroes();
         RegistrarBotoes();
         AtualizarTexto();
+
+        if (painelAviso != null)
+            painelAviso.SetActive(false);
     }
 
     private void Update()
@@ -44,18 +55,22 @@ public class ControleManager : MonoBehaviour
             if (tecla == KeyCode.Escape)
             {
                 CancelarRemapeamento();
+                AtualizarTexto();
+                MostrarAviso("Cancelado");
                 return;
             }
 
-            if (TeclaJaEmUso(tecla.ToString(), teclaAtual))
+            string teclaSalva = tecla.ToString();
+
+            if (TeclaJaEmUso(teclaSalva, teclaAtual))
             {
-                Debug.LogWarning("Essa tecla já está em uso por outra ação.");
                 CancelarRemapeamento();
                 AtualizarTexto();
+                MostrarAviso("Tecla em uso");
                 return;
             }
 
-            PlayerPrefs.SetString(teclaAtual, tecla.ToString());
+            PlayerPrefs.SetString(teclaAtual, teclaSalva);
             PlayerPrefs.Save();
 
             esperandoTecla = false;
@@ -63,8 +78,52 @@ public class ControleManager : MonoBehaviour
             botaoAtual = null;
 
             AtualizarTexto();
+            MostrarAviso("Tecla salva");
             return;
         }
+    }
+
+    private void MostrarAviso(string mensagem)
+    {
+        if (painelAviso == null || textoAviso == null)
+            return;
+
+        if (rotinaAviso != null)
+            StopCoroutine(rotinaAviso);
+
+        painelAviso.SetActive(true);
+        textoAviso.text = mensagem;
+        rotinaAviso = StartCoroutine(EsconderAviso());
+    }
+
+    private IEnumerator EsconderAviso()
+    {
+        yield return new WaitForSeconds(tempoAviso);
+        painelAviso.SetActive(false);
+        rotinaAviso = null;
+    }
+
+    private void GarantirPadroes()
+    {
+        DefinirPadraoSeNaoExistir("P1_Esquerda", "A");
+        DefinirPadraoSeNaoExistir("P1_Direita", "D");
+        DefinirPadraoSeNaoExistir("P1_Pular", "W");
+        DefinirPadraoSeNaoExistir("P1_Ataque", "F");
+        DefinirPadraoSeNaoExistir("P1_Especial", "G");
+
+        DefinirPadraoSeNaoExistir("P2_Esquerda", "LeftArrow");
+        DefinirPadraoSeNaoExistir("P2_Direita", "RightArrow");
+        DefinirPadraoSeNaoExistir("P2_Pular", "UpArrow");
+        DefinirPadraoSeNaoExistir("P2_Ataque", "K");
+        DefinirPadraoSeNaoExistir("P2_Especial", "L");
+
+        PlayerPrefs.Save();
+    }
+
+    private void DefinirPadraoSeNaoExistir(string chave, string valor)
+    {
+        if (!PlayerPrefs.HasKey(chave))
+            PlayerPrefs.SetString(chave, valor);
     }
 
     private void RegistrarBotoes()
@@ -87,6 +146,7 @@ public class ControleManager : MonoBehaviour
         if (botao == null)
             return;
 
+        botao.onClick.RemoveAllListeners();
         botao.onClick.AddListener(() => AlterarTecla(chave, botao));
     }
 
@@ -98,7 +158,9 @@ public class ControleManager : MonoBehaviour
 
         TextMeshProUGUI textoBotao = botaoAtual.GetComponentInChildren<TextMeshProUGUI>();
         if (textoBotao != null)
-            textoBotao.text = "Pressione uma tecla...";
+            textoBotao.text = "Pressione uma tecla";
+
+        MostrarAviso("Aguardando tecla");
     }
 
     private void CancelarRemapeamento()
@@ -154,7 +216,19 @@ public class ControleManager : MonoBehaviour
             return;
 
         string tecla = PlayerPrefs.GetString(chave, padrao);
-        texto.text = prefixo + tecla;
+        texto.text = prefixo + FormatarTecla(tecla);
+    }
+
+    private string FormatarTecla(string tecla)
+    {
+        switch (tecla)
+        {
+            case "LeftArrow": return "←";
+            case "RightArrow": return "→";
+            case "UpArrow": return "↑";
+            case "DownArrow": return "↓";
+            default: return tecla;
+        }
     }
 
     private string ObterPadrao(string chave)

@@ -31,6 +31,13 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
     void Start()
     {
+        // Garante que os corpos começam escondidos
+        if (imagemPlayer1 != null)
+            imagemPlayer1.gameObject.SetActive(false);
+
+        if (imagemPlayer2 != null)
+            imagemPlayer2.gameObject.SetActive(false);
+
         // Configura botões do Player 1
         for (int i = 0; i < botoesPlayer1.Length; i++)
         {
@@ -57,7 +64,13 @@ public class TelaSelecaoPlayer : MonoBehaviour
     void SelecionarPersonagemP1(int indice)
     {
         indiceSelecionadoP1 = indice;
-        imagemPlayer1.sprite = corposPlayer1[indice];
+
+        if (imagemPlayer1 != null)
+        {
+            imagemPlayer1.gameObject.SetActive(true);
+            imagemPlayer1.sprite = corposPlayer1[indice];
+            imagemPlayer1.preserveAspect = true;
+        }
 
         PlayerPrefs.SetInt("PersonagemP1", indice);
         PlayerPrefs.Save();
@@ -66,7 +79,13 @@ public class TelaSelecaoPlayer : MonoBehaviour
     void SelecionarPersonagemP2(int indice)
     {
         indiceSelecionadoP2 = indice;
-        imagemPlayer2.sprite = corposPlayer2[indice];
+
+        if (imagemPlayer2 != null)
+        {
+            imagemPlayer2.gameObject.SetActive(true);
+            imagemPlayer2.sprite = corposPlayer2[indice];
+            imagemPlayer2.preserveAspect = true;
+        }
 
         PlayerPrefs.SetInt("PersonagemP2", indice);
         PlayerPrefs.Save();

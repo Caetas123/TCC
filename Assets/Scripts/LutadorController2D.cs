@@ -6,7 +6,7 @@ public class LutadorController2D : MonoBehaviour
     public bool jogador1 = true;
 
     [Header("Movimento")]
-    public float velocidade = 45f;
+    public float velocidade = 82f;
     public float forcaPulo = 52f;
 
     [Header("Combate")]
@@ -24,6 +24,14 @@ public class LutadorController2D : MonoBehaviour
     public Rigidbody2D rb;
     public LutadorController2D oponente;
 
+    [Header("Teclas atuais")]
+    public KeyCode teclaEsquerda;
+    public KeyCode teclaDireita;
+    public KeyCode teclaPular;
+    public KeyCode teclaAtaque;
+    public KeyCode teclaEspecial;
+    public KeyCode teclaDefender;
+
     private bool estaNoChao;
     private bool defendendo;
     private float movimento;
@@ -34,6 +42,8 @@ public class LutadorController2D : MonoBehaviour
 
         if (rb == null)
             rb = GetComponent<Rigidbody2D>();
+
+        CarregarTeclas();
     }
 
     void Update()
@@ -45,8 +55,48 @@ public class LutadorController2D : MonoBehaviour
     void FixedUpdate()
     {
         if (rb != null)
-        {
             rb.linearVelocity = new Vector2(movimento * velocidade, rb.linearVelocity.y);
+    }
+
+    void CarregarTeclas()
+    {
+        if (jogador1)
+        {
+            teclaEsquerda = StringParaKeyCodeSeguro("P1_Esquerda", KeyCode.A);
+            teclaDireita = StringParaKeyCodeSeguro("P1_Direita", KeyCode.D);
+            teclaPular = StringParaKeyCodeSeguro("P1_Pular", KeyCode.W);
+            teclaAtaque = StringParaKeyCodeSeguro("P1_Ataque", KeyCode.F);
+            teclaEspecial = StringParaKeyCodeSeguro("P1_Especial", KeyCode.G);
+            teclaDefender = KeyCode.S;
+        }
+        else
+        {
+            teclaEsquerda = StringParaKeyCodeSeguro("P2_Esquerda", KeyCode.LeftArrow);
+            teclaDireita = StringParaKeyCodeSeguro("P2_Direita", KeyCode.RightArrow);
+            teclaPular = StringParaKeyCodeSeguro("P2_Pular", KeyCode.UpArrow);
+            teclaAtaque = StringParaKeyCodeSeguro("P2_Ataque", KeyCode.K);
+            teclaEspecial = StringParaKeyCodeSeguro("P2_Especial", KeyCode.L);
+            teclaDefender = KeyCode.DownArrow;
+        }
+
+        Debug.Log($"{gameObject.name} | Esq:{teclaEsquerda} Dir:{teclaDireita} Pulo:{teclaPular} Atk:{teclaAtaque} Esp:{teclaEspecial}");
+    }
+
+    KeyCode StringParaKeyCodeSeguro(string chave, KeyCode padrao)
+    {
+        string valor = PlayerPrefs.GetString(chave, padrao.ToString());
+
+        if (string.IsNullOrWhiteSpace(valor))
+            return padrao;
+
+        try
+        {
+            return (KeyCode)System.Enum.Parse(typeof(KeyCode), valor);
+        }
+        catch
+        {
+            Debug.LogWarning($"Tecla inválida em {chave}: {valor}. Usando padrão {padrao}");
+            return padrao;
         }
     }
 
@@ -55,54 +105,23 @@ public class LutadorController2D : MonoBehaviour
         movimento = 0f;
         defendendo = false;
 
-        if (jogador1)
-        {
-            // Movimento (teclado + controle)
-            movimento = Input.GetAxis("Horizontal");
+        if (Input.GetKey(teclaEsquerda))
+            movimento = -1f;
 
-            // Pulo
-            if (Input.GetButtonDown("Jump"))
-            {
-                if (estaNoChao)
-                    Pular();
-            }
+        if (Input.GetKey(teclaDireita))
+            movimento = 1f;
 
-            // Defesa
-            if (Input.GetKey(KeyCode.S) || Input.GetAxis("Vertical") < -0.5f)
-                defendendo = true;
+        if (Input.GetKeyDown(teclaPular) && estaNoChao)
+            Pular();
 
-            // Ataque normal
-            if (Input.GetButtonDown("Fire1"))
-                AtaqueNormal();
+        if (Input.GetKey(teclaDefender))
+            defendendo = true;
 
-            // Especial
-            if (Input.GetButtonDown("Fire2"))
-                AtaqueEspecial();
-        }
-        else
-        {
-            // PLAYER 2 TECLADO
-            if (Input.GetKey(KeyCode.LeftArrow)) movimento = -1f;
-            if (Input.GetKey(KeyCode.RightArrow)) movimento = 1f;
+        if (Input.GetKeyDown(teclaAtaque))
+            AtaqueNormal();
 
-            // PLAYER 2 CONTROLE (segundo controle)
-            movimento += Input.GetAxis("Horizontal2");
-
-            if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetButtonDown("Jump2"))
-            {
-                if (estaNoChao)
-                    Pular();
-            }
-
-            if (Input.GetKey(KeyCode.DownArrow))
-                defendendo = true;
-
-            if (Input.GetKeyDown(KeyCode.K) || Input.GetButtonDown("Fire3"))
-                AtaqueNormal();
-
-            if (Input.GetKeyDown(KeyCode.L) || Input.GetButtonDown("Fire4"))
-                AtaqueEspecial();
-        }
+        if (Input.GetKeyDown(teclaEspecial))
+            AtaqueEspecial();
     }
 
     void Pular()
@@ -111,8 +130,6 @@ public class LutadorController2D : MonoBehaviour
 
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
         rb.AddForce(Vector2.up * forcaPulo, ForceMode2D.Impulse);
-
-        Debug.Log(gameObject.name + " pulou");
     }
 
     void AtaqueNormal()
@@ -125,20 +142,13 @@ public class LutadorController2D : MonoBehaviour
         {
             oponente.ReceberDano(danoAtaque);
             energiaAtual = Mathf.Min(energiaAtual + 10, energiaMax);
-
-            Debug.Log(gameObject.name + " acertou ataque normal");
         }
     }
 
     void AtaqueEspecial()
     {
         if (oponente == null) return;
-
-        if (energiaAtual < custoEspecial)
-        {
-            Debug.Log(gameObject.name + " sem energia para especial");
-            return;
-        }
+        if (energiaAtual < custoEspecial) return;
 
         float distancia = Vector2.Distance(transform.position, oponente.transform.position);
 
@@ -146,8 +156,6 @@ public class LutadorController2D : MonoBehaviour
         {
             energiaAtual -= custoEspecial;
             oponente.ReceberDano(danoEspecial);
-
-            Debug.Log(gameObject.name + " acertou ataque especial");
         }
     }
 
@@ -156,11 +164,8 @@ public class LutadorController2D : MonoBehaviour
         int danoFinal = defendendo ? Mathf.RoundToInt(dano * 0.4f) : dano;
 
         vidaAtual -= danoFinal;
-
         if (vidaAtual < 0)
             vidaAtual = 0;
-
-        Debug.Log(gameObject.name + " recebeu dano: " + danoFinal + " | Vida atual: " + vidaAtual);
     }
 
     void VirarParaOponente()
@@ -180,24 +185,18 @@ public class LutadorController2D : MonoBehaviour
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.layer == LayerMask.NameToLayer("Chao"))
-        {
             estaNoChao = true;
-        }
     }
 
     private void OnCollisionStay2D(Collision2D collision)
     {
         if (collision.gameObject.layer == LayerMask.NameToLayer("Chao"))
-        {
             estaNoChao = true;
-        }
     }
 
     private void OnCollisionExit2D(Collision2D collision)
     {
         if (collision.gameObject.layer == LayerMask.NameToLayer("Chao"))
-        {
             estaNoChao = false;
-        }
     }
 }
