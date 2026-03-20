@@ -6,8 +6,8 @@ public class LutadorController2D : MonoBehaviour
     public bool jogador1 = true;
 
     [Header("Movimento")]
-    public float velocidade = 82f;
-    public float forcaPulo = 52f;
+    public float velocidade = 6f;
+    public float forcaPulo = 12f;
 
     [Header("Combate")]
     public int vidaMax = 100;

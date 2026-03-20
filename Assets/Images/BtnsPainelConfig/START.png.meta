@@ -103,10 +103,10 @@ TextureImporter:
       name: START_0
       rect:
         serializedVersion: 2
-        x: 19
+        x: 0
         y: 0
-        width: 796
-        height: 307
+        width: 638
+        height: 264
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

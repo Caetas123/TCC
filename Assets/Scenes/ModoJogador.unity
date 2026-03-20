@@ -130,6 +130,7 @@ GameObject:
   - component: {fileID: 237709540}
   - component: {fileID: 237709542}
   - component: {fileID: 237709541}
+  - component: {fileID: 237709543}
   m_Layer: 0
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -255,6 +256,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 237709539}
   m_CullTransparentMesh: 1
+--- !u!114 &237709543
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 237709539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a77a8dfb17e24024a9ae4f22639c8e53, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: MODE_CPU_CPU
 --- !u!1 &285795598
 GameObject:
   m_ObjectHideFlags: 0
@@ -540,7 +554,7 @@ Camera:
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 145
-  orthographic: 0
+  orthographic: 1
   orthographic size: 5
   m_Depth: -1
   m_CullingMask:
@@ -925,8 +939,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 845.1333, y: 478.7317}
-  m_SizeDelta: {x: 113.4174, y: 64.7596}
+  m_AnchoredPosition: {x: 837.8638, y: 478.7317}
+  m_SizeDelta: {x: 127.9564, y: 64.7596}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1079206183
 MonoBehaviour:
@@ -1021,6 +1035,7 @@ GameObject:
   - component: {fileID: 1115585307}
   - component: {fileID: 1115585309}
   - component: {fileID: 1115585308}
+  - component: {fileID: 1115585310}
   m_Layer: 0
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -1146,6 +1161,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1115585306}
   m_CullTransparentMesh: 1
+--- !u!114 &1115585310
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1115585306}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a77a8dfb17e24024a9ae4f22639c8e53, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: MODE_CPU
 --- !u!1 &1424733155
 GameObject:
   m_ObjectHideFlags: 0
@@ -1157,6 +1185,7 @@ GameObject:
   - component: {fileID: 1424733156}
   - component: {fileID: 1424733158}
   - component: {fileID: 1424733157}
+  - component: {fileID: 1424733159}
   m_Layer: 0
   m_Name: Title
   m_TagString: Untagged
@@ -1282,6 +1311,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1424733155}
   m_CullTransparentMesh: 1
+--- !u!114 &1424733159
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1424733155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a77a8dfb17e24024a9ae4f22639c8e53, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: MODE_TITLE
 --- !u!1 &1649799397
 GameObject:
   m_ObjectHideFlags: 0
@@ -1414,6 +1456,7 @@ GameObject:
   - component: {fileID: 1732122512}
   - component: {fileID: 1732122514}
   - component: {fileID: 1732122513}
+  - component: {fileID: 1732122515}
   m_Layer: 0
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -1539,6 +1582,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1732122511}
   m_CullTransparentMesh: 1
+--- !u!114 &1732122515
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1732122511}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a77a8dfb17e24024a9ae4f22639c8e53, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  key: MODE_PVP
 --- !u!1 &1876791787
 GameObject:
   m_ObjectHideFlags: 0
@@ -1633,7 +1689,7 @@ Canvas:
   m_GameObject: {fileID: 1876791787}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 1
+  m_RenderMode: 0
   m_Camera: {fileID: 0}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
