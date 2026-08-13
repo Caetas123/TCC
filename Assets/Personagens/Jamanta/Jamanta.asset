@@ -1,0 +1,98 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b4522f535474254fbb5f3f171156e92, type: 3}
+  m_Name: Jamanta
+  m_EditorClassIdentifier: 
+  nomePersonagem: Jamanta
+  spriteCorpo: {fileID: -2183022881041372296, guid: 02ed8c6a4d709664184b492ab289876f, type: 3}
+  spriteRosto: {fileID: 3168750426430394534, guid: 90ea6dacc8c23ce45a394fc9ec8505e7, type: 3}
+  vidaMax: 100
+  energiaMax: 100
+  velocidade: 9
+  forcaPulo: 12
+  danoAtaque: 10
+  alcanceAtaque: 2.5
+  custoAtaque: 6
+  alcanceAtaqueFollowThrough: 1.2
+  multiplicadorMovimentoAtaque: 0.1
+  danoEspecial: 25
+  alcanceEspecial: 2.5
+  tipoGastoEspecial: 2
+  custoEspecial: 30
+  spriteRachadura: {fileID: -5330143662540242285, guid: 71cd5960f7073624dbf2f458e572e2cd, type: 3}
+  multiplicadorAlturaSaltoRachadura: 1.3
+  raioRachadura: 1.5
+  quantidadeRachaduras: 3
+  intervaloRachaduras: 0.5
+  multiplicadorDanoRachadura: 1.5
+  duracaoHitboxRachadura: 0.2
+  danoUltimate: 55
+  alcanceUltimate: 3
+  tipoUsoUltimate: 1
+  custoUltimate: 80
+  porcentagemBloqueioDefesa: 0.9
+  custoDefesa: 18
+  velocidadeRecargaEnergia: 10
+  framesIdle:
+  - {fileID: 1964440940772309354, guid: d8939d4f261b88e498ea7d8f1c408bec, type: 3}
+  - {fileID: 1153229753337821043, guid: 6b7d92231fa1d8041b67c3c3f49a12c5, type: 3}
+  - {fileID: 1964440940772309354, guid: d8939d4f261b88e498ea7d8f1c408bec, type: 3}
+  fpsIdle: 2.5
+  framesMove:
+  - {fileID: 17188989856192028, guid: da866444db07f1d42a4c3e01868483ca, type: 3}
+  - {fileID: 7802682012112467970, guid: a27965233d115004686a70d32d583a78, type: 3}
+  - {fileID: -4331865995899174025, guid: 676e6a040a69cf342bfda7a48bfc36e6, type: 3}
+  - {fileID: 7802682012112467970, guid: a27965233d115004686a70d32d583a78, type: 3}
+  fpsMove: 8
+  framesJump: []
+  fpsJump: 8
+  framesDefend:
+  - {fileID: -1489712888088583096, guid: 46d4083b812d3bc4ebdd33be4f83a113, type: 3}
+  fpsDefend: 8
+  framesAttack:
+  - {fileID: -119174770373165798, guid: 8d344896f5926a64298b82c11cbbfa2d, type: 3}
+  - {fileID: 3973265849952309739, guid: b18792eccf15cae45a393bf1e57fd174, type: 3}
+  - {fileID: -7572666349747038047, guid: 7aca9dd7289a2cb4d9a48fc2666b8f50, type: 3}
+  - {fileID: 8632515346068760632, guid: 51a7067275a40af4d80258a88948293a, type: 3}
+  fpsAttack: 6
+  frameInicioHitbox: 1
+  frameFollowThrough: 3
+  framesSpecial:
+  - {fileID: -5841085671733655206, guid: 73b649f62ff45cd41806d6955f51bc3e, type: 3}
+  - {fileID: -2981911525744825914, guid: 6404f72d212a0fe40970a893fd6cfa14, type: 3}
+  fpsSpecial: 8
+  framesUltimate: []
+  fpsUltimate: 10
+  framesHit: []
+  fpsHit: 12
+  framesDeath: []
+  fpsDeath: 8
+  somAtaqueInicio: {fileID: 8300000, guid: edcd733df3926bf428cd44d081fc1b84, type: 3}
+  somAtaqueImpacto: {fileID: 0}
+  somEspecial: {fileID: 0}
+  somUltimate: {fileID: 0}
+  somHit: {fileID: 8300000, guid: b8e6e10f548e0d54b9532f73369a07d2, type: 3}
+  somMorte: {fileID: 0}
+  somPassos: {fileID: 8300000, guid: 2a01b9ec03bfb6d4fb15ef41d6fd0ff5, type: 3}
+  somPulo: {fileID: 0}
+  somPouso: {fileID: 0}
+  volumeEfeitos: 1
+  pitchEfeitos: 1
+  volumePassos: 0.33
+  volumePulo: 1
+  volumePouso: 1
+  volumeAtaqueInicio: 0.28
+  volumeAtaqueImpacto: 0.79
+  volumeEspecial: 1
+  volumeUltimate: 1
+  volumeHit: 1
+  volumeMorte: 1
