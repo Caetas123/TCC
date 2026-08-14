@@ -126,6 +126,12 @@ public class TelaSelecaoPlayer : MonoBehaviour
     private int focoInferior = 1;
     private bool mouseSobreBotaoInferior = false; // só cosmético — nunca usado pra lógica de teclado
 
+    // Rastreiam se o eixo "Vertical" já estava acima/abaixo do limiar no frame anterior —
+    // usados só pra detectar borda (subida) em TratarNavegacaoGrupos, evitando que segurar
+    // a tecla processe várias transições de grupo em frames consecutivos.
+    private bool eixoVerticalCimaSegurando = false;
+    private bool eixoVerticalBaixoSegurando = false;
+
     private Color corOriginalIniciar;
     private Color corOriginalVoltar;
     private Sprite spriteOriginalIniciar;
@@ -194,6 +200,15 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
     void Start()
     {
+        // Se o EventSystem tiver um "First Selected" configurado no Inspector (mesmo sem
+        // querer, de algum teste no Editor), a Unity auto-seleciona ele sozinha sempre que
+        // uma tecla de navegação/confirmação é pressionada com nada selecionado de verdade
+        // — e dispara o onClick dele junto. Era isso que selecionava um personagem sozinho
+        // ao dar Enter em Iniciar sem nada selecionado. Zera aqui pra nunca depender de
+        // ninguém lembrar de checar esse campo no Inspector.
+        if (EventSystem.current != null)
+            EventSystem.current.firstSelectedGameObject = null;
+
         modoJogo = PlayerPrefs.GetString("ModoJogo", "PVP");
 
         indiceSelecionadoP1 = -1;
@@ -719,12 +734,28 @@ public class TelaSelecaoPlayer : MonoBehaviour
             return true;
         }
 
-        bool cimaGlobal = UIInputUtility.WasNavigateUpPressed()
+        // Detecção "por borda" de cima/baixo — NÃO usa UIInputUtility.WasNavigateUpPressed()
+        // direto aqui porque ele também checa o eixo "Vertical" de forma contínua
+        // (Input.GetAxisRaw > 0.5), e W/S/setas alimentam esse eixo por padrão. Isso fazia
+        // segurar a tecla (mesmo que por uma fração de segundo) manter a condição "true"
+        // por vários frames seguidos, processando várias transições de grupo em sequência
+        // (ex: 2->1->0 quase no mesmo instante) — dava a impressão de "pular" direto de
+        // Iniciar pro Voltar, sem passar visivelmente pelos personagens.
+        float eixoVertical = Input.GetAxisRaw("Vertical");
+        bool eixoAcimaAgora = eixoVertical > 0.5f;
+        bool eixoAbaixoAgora = eixoVertical < -0.5f;
+
+        bool cimaGlobal = Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)
             || Input.GetKeyDown(teclaCimaP1)
-            || Input.GetKeyDown(teclaCimaP2);
-        bool baixoGlobal = UIInputUtility.WasNavigateDownPressed()
+            || Input.GetKeyDown(teclaCimaP2)
+            || (eixoAcimaAgora && !eixoVerticalCimaSegurando);
+        bool baixoGlobal = Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow)
             || Input.GetKeyDown(teclaBaixoP1)
-            || Input.GetKeyDown(teclaBaixoP2);
+            || Input.GetKeyDown(teclaBaixoP2)
+            || (eixoAbaixoAgora && !eixoVerticalBaixoSegurando);
+
+        eixoVerticalCimaSegurando = eixoAcimaAgora;
+        eixoVerticalBaixoSegurando = eixoAbaixoAgora;
 
         // Enter global — funciona só no botão Voltar e no botão Start.
         // NÃO seleciona personagem e NÃO confirma os botões de deselecionar.
@@ -865,18 +896,36 @@ public class TelaSelecaoPlayer : MonoBehaviour
             return;
         }
 
-        // Enter respeita o campo focado — antes ele SEMPRE chamava SalvarConfiguracaoIA()
-        // (que salva E fecha o painel), não importa se o foco estava no dropdown, em
-        // Salvar ou em Fechar. Por isso Enter fechava o painel mesmo sem estar no botão
-        // certo.
-        if (UIInputUtility.WasSubmitPressed())
+        // Enter (ou a tecla de confirmar/ataque do próprio player) respeita o campo
+        // focado: no dropdown, abre a lista (1º toque) e confirma/fecha ela (2º toque) —
+        // igual um dropdown de verdade. Em Salvar, salva. Em Fechar, fecha. Nunca faz
+        // Salvar/Fechar estando com foco no dropdown (era isso que fechava o painel sem
+        // lógica nenhuma antes).
+        bool confirmarPressionado = UIInputUtility.WasSubmitPressed()
+            || (ladoIAConfigAberta == 1 && Input.GetKeyDown(teclaConfirmarP1))
+            || (ladoIAConfigAberta == 2 && Input.GetKeyDown(teclaConfirmarP2));
+
+        if (confirmarPressionado)
         {
-            if (focoIAPanel == 2)
+            if (focoIAPanel == 0 || focoIAPanel == 1)
+            {
+                TMP_Dropdown dropFocado = ladoIAConfigAberta == 1
+                    ? (focoIAPanel == 0 ? dropdownEstiloIAP1 : dropdownDificuldadeIAP1)
+                    : (focoIAPanel == 0 ? dropdownEstiloIAP2 : dropdownDificuldadeIAP2);
+
+                if (dropFocado != null)
+                {
+                    if (dropFocado.IsExpanded)
+                        dropFocado.Hide(); // 2º toque: confirma o valor atual e fecha a lista
+                    else
+                        dropFocado.Show(); // 1º toque: abre a lista
+                }
+            }
+            else if (focoIAPanel == 2)
                 SalvarConfiguracaoIA();
             else if (focoIAPanel == 3)
                 FecharConfiguracaoIAAtiva();
-            // focoIAPanel 0/1 (dropdowns): Enter não faz nada aqui — a lista já abre e
-            // muda de valor com esquerda/direita (ou cima/baixo quando já está aberta).
+
             return;
         }
 
@@ -898,8 +947,6 @@ public class TelaSelecaoPlayer : MonoBehaviour
                 AlterarValorDropdownFocado(-1);
             else if (Input.GetKeyDown(teclaDireitaP1))
                 AlterarValorDropdownFocado(1);
-            else if (Input.GetKeyDown(teclaConfirmarP1))
-                SalvarConfiguracaoIA();
         }
         // Painel do P2: teclas do P2 navegam e confirmam
         else if (ladoIAConfigAberta == 2)
@@ -919,8 +966,6 @@ public class TelaSelecaoPlayer : MonoBehaviour
                 AlterarValorDropdownFocado(-1);
             else if (Input.GetKeyDown(teclaDireitaP2))
                 AlterarValorDropdownFocado(1);
-            else if (Input.GetKeyDown(teclaConfirmarP2))
-                SalvarConfiguracaoIA();
         }
     }
 
@@ -1639,6 +1684,12 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
         PlayerPrefs.SetInt("PersonagemP1", indice);
         PlayerPrefs.Save();
+
+        // Se esse clique veio do mouse, a Unity automaticamente marcou esse botão como
+        // o "selecionado de verdade" do EventSystem — o que faria um Enter futuro em
+        // QUALQUER lugar da tela (Iniciar, Voltar, etc.) disparar o onClick dele de novo
+        // sozinho. Limpa aqui pra garantir que isso nunca fica "preso".
+        UIFocusUtility.ClearSelection();
     }
 
     void SelecionarPersonagemP2(int indice)
@@ -1664,6 +1715,10 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
         PlayerPrefs.SetInt("PersonagemP2", indice);
         PlayerPrefs.Save();
+
+        // Mesmo motivo do SelecionarPersonagemP1 — limpa a seleção real do EventSystem
+        // pra um Enter futuro em qualquer lugar da tela não disparar esse botão de novo.
+        UIFocusUtility.ClearSelection();
     }
 
     void DeselecionarPersonagemP1()
@@ -1678,6 +1733,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
         PlayerPrefs.DeleteKey("PersonagemP1");
         AtualizarVisuaisIA();
         AtualizarFocoVisualP1();
+        UIFocusUtility.ClearSelection();
     }
 
     void DeselecionarPersonagemP2()
@@ -1692,6 +1748,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
         PlayerPrefs.DeleteKey("PersonagemP2");
         AtualizarVisuaisIA();
         AtualizarFocoVisualP2();
+        UIFocusUtility.ClearSelection();
     }
 
 
@@ -2072,7 +2129,11 @@ public class TelaSelecaoPlayer : MonoBehaviour
     {
         if (PainelConfiguracaoIAAberto()) return;
 
-        estadoAtual = EstadoTela.Transicao;
+        // Só marca Transicao DEPOIS de confirmar que os personagens necessários estão
+        // selecionados — se essa linha rodasse antes das checagens abaixo, um Enter em
+        // Iniciar sem personagem selecionado deixava estadoAtual preso em Transicao pra
+        // sempre (Update() para de rodar nesse estado), travando teclado/controle até
+        // reiniciar a cena.
         if (modoJogo == "PVP")
         {
             if (indiceSelecionadoP1 == -1 || indiceSelecionadoP2 == -1)
@@ -2104,6 +2165,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
             }
         }
 
+        estadoAtual = EstadoTela.Transicao;
         SceneManager.LoadScene("SelecaoArena");
     }
 

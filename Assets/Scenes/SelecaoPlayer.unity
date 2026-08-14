@@ -701,6 +701,7 @@ GameObject:
   - component: {fileID: 68565946}
   - component: {fileID: 68565945}
   - component: {fileID: 68565948}
+  - component: {fileID: 68565949}
   m_Layer: 0
   m_Name: Canvas
   m_TagString: Untagged
@@ -950,6 +951,18 @@ MonoBehaviour:
   destaqueRandomP2: {fileID: 511412040}
   tempoInicialRoleta: 0.05
   ciclosRoleta: 18
+--- !u!114 &68565949
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 68565943}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0a4102bcfc7a7d40a8c1923ee926463, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &68964895
 GameObject:
   m_ObjectHideFlags: 0
@@ -9308,7 +9321,6 @@ GameObject:
   - component: {fileID: 1481534633}
   - component: {fileID: 1481534632}
   - component: {fileID: 1481534635}
-  - component: {fileID: 1481534636}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -9435,18 +9447,6 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
---- !u!114 &1481534636
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1481534631}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eb242b2c18937d14d919c48ddfabaca6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1505021577
 GameObject:
   m_ObjectHideFlags: 0
