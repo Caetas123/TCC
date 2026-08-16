@@ -12,18 +12,30 @@ public class PauseManager : MonoBehaviour
     [Header("Primeiro botão do pause")]
     public GameObject primeiroBotaoPause;
 
+    [Header("Bloqueio automático")]
+    [Tooltip("Arraste aqui o GameManagerLuta da cena (opcional — só é usado na cena de luta). Se preenchido, o Esc é ignorado enquanto a luta já tiver terminado ou estiver mostrando a tela de round/vencedor.")]
+    public GameManagerLuta gameManagerLuta;
+
     private bool pausado = false;
 
     void Start()
     {
         if (painelPause != null)
             painelPause.SetActive(false);
+
+        if (gameManagerLuta == null)
+            gameManagerLuta = FindFirstObjectByType<GameManagerLuta>();
     }
 
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            // Não deixa abrir o pause em cima da tela de Round Win / Vencedor, nem depois
+            // que a luta já terminou — era isso que abria o menu por cima do "WINNER".
+            if (!pausado && gameManagerLuta != null && !gameManagerLuta.PodePausar())
+                return;
+
             if (pausado)
                 Continuar();
             else

@@ -8,7 +8,10 @@ using UnityEngine.UI;
 /// NORMAL      = botão sem destaque
 /// HIGHLIGHTED = botão atualmente selecionado no EventSystem (mouse, teclado
 ///               ou controle — todos passam pelo MESMO mecanismo)
-/// SELECTED    = último botão realmente confirmado (clique ou Submit)
+/// SELECTED    = flash rápido no instante do clique/Submit (duração
+///               configurável em duracaoFlashSelected) — depois volta
+///               sozinho pro estado real: Highlighted se o foco continuar
+///               nele, Normal se não.
 ///
 /// O Highlight NUNCA é controlado por uma variável própria: ele é sempre
 /// derivado do OnSelect/OnDeselect, que a própria Unity garante disparar em
@@ -18,6 +21,10 @@ using UnityEngine.UI;
 /// controle — os três agora passam pelo mesmo caminho: o mouse só pede pra
 /// Unity selecionar este botão (OnPointerEnter -> SetSelectedGameObject);
 /// quem pinta o sprite é sempre o OnSelect/OnDeselect.
+///
+/// O SELECTED NÃO fica gravado até outro botão ser clicado — clicar um botão
+/// e depois só navegar/passar o mouse por outros não deixa mais nenhum
+/// "amarelo preso" no botão antigo.
 ///
 /// A Navigation do Unity não é alterada.
 /// Os sprites são configurados manualmente no Inspector.
@@ -40,22 +47,17 @@ public class ButtonVisualPersonalizado :
     [Tooltip("PNG quando este botão está em Highlight (mouse, teclado ou controle).")]
     public Sprite highlightedSprite;
 
-    [Tooltip("PNG quando este botão é realmente confirmado.")]
+    [Tooltip("PNG quando este botão é clicado/confirmado — aparece por um instante só.")]
     public Sprite selectedSprite;
+
+    [Header("Flash do Selected")]
+    [Tooltip("Quanto tempo (em segundos) o sprite Selected fica visível após o clique/Submit, antes de voltar sozinho pro estado real de foco.")]
+    public float duracaoFlashSelected = 0.15f;
 
 
     private Image imagem;
     private Button botao;
-
-
-    // =========================================================
-    // ESTADO GLOBAL
-    // =========================================================
-
-    // ÚNICO botão atualmente confirmado (clique real ou Submit). O Highlight
-    // não precisa de uma variável equivalente — quem já garante isso é o
-    // próprio EventSystem.currentSelectedGameObject.
-    private static ButtonVisualPersonalizado selectedAtual;
+    private Coroutine flashEmAndamento;
 
 
     // =========================================================
@@ -83,8 +85,11 @@ public class ButtonVisualPersonalizado :
 
     private void OnDisable()
     {
-        if (selectedAtual == this)
-            selectedAtual = null;
+        if (flashEmAndamento != null)
+        {
+            StopCoroutine(flashEmAndamento);
+            flashEmAndamento = null;
+        }
     }
 
 
@@ -109,8 +114,8 @@ public class ButtonVisualPersonalizado :
         if (!PodeInteragir())
             return;
 
-        // Clique REAL.
-        DefinirSelected(this);
+        // Clique REAL — dispara o flash.
+        IniciarFlashSelected();
     }
 
 
@@ -122,15 +127,19 @@ public class ButtonVisualPersonalizado :
     {
         // A Unity garante que isto só dispara DEPOIS do OnDeselect do botão
         // anterior — nunca dois botões em Highlight ao mesmo tempo.
-        PintarComoDestacado();
+        // Se tiver um flash de Selected rolando, ele continua — só não
+        // interrompe aqui, quem decide quando parar é o próprio flash.
+        if (flashEmAndamento == null)
+            PintarComoDestacado();
     }
 
 
     public void OnDeselect(BaseEventData eventData)
     {
-        // Some o Highlight. Se este botão também for o Selected, o visual de
-        // Selected continua (prioridade tratada dentro do próprio método).
-        PintarComoNaoDestacado();
+        // Some o Highlight. Se tiver um flash de Selected rolando, deixa ele
+        // terminar sozinho — ele mesmo repinta pro estado certo no final.
+        if (flashEmAndamento == null)
+            PintarComoNaoDestacado();
     }
 
 
@@ -139,30 +148,37 @@ public class ButtonVisualPersonalizado :
         if (!PodeInteragir())
             return;
 
-        // Enter / Space / A / X / botão de confirmação.
-        DefinirSelected(this);
+        // Enter / Space / A / X / botão de confirmação — mesmo flash do clique.
+        IniciarFlashSelected();
     }
 
 
     // =========================================================
-    // DEFINIR SELECTED
+    // FLASH DO SELECTED
     // =========================================================
 
-    private static void DefinirSelected(ButtonVisualPersonalizado novoBotao)
+    private void IniciarFlashSelected()
     {
-        if (novoBotao == null)
-            return;
+        if (flashEmAndamento != null)
+            StopCoroutine(flashEmAndamento);
 
-        ButtonVisualPersonalizado antigo = selectedAtual;
-        selectedAtual = novoBotao;
+        flashEmAndamento = StartCoroutine(FlashSelectedRotina());
+    }
 
-        // Repinta o antigo (fora do OnSelect/OnDeselect, então é seguro
-        // consultar o EventSystem diretamente pra saber se ele continua
-        // destacado por Highlight).
-        if (antigo != null && antigo != novoBotao)
-            antigo.AtualizarVisual();
+    private System.Collections.IEnumerator FlashSelectedRotina()
+    {
+        if (imagem != null)
+            imagem.sprite = selectedSprite != null ? selectedSprite : normalSprite;
 
-        novoBotao.AtualizarVisual();
+        // Realtime, não Time.deltaTime — assim o flash funciona certinho mesmo em
+        // telas que pausam o jogo (Time.timeScale = 0), como o menu de pause.
+        yield return new WaitForSecondsRealtime(duracaoFlashSelected);
+
+        flashEmAndamento = null;
+
+        // Depois do flash, volta pro estado real: Highlighted se o foco ainda
+        // estiver aqui, Normal se não — nunca mais "preso" no Selected.
+        AtualizarVisual();
     }
 
 
@@ -173,29 +189,25 @@ public class ButtonVisualPersonalizado :
     // Usados DENTRO de OnSelect/OnDeselect: nesses dois métodos não dá pra
     // confiar em EventSystem.currentSelectedGameObject porque a Unity chama
     // Deselect do antigo ANTES de atualizar essa referência pro novo — então
-    // aqui a prioridade Selected > Highlight > Normal é decidida direto.
+    // aqui a prioridade Highlight > Normal é decidida direto (Selected nunca
+    // entra aqui: enquanto o flash está ativo, OnSelect/OnDeselect nem chamam
+    // esses dois métodos — ver acima).
 
     private void PintarComoDestacado()
     {
         if (imagem == null) return;
-
-        imagem.sprite = selectedAtual == this
-            ? (selectedSprite != null ? selectedSprite : normalSprite)
-            : (highlightedSprite != null ? highlightedSprite : normalSprite);
+        imagem.sprite = highlightedSprite != null ? highlightedSprite : normalSprite;
     }
 
     private void PintarComoNaoDestacado()
     {
         if (imagem == null) return;
-
-        imagem.sprite = selectedAtual == this
-            ? (selectedSprite != null ? selectedSprite : normalSprite)
-            : normalSprite;
+        imagem.sprite = normalSprite;
     }
 
     // Usado fora do OnSelect/OnDeselect (Awake, OnEnable, mudança de
-    // interactable, repintura do botão que perdeu o Selected) — aqui é seguro
-    // consultar o EventSystem diretamente.
+    // interactable, fim do flash) — aqui é seguro consultar o EventSystem
+    // diretamente.
     private void AtualizarVisual()
     {
         if (imagem == null || botao == null)
@@ -207,11 +219,11 @@ public class ButtonVisualPersonalizado :
             return;
         }
 
-        if (selectedAtual == this)
-        {
-            imagem.sprite = selectedSprite != null ? selectedSprite : normalSprite;
+        // Enquanto o flash está rolando, ele já pintou o sprite certo — não
+        // sobrescreve por cima (evita "piscar" pro Highlighted no meio do flash
+        // se algo mais chamar AtualizarVisual nesse meio tempo).
+        if (flashEmAndamento != null)
             return;
-        }
 
         bool destacado = EventSystem.current != null
             && EventSystem.current.currentSelectedGameObject == gameObject;

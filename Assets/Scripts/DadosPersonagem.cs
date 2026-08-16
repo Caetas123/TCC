@@ -34,8 +34,6 @@ public class DadosPersonagem : ScriptableObject
     public float custoAtaque = 5f;
     [Tooltip("Alcance do frame de follow-through (frame 3) — recomendado ~60% do alcance normal")]
     public float alcanceAtaqueFollowThrough = 1.2f;
-    [Tooltip("Multiplicador de velocidade durante animação de ataque (0=parado, 0.1=90% reduzido)")]
-    [Range(0f, 1f)] public float multiplicadorMovimentoAtaque = 0.1f;
 
     [Header("Especial")]
     public int danoEspecial = 25;
@@ -63,6 +61,32 @@ public class DadosPersonagem : ScriptableObject
     public int danoUltimate = 45;
     public float alcanceUltimate = 3f;
     public TipoUsoUltimate tipoUsoUltimate = TipoUsoUltimate.BarraCheia;
+
+    // ── Movimento durante cada animação ─────────────────────────────────────
+    // Pra cada animação: "Pode Se Mover" desligado = personagem trava completamente
+    // no lugar (equivale a multiplicador 0, mas mais claro de configurar). Ligado =
+    // o multiplicador ao lado controla o quanto (0 = parado, 1 = velocidade normal).
+    [Header("Movimento — Ataque normal")]
+    public bool podeSeMoverDuranteAtaque = true;
+    [Tooltip("Só usado se 'Pode Se Mover' estiver ligado (0=parado, 0.1=90% reduzido)")]
+    [Range(0f, 1f)] public float multiplicadorMovimentoAtaque = 0.1f;
+
+    [Header("Movimento — Especial")]
+    [Tooltip("Não afeta o Especial Única (Salto + Rachadura) — esse sempre trava o personagem durante o salto, faz parte do próprio golpe")]
+    public bool podeSeMoverDuranteEspecial = false;
+    [Range(0f, 1f)] public float multiplicadorMovimentoEspecial = 0f;
+
+    [Header("Movimento — Ultimate")]
+    public bool podeSeMoverDuranteUltimate = false;
+    [Range(0f, 1f)] public float multiplicadorMovimentoUltimate = 0f;
+
+    [Header("Movimento — Defesa")]
+    public bool podeSeMoverDuranteDefesa = false;
+    [Range(0f, 1f)] public float multiplicadorMovimentoDefesa = 0f;
+
+    [Header("Movimento — Hit (recebendo dano)")]
+    public bool podeSeMoverDuranteHit = false;
+    [Range(0f, 1f)] public float multiplicadorMovimentoHit = 0f;
     public float custoUltimate = 100f;
 
     [Header("Defesa")]

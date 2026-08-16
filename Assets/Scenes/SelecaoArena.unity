@@ -5040,7 +5040,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: COMECAR
+  m_text: INICIAR
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ae4c496acf3c002458f98c3bcb2d13a2, type: 2}
   m_sharedMaterial: {fileID: 2176585569844109056, guid: ae4c496acf3c002458f98c3bcb2d13a2, type: 2}

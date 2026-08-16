@@ -101,6 +101,10 @@ public class LanguageManager : MonoBehaviour
             { "VIDEO_APPLY",      "Aplicar" },
             { "VIDEO_RESTORE",    "Restaurar" },
             { "HZ",               "Taxa de Atualização (Hz):" },
+            { "VIDEO_RECOMENDADO",   "(Recomendado)" },
+            { "VIDEO_TELA_CHEIA",    "Tela cheia" },
+            { "VIDEO_JANELA_SEM_BORDA", "Janela sem borda" },
+            { "VIDEO_JANELA",        "Janela" },
 
             // ── Jogadores ─────────────────────────────────────────────────
             { "PLAYER1",  "Jogador 1" },
@@ -233,6 +237,10 @@ public class LanguageManager : MonoBehaviour
             { "VIDEO_APPLY",      "Apply" },
             { "VIDEO_RESTORE",    "Restore" },
             { "HZ",               "Refresh Rate (Hz):" },
+            { "VIDEO_RECOMENDADO",   "(Recommended)" },
+            { "VIDEO_TELA_CHEIA",    "Fullscreen" },
+            { "VIDEO_JANELA_SEM_BORDA", "Borderless Window" },
+            { "VIDEO_JANELA",        "Window" },
 
             // ── Jogadores ─────────────────────────────────────────────────
             { "PLAYER1",  "Player 1" },

@@ -37,6 +37,44 @@ public class VideoSettingsManager : MonoBehaviour
         RegistrarEventos();
 
         inicializando = false;
+
+        // Reconstrói os textos localizados (sufixo "(Recomendado)" e as opções do
+        // dropdown de Modo de Tela) sempre que o idioma mudar — sem isso eles ficavam
+        // presos no idioma em que o painel foi aberto pela primeira vez.
+        LanguageManager.OnLanguageChanged += AtualizarTextosIdioma;
+    }
+
+    private void OnDestroy()
+    {
+        LanguageManager.OnLanguageChanged -= AtualizarTextosIdioma;
+    }
+
+    private string ObterTexto(string chave, string fallback)
+    {
+        return LanguageManager.Instance != null ? LanguageManager.Instance.GetText(chave) : fallback;
+    }
+
+    private void AtualizarTextosIdioma()
+    {
+        bool estavaInicializando = inicializando;
+        inicializando = true;
+
+        ConfigurarDropdownResolucoes();
+        ConfigurarDropdownModoTela();
+
+        if (resolucaoDropdown != null)
+        {
+            resolucaoDropdown.SetValueWithoutNotify(indiceResolucaoSelecionada);
+            resolucaoDropdown.RefreshShownValue();
+        }
+
+        if (modoTelaDropdown != null)
+        {
+            modoTelaDropdown.SetValueWithoutNotify(indiceModoTelaSelecionado);
+            modoTelaDropdown.RefreshShownValue();
+        }
+
+        inicializando = estavaInicializando;
     }
 
     // ─────────────────────────────────────────────
@@ -108,7 +146,8 @@ public class VideoSettingsManager : MonoBehaviour
             resolucoesDisponiveis.Add(r);
 
             bool ehNativa = r.width == larguraNativa && r.height == alturaNativa;
-            string label = r.width + " x " + r.height + (ehNativa ? "  (Recomendado)" : "");
+            string label = r.width + " x " + r.height
+                + (ehNativa ? "  " + ObterTexto("VIDEO_RECOMENDADO", "(Recomendado)") : "");
             opcoes.Add(label);
         }
 
@@ -127,9 +166,9 @@ public class VideoSettingsManager : MonoBehaviour
         modoTelaDropdown.ClearOptions();
         modoTelaDropdown.AddOptions(new List<string>
         {
-            "Tela cheia",
-            "Janela sem borda",
-            "Janela"
+            ObterTexto("VIDEO_TELA_CHEIA", "Tela cheia"),
+            ObterTexto("VIDEO_JANELA_SEM_BORDA", "Janela sem borda"),
+            ObterTexto("VIDEO_JANELA", "Janela")
         });
 
         modoTelaDropdown.RefreshShownValue();

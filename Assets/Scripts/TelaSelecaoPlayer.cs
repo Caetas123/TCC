@@ -901,9 +901,10 @@ public class TelaSelecaoPlayer : MonoBehaviour
         // igual um dropdown de verdade. Em Salvar, salva. Em Fechar, fecha. Nunca faz
         // Salvar/Fechar estando com foco no dropdown (era isso que fechava o painel sem
         // lógica nenhuma antes).
-        bool confirmarPressionado = UIInputUtility.WasSubmitPressed()
-            || (ladoIAConfigAberta == 1 && Input.GetKeyDown(teclaConfirmarP1))
+        bool enterGlobalPressionado = UIInputUtility.WasSubmitPressed();
+        bool teclaJogadorPressionada = (ladoIAConfigAberta == 1 && Input.GetKeyDown(teclaConfirmarP1))
             || (ladoIAConfigAberta == 2 && Input.GetKeyDown(teclaConfirmarP2));
+        bool confirmarPressionado = enterGlobalPressionado || teclaJogadorPressionada;
 
         if (confirmarPressionado)
         {
@@ -916,9 +917,21 @@ public class TelaSelecaoPlayer : MonoBehaviour
                 if (dropFocado != null)
                 {
                     if (dropFocado.IsExpanded)
-                        dropFocado.Hide(); // 2º toque: confirma o valor atual e fecha a lista
-                    else
-                        dropFocado.Show(); // 1º toque: abre a lista
+                    {
+                        // 2º toque: confirma o valor atual e fecha a lista — vale tanto pro
+                        // Enter global quanto pra tecla de ataque do player.
+                        dropFocado.Hide();
+                    }
+                    else if (teclaJogadorPressionada)
+                    {
+                        // Só precisa abrir manualmente quando veio da tecla de ataque do
+                        // player. O Enter "de verdade" (Submit) já chega sozinho ao dropdown
+                        // selecionado pelo próprio EventSystem — TMP_Dropdown.OnSubmit já
+                        // chama Show(). Chamar Show() de novo aqui pro Enter global abria e
+                        // fechava a lista no mesmo frame, dando a impressão de que o Enter
+                        // "não funcionava" nos dropdowns do painel de IA.
+                        dropFocado.Show();
+                    }
                 }
             }
             else if (focoIAPanel == 2)
@@ -1039,8 +1052,11 @@ public class TelaSelecaoPlayer : MonoBehaviour
         // Fecha a lista suspensa de qualquer um dos dois dropdowns antes de aplicar o
         // novo foco — evita ficar uma lista "fantasma" aberta quando o jogador sai do
         // dropdown pra outro campo (Cima/Baixo pro outro dropdown, ou pra Salvar/Fechar).
-        if (dropEstilo != null) dropEstilo.Hide();
-        if (dropDific != null) dropDific.Hide();
+        // Só chama Hide() se a lista estiver REALMENTE aberta — chamar em uma lista que
+        // nunca foi mostrada podia lançar NullReferenceException dentro do próprio
+        // TMP_Dropdown (AlphaFadeList), travando a navegação por teclado no painel de IA.
+        if (dropEstilo != null && dropEstilo.IsExpanded) dropEstilo.Hide();
+        if (dropDific != null && dropDific.IsExpanded) dropDific.Hide();
 
         // A navegação usa UIFocusUtility.Select pra seleção real do EventSystem
         // (dropdowns dependem disso); Salvar/Fechar agora são pintados pelo nosso
@@ -1087,53 +1103,6 @@ public class TelaSelecaoPlayer : MonoBehaviour
         if (img != null) img.color = Color.white;
     }
 
-    // Enter global no grupo 1 — funciona IGUAL às teclas de ataque (F/K) de cada player,
-    // só que global: age SOMENTE sobre o último lado ativo. Nunca toca no lado oposto.
-    // Nunca desseleciona — se já está selecionado e é IA, abre config; senão seleciona normalmente.
-    void ConfirmarSelecaoGlobal()
-    {
-        if (ultimoLadoAtivo == 2)
-        {
-            if (PermiteSelecaoP2()) ConfirmarLadoP2();
-        }
-        else
-        {
-            if (PermiteSelecaoP1()) ConfirmarLadoP1();
-        }
-    }
-
-    // Mesma lógica da tecla de ataque do P1 (ex: F)
-    void ConfirmarLadoP1()
-    {
-        if (focoP1 == indiceSelecionadoP1 && focoP1 >= 0)
-        {
-            // Já selecionado: abre config de IA (se modo IA), senão não faz nada (Enter não desseleciona)
-            if (UsaIAP1())
-                AbrirConfiguracaoIA(1, focoP1);
-            // Enter nunca desseleciona — apenas teclas de ataque do próprio player fazem isso
-        }
-        else
-        {
-            SelecionarPersonagemP1(focoP1);
-        }
-    }
-
-    // Mesma lógica da tecla de ataque do P2 (ex: K)
-    void ConfirmarLadoP2()
-    {
-        if (focoP2 == indiceSelecionadoP2 && focoP2 >= 0)
-        {
-            // Já selecionado: abre config de IA (se modo IA), senão não faz nada (Enter não desseleciona)
-            if (UsaIAP2())
-                AbrirConfiguracaoIA(2, focoP2);
-            // Enter nunca desseleciona — apenas teclas de ataque do próprio player fazem isso
-        }
-        else
-        {
-            SelecionarPersonagemP2(focoP2);
-        }
-    }
-
     void TratarTecladoInferior()
     {
         bool esquerdaP1 = Input.GetKeyDown(teclaEsquerdaP1);
@@ -1156,33 +1125,6 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
         // No grupo inferior, S/Seta para baixo não sobem mais.
         // Para voltar aos personagens use W/Seta para cima.
-    }
-
-    // Mantido por compatibilidade, mas o Enter global só pode confirmar o Start.
-    void ConfirmarBotaoInferior()
-    {
-        if (focoInferior == 1)
-            IniciarJogo();
-    }
-
-    // Confirma o botão focado, respeitando qual lado está ativo
-    void ConfirmarBotaoInferiorParaLado(int lado)
-    {
-        if (focoInferior == 0)
-        {
-            // Deselecionar P1 — só P1 pode fazer isso
-            if (lado == 1) DeselecionarPersonagemP1();
-        }
-        else if (focoInferior == 1)
-        {
-            // Start — qualquer lado pode confirmar
-            IniciarJogo();
-        }
-        else if (focoInferior == 2)
-        {
-            // Deselecionar P2 — só P2 pode fazer isso
-            if (lado == 2) DeselecionarPersonagemP2();
-        }
     }
 
     void AtualizarFocoInferior()
@@ -2296,8 +2238,8 @@ public class TelaSelecaoPlayer : MonoBehaviour
         // painel for aberto de novo.
         TMP_Dropdown dropEstiloAtivo = ladoIAConfigAberta == 1 ? dropdownEstiloIAP1 : dropdownEstiloIAP2;
         TMP_Dropdown dropDificAtivo = ladoIAConfigAberta == 1 ? dropdownDificuldadeIAP1 : dropdownDificuldadeIAP2;
-        if (dropEstiloAtivo != null) dropEstiloAtivo.Hide();
-        if (dropDificAtivo != null) dropDificAtivo.Hide();
+        if (dropEstiloAtivo != null && dropEstiloAtivo.IsExpanded) dropEstiloAtivo.Hide();
+        if (dropDificAtivo != null && dropDificAtivo.IsExpanded) dropDificAtivo.Hide();
 
         // Desativar o painel já é suficiente — a seleção do EventSystem que estava
         // em cima do dropdown/botão dentro dele deixa de existir junto (o objeto some),

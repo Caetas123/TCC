@@ -23,7 +23,6 @@ MonoBehaviour:
   alcanceAtaque: 2.5
   custoAtaque: 5
   alcanceAtaqueFollowThrough: 1.2
-  multiplicadorMovimentoAtaque: 0.2
   danoEspecial: 25
   alcanceEspecial: 2.5
   tipoGastoEspecial: 2
@@ -38,6 +37,16 @@ MonoBehaviour:
   danoUltimate: 50
   alcanceUltimate: 3
   tipoUsoUltimate: 1
+  podeSeMoverDuranteAtaque: 1
+  multiplicadorMovimentoAtaque: 0.2
+  podeSeMoverDuranteEspecial: 1
+  multiplicadorMovimentoEspecial: 0.2
+  podeSeMoverDuranteUltimate: 0
+  multiplicadorMovimentoUltimate: 0
+  podeSeMoverDuranteDefesa: 0
+  multiplicadorMovimentoDefesa: 0
+  podeSeMoverDuranteHit: 0
+  multiplicadorMovimentoHit: 0
   custoUltimate: 100
   porcentagemBloqueioDefesa: 1
   custoDefesa: 20

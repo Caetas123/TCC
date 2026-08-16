@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
 using TMPro;
 using System.Collections;
 
@@ -249,6 +250,7 @@ public class GameManagerLuta : MonoBehaviour
         {
             if (barraVidaP1 != null)
             {
+                barraVidaP1.minValue = 0f;
                 barraVidaP1.maxValue = player1.dadosPersonagem.vidaMax;
                 barraVidaP1.value = player1.vidaAtual;
             }
@@ -271,6 +273,7 @@ public class GameManagerLuta : MonoBehaviour
         {
             if (barraVidaP2 != null)
             {
+                barraVidaP2.minValue = 0f;
                 barraVidaP2.maxValue = player2.dadosPersonagem.vidaMax;
                 barraVidaP2.value = player2.vidaAtual;
             }
@@ -579,12 +582,41 @@ public class GameManagerLuta : MonoBehaviour
             {
                 imagemRostoVencedor.sprite = rosto;
                 imagemRostoVencedor.gameObject.SetActive(true);
+
+                // Blindagem: essa imagem é só visual, nunca deveria interceptar
+                // clique/navegação. Se em algum momento um componente Selectable
+                // (Button, Toggle etc.) tiver sido adicionado nela sem querer no
+                // Inspector, desliga aqui — é exatamente esse tipo de coisa que
+                // rouba a seleção do teclado sem o mouse nunca ter tocado em nada.
+                Selectable selecionavelNaImagem = imagemRostoVencedor.GetComponent<Selectable>();
+                if (selecionavelNaImagem != null)
+                    selecionavelNaImagem.interactable = false;
+
+                imagemRostoVencedor.raycastTarget = false;
             }
             else
             {
                 imagemRostoVencedor.gameObject.SetActive(false);
             }
         }
+
+        // Seleciona de verdade o primeiro botão real do painel pro teclado/controle
+        // funcionar assim que a tela aparece — sem isso, nada está selecionado no
+        // EventSystem até o mouse clicar em algo, e as setas não têm de onde partir.
+        Button primeiroBotao = botaoReiniciar != null ? botaoReiniciar : botaoVoltar;
+        if (primeiroBotao != null)
+            StartCoroutine(SelecionarBotaoNoProximoFrame(primeiroBotao.gameObject));
+    }
+
+    IEnumerator SelecionarBotaoNoProximoFrame(GameObject botao)
+    {
+        yield return null;
+
+        if (EventSystem.current == null || botao == null)
+            yield break;
+
+        EventSystem.current.SetSelectedGameObject(null);
+        EventSystem.current.SetSelectedGameObject(botao);
     }
 
     void MostrarRoundWin(string nomeVencedor, int round, LutadorController2D vencedorObj)
@@ -637,6 +669,16 @@ public class GameManagerLuta : MonoBehaviour
 
         roundAtual++;
         IniciarRound();
+    }
+
+    /// <summary>
+    /// Consultado pelo PauseManager antes de abrir o menu de pause. Retorna false
+    /// durante a tela de Round Win, a transição pro próximo round e a tela de
+    /// vencedor final — evitando o menu de pause abrir por cima delas.
+    /// </summary>
+    public bool PodePausar()
+    {
+        return !lutaTerminou && roundEmAndamento;
     }
 
     public void ReiniciarLuta()

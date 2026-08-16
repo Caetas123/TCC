@@ -1442,6 +1442,7 @@ MonoBehaviour:
   normalSprite: {fileID: 1880210143406618877, guid: 0652ebbd839e1a44eb29cdfb9be1da6e, type: 3}
   highlightedSprite: {fileID: 4265961555943963154, guid: 280eafe372d56f046b81e692e0154c60, type: 3}
   selectedSprite: {fileID: 7921646968328196971, guid: 9220cc34b441406489ed47f32bd45fbf, type: 3}
+  duracaoFlashSelected: 0.15
 --- !u!1 &85867206
 GameObject:
   m_ObjectHideFlags: 0
@@ -3755,6 +3756,7 @@ MonoBehaviour:
   normalSprite: {fileID: -8545761501449185026, guid: 67126e4add1fa46418fb361aa3c1d719, type: 3}
   highlightedSprite: {fileID: -8458870281483718234, guid: 16e4327015c53004094f2a3cfb56a9da, type: 3}
   selectedSprite: {fileID: 7921646968328196971, guid: 9220cc34b441406489ed47f32bd45fbf, type: 3}
+  duracaoFlashSelected: 0.15
 --- !u!1 &793502129
 GameObject:
   m_ObjectHideFlags: 0
@@ -4370,6 +4372,7 @@ MonoBehaviour:
   normalSprite: {fileID: 1880210143406618877, guid: 0652ebbd839e1a44eb29cdfb9be1da6e, type: 3}
   highlightedSprite: {fileID: 4265961555943963154, guid: 280eafe372d56f046b81e692e0154c60, type: 3}
   selectedSprite: {fileID: 7921646968328196971, guid: 9220cc34b441406489ed47f32bd45fbf, type: 3}
+  duracaoFlashSelected: 0.15
 --- !u!1 &872633929
 GameObject:
   m_ObjectHideFlags: 0
@@ -5372,6 +5375,8 @@ MonoBehaviour:
   rb: {fileID: 1089833380}
   spriteRenderer: {fileID: 1089833377}
   oponente: {fileID: 1379144100}
+  distanciaMinimaEntreLutadores: 1
+  forcaEmpurraoLutadores: 12
   gameManager: {fileID: 1169278383}
   teclaEsquerda: 0
   teclaDireita: 0
@@ -5418,7 +5423,6 @@ GameObject:
   - component: {fileID: 1090133117}
   - component: {fileID: 1090133119}
   - component: {fileID: 1090133118}
-  - component: {fileID: 1090133121}
   m_Layer: 0
   m_Name: jogador
   m_TagString: Untagged
@@ -5484,50 +5488,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1090133116}
   m_CullTransparentMesh: 1
---- !u!114 &1090133121
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1090133116}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Navigation:
-    m_Mode: 3
-    m_WrapAround: 0
-    m_SelectOnUp: {fileID: 0}
-    m_SelectOnDown: {fileID: 0}
-    m_SelectOnLeft: {fileID: 0}
-    m_SelectOnRight: {fileID: 0}
-  m_Transition: 0
-  m_Colors:
-    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
-    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
-    m_ColorMultiplier: 1
-    m_FadeDuration: 0.1
-  m_SpriteState:
-    m_HighlightedSprite: {fileID: 0}
-    m_PressedSprite: {fileID: 0}
-    m_SelectedSprite: {fileID: 0}
-    m_DisabledSprite: {fileID: 0}
-  m_AnimationTriggers:
-    m_NormalTrigger: Normal
-    m_HighlightedTrigger: Highlighted
-    m_PressedTrigger: Pressed
-    m_SelectedTrigger: Selected
-    m_DisabledTrigger: Disabled
-  m_Interactable: 1
-  m_TargetGraphic: {fileID: 1090133118}
-  m_OnClick:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!1 &1091675753
 GameObject:
   m_ObjectHideFlags: 0
@@ -6117,6 +6077,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   painelPause: {fileID: 2044953104}
   primeiroBotaoPause: {fileID: 1678220684}
+  gameManagerLuta: {fileID: 0}
 --- !u!114 &1169278385
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6622,6 +6583,7 @@ MonoBehaviour:
   normalSprite: {fileID: -8545761501449185026, guid: 67126e4add1fa46418fb361aa3c1d719, type: 3}
   highlightedSprite: {fileID: -8458870281483718234, guid: 16e4327015c53004094f2a3cfb56a9da, type: 3}
   selectedSprite: {fileID: 7921646968328196971, guid: 9220cc34b441406489ed47f32bd45fbf, type: 3}
+  duracaoFlashSelected: 0.15
 --- !u!1 &1377776572
 GameObject:
   m_ObjectHideFlags: 0
@@ -6942,6 +6904,8 @@ MonoBehaviour:
   rb: {fileID: 1379144099}
   spriteRenderer: {fileID: 1379144096}
   oponente: {fileID: 1089833381}
+  distanciaMinimaEntreLutadores: 1
+  forcaEmpurraoLutadores: 12
   gameManager: {fileID: 1169278383}
   teclaEsquerda: 0
   teclaDireita: 0
@@ -7806,6 +7770,7 @@ MonoBehaviour:
   normalSprite: {fileID: -8545761501449185026, guid: 67126e4add1fa46418fb361aa3c1d719, type: 3}
   highlightedSprite: {fileID: -8458870281483718234, guid: 16e4327015c53004094f2a3cfb56a9da, type: 3}
   selectedSprite: {fileID: 7921646968328196971, guid: 9220cc34b441406489ed47f32bd45fbf, type: 3}
+  duracaoFlashSelected: 0.15
 --- !u!1 &1662286122
 GameObject:
   m_ObjectHideFlags: 0
@@ -8005,6 +7970,7 @@ MonoBehaviour:
   normalSprite: {fileID: -8545761501449185026, guid: 67126e4add1fa46418fb361aa3c1d719, type: 3}
   highlightedSprite: {fileID: -8458870281483718234, guid: 16e4327015c53004094f2a3cfb56a9da, type: 3}
   selectedSprite: {fileID: 7921646968328196971, guid: 9220cc34b441406489ed47f32bd45fbf, type: 3}
+  duracaoFlashSelected: 0.15
 --- !u!1 &1690870785
 GameObject:
   m_ObjectHideFlags: 0
@@ -8500,6 +8466,7 @@ MonoBehaviour:
   normalSprite: {fileID: -8545761501449185026, guid: 67126e4add1fa46418fb361aa3c1d719, type: 3}
   highlightedSprite: {fileID: -8458870281483718234, guid: 16e4327015c53004094f2a3cfb56a9da, type: 3}
   selectedSprite: {fileID: 7921646968328196971, guid: 9220cc34b441406489ed47f32bd45fbf, type: 3}
+  duracaoFlashSelected: 0.15
 --- !u!1 &1816637156
 GameObject:
   m_ObjectHideFlags: 0
@@ -8755,6 +8722,7 @@ MonoBehaviour:
   normalSprite: {fileID: -8545761501449185026, guid: 67126e4add1fa46418fb361aa3c1d719, type: 3}
   highlightedSprite: {fileID: -8458870281483718234, guid: 16e4327015c53004094f2a3cfb56a9da, type: 3}
   selectedSprite: {fileID: 7921646968328196971, guid: 9220cc34b441406489ed47f32bd45fbf, type: 3}
+  duracaoFlashSelected: 0.15
 --- !u!1 &1837848251
 GameObject:
   m_ObjectHideFlags: 0

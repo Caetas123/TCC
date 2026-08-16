@@ -74,6 +74,15 @@ public class UIConfiguracoesVideo : MonoBehaviour
             botaoRestaurar.onClick.AddListener(RestaurarFPSPadrao);
 
         eventosRegistrados = true;
+
+        // Sem isso, o rótulo "Taxa de Atualização (Hz)" ficava preso no idioma em que
+        // o painel foi aberto pela primeira vez, mesmo depois de trocar o idioma.
+        LanguageManager.OnLanguageChanged += AtualizarTextosIdioma;
+    }
+
+    void AtualizarTextosIdioma()
+    {
+        AtualizarTextoHZ(hzPendente);
     }
 
     void OnDestroy()
@@ -88,6 +97,8 @@ public class UIConfiguracoesVideo : MonoBehaviour
 
         if (botaoRestaurar != null)
             botaoRestaurar.onClick.RemoveListener(RestaurarFPSPadrao);
+
+        LanguageManager.OnLanguageChanged -= AtualizarTextosIdioma;
     }
 
     void OnSliderFPSChange(float valor)
@@ -161,11 +172,14 @@ public class UIConfiguracoesVideo : MonoBehaviour
 
     void AtualizarTextoHZ(int hz)
     {
-        if (textoHZ != null)
-            textoHZ.text =
-                LanguageManager.Instance.GetText("HZ")
-                + " "
-                + hz;
+        if (textoHZ == null)
+            return;
+
+        string rotulo = LanguageManager.Instance != null
+            ? LanguageManager.Instance.GetText("HZ")
+            : "Hz:";
+
+        textoHZ.text = rotulo + " " + hz;
     }
 
     public void AplicarFPSPendente()

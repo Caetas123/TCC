@@ -32,6 +32,12 @@ public class LutadorController2D : MonoBehaviour
     public Rigidbody2D rb;
     public SpriteRenderer spriteRenderer;
     public LutadorController2D oponente;
+
+    [Header("Empurrão entre lutadores")]
+    [Tooltip("Distância mínima que os dois lutadores podem chegar um do outro — abaixo disso, o empurrão entra em ação")]
+    public float distanciaMinimaEntreLutadores = 1.0f;
+    [Tooltip("Intensidade do empurrão ao ficarem mais próximos que a distância mínima")]
+    public float forcaEmpurraoLutadores = 12f;
     public GameManagerLuta gameManager;
 
     [Header("Teclas atuais")]
@@ -192,30 +198,73 @@ public class LutadorController2D : MonoBehaviour
         if (audioSource != null) audioSource.Stop();
     }
 
+    // ── Movimento por animação ──────────────────────────────────────────────
+    // Centraliza a decisão de "quanto o personagem pode andar" em cada animação,
+    // toda configurável por personagem via DadosPersonagem (podeSeMoverDuranteX +
+    // multiplicadorMovimentoX). "Pode Se Mover" desligado = 0 (trava completa),
+    // ligado = usa o multiplicador correspondente.
+    //
+    // Defesa usa o campo "defendendo" direto (não o estadoAtual) porque é a fonte
+    // de verdade mais confiável de "está defendendo agora" — não depende de qual
+    // frame de animação está tocando no instante exato.
+    float ObterMultiplicadorMovimentoAtual()
+    {
+        if (defendendo)
+            return dadosPersonagem.podeSeMoverDuranteDefesa ? dadosPersonagem.multiplicadorMovimentoDefesa : 0f;
+
+        if (animacaoUmaVezAtiva)
+        {
+            switch (estadoAtual)
+            {
+                case EstadoAnim.Attack:
+                    return dadosPersonagem.podeSeMoverDuranteAtaque ? dadosPersonagem.multiplicadorMovimentoAtaque : 0f;
+                case EstadoAnim.Special:
+                    return dadosPersonagem.podeSeMoverDuranteEspecial ? dadosPersonagem.multiplicadorMovimentoEspecial : 0f;
+                case EstadoAnim.Ultimate:
+                    return dadosPersonagem.podeSeMoverDuranteUltimate ? dadosPersonagem.multiplicadorMovimentoUltimate : 0f;
+                case EstadoAnim.Hit:
+                    return dadosPersonagem.podeSeMoverDuranteHit ? dadosPersonagem.multiplicadorMovimentoHit : 0f;
+            }
+        }
+
+        return 1f; // Idle/Move/Jump — velocidade normal
+    }
+
     void FixedUpdate()
     {
         if (morreu) return;
         if (rb == null || dadosPersonagem == null) return;
 
         float velocidadeX = movimento * dadosPersonagem.velocidade;
+        velocidadeX *= ObterMultiplicadorMovimentoAtual();
 
-        // Reduz a velocidade de andar SÓ durante o ataque básico (Attack) — ao
-        // acabar a animação, EstadoAnim volta sozinho e a velocidade volta ao
-        // normal automaticamente, sem precisar resetar nada aqui.
-        if (animacaoUmaVezAtiva && estadoAtual == EstadoAnim.Attack)
-            velocidadeX *= dadosPersonagem.multiplicadorMovimentoAtaque;
-
+        // ── Empurrão entre lutadores ────────────────────────────────────────
+        // Antes isso só ZERAVA a velocidade de quem tentava se aproximar demais —
+        // um bloqueio duro, não um empurrão: o personagem simplesmente travava no
+        // lugar e o oponente não reagia nada, mesmo em PVP. Agora os dois são
+        // afastados de verdade quando ficam colados — cada instância deste script
+        // roda essa mesma conta independentemente, então o resultado é simétrico:
+        // os dois deslizam pra trás, como se estivessem se empurrando.
         if (oponente != null)
         {
-            float distanciaX = Mathf.Abs(transform.position.x - oponente.transform.position.x);
-            float distanciaMinima = 2.0f;
+            float dx = transform.position.x - oponente.transform.position.x;
+            float distanciaX = Mathf.Abs(dx);
 
-            bool tentandoIrParaOponente =
-                (transform.position.x < oponente.transform.position.x && velocidadeX > 0) ||
-                (transform.position.x > oponente.transform.position.x && velocidadeX < 0);
+            if (distanciaX < distanciaMinimaEntreLutadores && distanciaX > 0.0001f)
+            {
+                float direcaoAfastamento = Mathf.Sign(dx);
+                float penetracao = distanciaMinimaEntreLutadores - distanciaX;
 
-            if (distanciaX <= distanciaMinima && tentandoIrParaOponente)
-                velocidadeX = 0f;
+                // Não deixa o movimento do jogador empurrar AINDA MAIS pra dentro do
+                // oponente (continua impossível atravessar), mas se afastar continua livre
+                bool indoParaDentro = velocidadeX != 0f && Mathf.Sign(velocidadeX) == -direcaoAfastamento;
+                if (indoParaDentro) velocidadeX = 0f;
+
+                // O empurrão em si: proporcional à sobreposição, soma-se ao movimento —
+                // é isso que efetivamente separa os dois, inclusive quando o overlap vem
+                // de knockback/spawn, não só de andar um em direção ao outro
+                velocidadeX += direcaoAfastamento * penetracao * forcaEmpurraoLutadores;
+            }
         }
 
         rb.linearVelocity = new Vector2(velocidadeX, rb.linearVelocity.y);
@@ -226,7 +275,9 @@ public class LutadorController2D : MonoBehaviour
         if (dadosPersonagem == null) return;
 
         vidaAtual = dadosPersonagem.vidaMax;
-        energiaAtual = dadosPersonagem.energiaMax;
+        // Energia começa ZERADA no início da luta — combinado com o time pra ninguém
+        // conseguir usar Especial/Ultimate de cara, sem precisar lutar pra carregar energia.
+        energiaAtual = 0f;
         morreu = false;
 
         // Aplica o primeiro frame do Idle imediatamente
@@ -247,7 +298,9 @@ public class LutadorController2D : MonoBehaviour
         if (dadosPersonagem == null) return;
 
         vidaAtual = dadosPersonagem.vidaMax;
-        energiaAtual = dadosPersonagem.energiaMax;
+        // Mesma regra do início da luta: cada round novo também começa com energia
+        // ZERADA, pra ninguém entrar no round já podendo soltar Especial/Ultimate.
+        energiaAtual = 0f;
         movimento = 0f;
         defendendo = false;
         morreu = false;
@@ -342,17 +395,19 @@ public class LutadorController2D : MonoBehaviour
             return;
         }
 
-        // Bloqueia a LEITURA de movimento (trava e ignora novas teclas) só durante
-        // Special/Ultimate — essas devem travar o personagem parado no lugar.
-        // O Attack (ataque básico) NÃO entra aqui: ele continua lendo teclas novas
+        // Bloqueia a LEITURA de movimento (trava e ignora novas teclas) durante
+        // Special/Ultimate SÓ SE o personagem estiver configurado pra não se mover
+        // nessas animações (dadosPersonagem.podeSeMoverDuranteEspecial/Ultimate).
+        // O Attack (ataque básico) NUNCA entra aqui: ele sempre lê teclas novas
         // normalmente durante a animação (senão, se o ataque começasse parado, uma
         // tecla de andar pressionada DEPOIS nunca seria lida até o ataque acabar —
-        // só funcionava se already estivesse andando ANTES do ataque começar). A
-        // redução de velocidade durante o Attack já é aplicada depois, no FixedUpdate,
-        // via dadosPersonagem.multiplicadorMovimentoAtaque.
+        // só funcionava se já estivesse andando ANTES do ataque começar). A redução
+        // de velocidade durante o Attack é aplicada depois, no FixedUpdate.
+        bool travaEspecial  = dadosPersonagem == null || !dadosPersonagem.podeSeMoverDuranteEspecial;
+        bool travaUltimate  = dadosPersonagem == null || !dadosPersonagem.podeSeMoverDuranteUltimate;
         bool bloqueado = animacaoUmaVezAtiva &&
-                         (estadoAtual == EstadoAnim.Special ||
-                          estadoAtual == EstadoAnim.Ultimate);
+                         ((estadoAtual == EstadoAnim.Special  && travaEspecial) ||
+                          (estadoAtual == EstadoAnim.Ultimate && travaUltimate));
 
         if (!bloqueado)
         {
@@ -408,7 +463,15 @@ public class LutadorController2D : MonoBehaviour
             return;
         }
 
-        movimento = Mathf.Clamp(movimentoIA, -1f, 1f);
+        // Mesma trava do jogador humano — sem isso, a IA nunca era impedida de andar
+        // durante Special/Ultimate genéricos (só travava no Especial Única tipo Jamanta).
+        bool travaEspecialIA = dadosPersonagem == null || !dadosPersonagem.podeSeMoverDuranteEspecial;
+        bool travaUltimateIA = dadosPersonagem == null || !dadosPersonagem.podeSeMoverDuranteUltimate;
+        bool bloqueadoIA = animacaoUmaVezAtiva &&
+                           ((estadoAtual == EstadoAnim.Special  && travaEspecialIA) ||
+                            (estadoAtual == EstadoAnim.Ultimate && travaUltimateIA));
+
+        movimento = bloqueadoIA ? 0f : Mathf.Clamp(movimentoIA, -1f, 1f);
         defendendo = defesaIA;
 
         if (puloIASolicitado && estaNoChao) Pular();
@@ -423,6 +486,20 @@ public class LutadorController2D : MonoBehaviour
     }
 
     // ── Ações de combate ──────────────────────────────────────────────────
+    // Impede cancelar Ataque/Especial/Ultimate um no outro no meio da animação —
+    // sem isso, dava pra encadear Ataque -> cancela pra Especial -> assim que
+    // possível cancela de volta pra Ataque, batendo repetidamente sem nunca esperar
+    // a recuperação normal de nenhum dos dois (dano sem delay, infinito). Levar um
+    // Hit continua interrompendo normalmente — só não dá pra cancelar POR VONTADE
+    // PRÓPRIA num golpe pra outro.
+    bool EmAcaoOfensiva()
+    {
+        return animacaoUmaVezAtiva &&
+               (estadoAtual == EstadoAnim.Attack ||
+                estadoAtual == EstadoAnim.Special ||
+                estadoAtual == EstadoAnim.Ultimate);
+    }
+
     void RecarregarEnergiaParado()
     {
         if (dadosPersonagem == null) return;
@@ -449,6 +526,7 @@ public class LutadorController2D : MonoBehaviour
     void AtaqueNormal()
     {
         if (oponente == null || dadosPersonagem == null || morreu) return;
+        if (EmAcaoOfensiva()) return;
         if (!TemEnergiaSuficiente(dadosPersonagem.custoAtaque)) return;
 
         GastarEnergia(dadosPersonagem.custoAtaque);
@@ -503,6 +581,7 @@ public class LutadorController2D : MonoBehaviour
     void AtaqueEspecial()
     {
         if (oponente == null || dadosPersonagem == null || morreu) return;
+        if (EmAcaoOfensiva()) return;
         if (!PodeUsarEspecial()) return;
 
         // Personagem com spriteRachadura configurado usa o golpe único (salto alto +
@@ -824,6 +903,7 @@ public class LutadorController2D : MonoBehaviour
     void AtaqueUltimate()
     {
         if (oponente == null || dadosPersonagem == null || morreu) return;
+        if (EmAcaoOfensiva()) return;
         if (!PodeUsarUltimate()) return;
 
         float distancia = Vector2.Distance(transform.position, oponente.transform.position);
@@ -1137,6 +1217,8 @@ public class LutadorController2D : MonoBehaviour
                 int inicioHit     = dadosPersonagem != null ? dadosPersonagem.frameInicioHitbox : 1;
                 int followThrough = dadosPersonagem != null ? dadosPersonagem.frameFollowThrough : -1;
 
+                FaseAtaque faseAnterior = faseAtaqueAtual;
+
                 if (frameAtual < inicioHit)
                     faseAtaqueAtual = FaseAtaque.Windup;
                 else if (followThrough >= 0 && frameAtual == followThrough)
@@ -1144,7 +1226,14 @@ public class LutadorController2D : MonoBehaviour
                 else if (frameAtual >= inicioHit)
                     faseAtaqueAtual = FaseAtaque.Hit;
 
-                danoJaAplicado = false;
+                // Só reseta o "já aplicou dano" quando a FASE muda de verdade (entrou
+                // agora no Hit, ou entrou agora no FollowThrough) — nunca a cada frame.
+                // Antes resetava sempre aqui, então se a fase Hit durasse mais de um
+                // frame de animação, cada frame aplicava o dano (e o gasto de energia
+                // de quem defendia) de novo — 2 ou 3 vezes no mesmo golpe.
+                if (faseAtaqueAtual != faseAnterior)
+                    danoJaAplicado = false;
+
                 AplicarFrameAtual();
                 AplicarDanoAtaquePorFrame();
                 return;
