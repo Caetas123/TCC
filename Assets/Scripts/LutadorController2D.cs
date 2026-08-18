@@ -492,12 +492,19 @@ public class LutadorController2D : MonoBehaviour
     // a recuperação normal de nenhum dos dois (dano sem delay, infinito). Levar um
     // Hit continua interrompendo normalmente — só não dá pra cancelar POR VONTADE
     // PRÓPRIA num golpe pra outro.
+    //
+    // Também bloqueia iniciar golpe durante o próprio Hit (EstaLevandoHit()): antes
+    // só checava Attack/Special/Ultimate, então apertar ataque enquanto tomava dano
+    // gastava energia à toa — a animação nem saía do lugar (Hit tem prioridade maior
+    // e barra a troca de estado em IniciarAnimacaoUmaVez), mas o custo em energia já
+    // tinha sido debitado antes dessa checagem.
     bool EmAcaoOfensiva()
     {
         return animacaoUmaVezAtiva &&
                (estadoAtual == EstadoAnim.Attack ||
                 estadoAtual == EstadoAnim.Special ||
-                estadoAtual == EstadoAnim.Ultimate);
+                estadoAtual == EstadoAnim.Ultimate ||
+                estadoAtual == EstadoAnim.Hit);
     }
 
     void RecarregarEnergiaParado()
