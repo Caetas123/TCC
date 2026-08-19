@@ -344,6 +344,13 @@ public class LutadorController2D : MonoBehaviour
     }
 
     // ── Teclas ────────────────────────────────────────────────────────────
+    // Chamado publicamente pelo ControleManager assim que uma tecla é remapeada
+    // e salva no PlayerPrefs — sem isso, remapear controle NO MEIO DE UMA LUTA
+    // (o ControleManager mora dentro de cena1/cena2, acessível pelo pause) salvava
+    // certinho, mas o lutador já em cena continuava com a tecla antiga: CarregarTeclas
+    // só rodava uma vez, no Start(), então nada recarregava o novo valor em memória.
+    public void RecarregarTeclas() => CarregarTeclas();
+
     void CarregarTeclas()
     {
         if (numeroJogador == 1)

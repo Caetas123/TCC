@@ -108,6 +108,7 @@ public class ControleManager : MonoBehaviour
 
             PlayerPrefs.SetString(teclaAtual, teclaSalva);
             PlayerPrefs.Save();
+            AplicarTeclasNosLutadoresEmCena();
 
             if (botaoAtual != null)
             {
@@ -326,7 +327,18 @@ public class ControleManager : MonoBehaviour
             PlayerPrefs.SetString(par.Key, par.Value);
 
         PlayerPrefs.Save();
+        AplicarTeclasNosLutadoresEmCena();
         AtualizarTexto();
         MostrarAviso("Controles restaurados!");
+    }
+
+    // Empurra as teclas recém-salvas pra qualquer LutadorController2D já vivo na
+    // cena (cena1/cena2, remapeado pelo pause no meio da luta). Em telas sem
+    // lutador (TelaInicial) simplesmente não encontra nada e não faz nada — só o
+    // PlayerPrefs importa nesse caso, e ele já foi salvo acima.
+    private void AplicarTeclasNosLutadoresEmCena()
+    {
+        foreach (var lutador in FindObjectsByType<LutadorController2D>(FindObjectsSortMode.None))
+            lutador.RecarregarTeclas();
     }
 }
