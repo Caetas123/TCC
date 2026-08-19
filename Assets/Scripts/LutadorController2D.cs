@@ -1201,7 +1201,28 @@ public class LutadorController2D : MonoBehaviour
         Sprite[] frames = ObterFramesDoEstado(estadoAtual);
         float fps = ObterFpsDoEstado(estadoAtual);
 
-        if (frames == null || frames.Length == 0 || fps <= 0f) return;
+        if (frames == null || frames.Length == 0 || fps <= 0f)
+        {
+            // Personagem ainda sem os sprites desse estado prontos (produção em
+            // andamento). Enquanto isso não existia, faltar frames numa animação
+            // "toca uma vez" (Hit/Special/Ultimate) travava o lutador PRA SEMPRE
+            // nesse estado — o único lugar que volta animacaoUmaVezAtiva pra false
+            // fica adiante, dentro do bloco de cronômetro, que a gente nunca
+            // alcançava sem frame nenhum pra avançar. Sem sprite pra tocar, trata
+            // como se a animação já tivesse terminado na hora — volta pro estado
+            // anterior igual quando ela chega no último frame normalmente. Death é
+            // exceção: não tem "estado anterior" pra voltar, e a partida já é
+            // encerrada por FinalizarLuta() independente da animação terminar.
+            if (animacaoUmaVezAtiva && estadoAtual != EstadoAnim.Death)
+            {
+                animacaoUmaVezAtiva = false;
+                estadoAtual = estadoAnterior;
+                frameAtual = 0;
+                cronometroFrame = 0f;
+                AplicarFrameAtual();
+            }
+            return;
+        }
 
         cronometroFrame += Time.deltaTime;
         float intervalo = 1f / fps;
