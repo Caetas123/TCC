@@ -5317,8 +5317,8 @@ MonoBehaviour:
   rb: {fileID: 1089833380}
   spriteRenderer: {fileID: 1089833377}
   oponente: {fileID: 1379144100}
-  distanciaMinimaEntreLutadores: 1
-  forcaEmpurraoLutadores: 12
+  distanciaMinimaEntreLutadores: 2
+  forcaEmpurraoLutadores: 6
   gameManager: {fileID: 1169278383}
   teclaEsquerda: 0
   teclaDireita: 0
@@ -6921,8 +6921,8 @@ MonoBehaviour:
   rb: {fileID: 1379144099}
   spriteRenderer: {fileID: 1379144096}
   oponente: {fileID: 1089833381}
-  distanciaMinimaEntreLutadores: 1
-  forcaEmpurraoLutadores: 12
+  distanciaMinimaEntreLutadores: 2
+  forcaEmpurraoLutadores: 6
   gameManager: {fileID: 1169278383}
   teclaEsquerda: 0
   teclaDireita: 0

@@ -35,7 +35,7 @@ public class LutadorController2D : MonoBehaviour
 
     [Header("Empurrão entre lutadores")]
     [Tooltip("Distância mínima que os dois lutadores podem chegar um do outro — abaixo disso, o empurrão entra em ação")]
-    public float distanciaMinimaEntreLutadores = 1.0f;
+    public float distanciaMinimaEntreLutadores = 2.0f;
     [Tooltip("Intensidade do empurrão ao ficarem mais próximos que a distância mínima")]
     public float forcaEmpurraoLutadores = 12f;
     public GameManagerLuta gameManager;
