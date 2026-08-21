@@ -51,6 +51,12 @@ MonoBehaviour:
   porcentagemBloqueioDefesa: 1
   custoDefesa: 20
   velocidadeRecargaEnergia: 10
+  especialAlternavelComQueimadura: 1
+  custoAtivarEspecialAlternavel: 30
+  drenoPorSegundoEspecialAlternavel: 3
+  danoQueimacaoPorSegundo: 3
+  duracaoQueimacao: 5
+  duracaoQueimacaoDefendendo: 3
   framesIdle:
   - {fileID: -3943748194325502948, guid: a2c48164b293adb408c484f447c41c92, type: 3}
   - {fileID: 4430578856213414250, guid: 6b9a39fbeb2c4eb4dbc1309f471f0155, type: 3}

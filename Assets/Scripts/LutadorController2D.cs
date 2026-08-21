@@ -113,6 +113,17 @@ public class LutadorController2D : MonoBehaviour
     // parar os sons só uma vez nesse instante, não em todo frame pausado.
     private bool estavaPausadoAntes = false;
 
+    // ── Especial alternável — Espada em Chamas (ex: Diego) ──────────────────
+    // true enquanto o especial estiver ligado: troca os sprites de
+    // Idle/Move/Jump/Defend/Attack pela variante em chamas (se configurada) e faz
+    // o ataque básico aplicar queimação, além de drenar energia por segundo.
+    private bool espadaEmChamasAtiva = false;
+
+    // Queimação ativa NESTE lutador (aplicada pelo ataque em chamas do oponente).
+    // Guardada aqui pra poder reiniciar a contagem se levar outro golpe em chamas
+    // antes da anterior acabar, em vez de empilhar múltiplas queimações somando dano.
+    private Coroutine rotinaQueimacao;
+
     void Start()
     {
         if (rb == null) rb = GetComponent<Rigidbody2D>();
@@ -185,6 +196,7 @@ public class LutadorController2D : MonoBehaviour
             LerInputsHumano();
 
         RecarregarEnergiaParado();
+        DrenarEspadaEmChamasSeAtiva();
         VirarParaOponente();
         AtualizarAnimacao();
         AtualizarSons();
@@ -279,6 +291,8 @@ public class LutadorController2D : MonoBehaviour
         // conseguir usar Especial/Ultimate de cara, sem precisar lutar pra carregar energia.
         energiaAtual = 0f;
         morreu = false;
+        espadaEmChamasAtiva = false;
+        if (rotinaQueimacao != null) { StopCoroutine(rotinaQueimacao); rotinaQueimacao = null; }
 
         // Aplica o primeiro frame do Idle imediatamente
         AplicarPrimeiroFrame(dadosPersonagem.framesIdle, dadosPersonagem.spriteCorpo);
@@ -305,6 +319,8 @@ public class LutadorController2D : MonoBehaviour
         defendendo = false;
         morreu = false;
         estaNoChao = false;
+        espadaEmChamasAtiva = false;
+        if (rotinaQueimacao != null) { StopCoroutine(rotinaQueimacao); rotinaQueimacao = null; }
 
         movimentoIA = 0f;
         defesaIA = false;
@@ -569,6 +585,7 @@ public class LutadorController2D : MonoBehaviour
                 if (distHit <= dadosPersonagem.alcanceAtaque)
                 {
                     oponente.ReceberDano(dadosPersonagem.danoAtaque);
+                    AplicarQueimacaoSeEspadaEmChamas();
                     TocarSom(
                         dadosPersonagem.somAtaqueImpacto,
                         dadosPersonagem.volumeAtaqueImpacto
@@ -582,6 +599,7 @@ public class LutadorController2D : MonoBehaviour
                 if (distFollow <= dadosPersonagem.alcanceAtaque)
                 {
                     oponente.ReceberDano(Mathf.RoundToInt(dadosPersonagem.danoAtaque * 0.5f));
+                    AplicarQueimacaoSeEspadaEmChamas();
                     TocarSom(
                         dadosPersonagem.somAtaqueImpacto,
                         dadosPersonagem.volumeAtaqueImpacto
@@ -592,9 +610,36 @@ public class LutadorController2D : MonoBehaviour
         }
     }
 
+    // Espada em chamas ativa (ver AlternarEspadaEmChamas) faz o ataque básico
+    // também queimar quem levou o golpe. A queimação nunca é bloqueada — só a
+    // duração encolhe se o alvo estava defendendo no instante do impacto.
+    void AplicarQueimacaoSeEspadaEmChamas()
+    {
+        if (!espadaEmChamasAtiva || oponente == null || oponente.EstaMorto()) return;
+
+        bool oponenteDefendendo = oponente.EstaDefendendo();
+        float duracao = oponenteDefendendo
+            ? dadosPersonagem.duracaoQueimacaoDefendendo
+            : dadosPersonagem.duracaoQueimacao;
+
+        oponente.AplicarQueimadura(dadosPersonagem.danoQueimacaoPorSegundo, duracao);
+    }
+
     void AtaqueEspecial()
     {
         if (oponente == null || dadosPersonagem == null || morreu) return;
+
+        // Especial alternável (ex: espada em chamas do Diego): não é "toca uma vez e
+        // acaba" como os outros — é liga/desliga. Sai ANTES do gate EmAcaoOfensiva()
+        // de propósito: ligar/desligar não deve depender de estar no meio de outra
+        // animação de golpe, é só uma troca de estado + sprite, não uma ação ofensiva
+        // nova em si.
+        if (dadosPersonagem.especialAlternavelComQueimadura)
+        {
+            AlternarEspadaEmChamas();
+            return;
+        }
+
         if (EmAcaoOfensiva()) return;
         if (!PodeUsarEspecial()) return;
 
@@ -620,6 +665,89 @@ public class LutadorController2D : MonoBehaviour
             dadosPersonagem.volumeEspecial
         );
         IniciarAnimacaoUmaVez(EstadoAnim.Special);
+    }
+
+    // ── Especial alternável — Espada em Chamas (ex: Diego) ──────────────────
+    void AlternarEspadaEmChamas()
+    {
+        if (espadaEmChamasAtiva)
+        {
+            DesativarEspadaEmChamas();
+            return;
+        }
+
+        float custoAtivacao = dadosPersonagem.custoAtivarEspecialAlternavel / 100f * dadosPersonagem.energiaMax;
+        if (energiaAtual < custoAtivacao) return; // sem energia nem pra ativar
+
+        energiaAtual -= custoAtivacao;
+        energiaAtual = Mathf.Clamp(energiaAtual, 0f, dadosPersonagem.energiaMax);
+        espadaEmChamasAtiva = true;
+
+        TocarSom(
+            dadosPersonagem.somEspecial,
+            dadosPersonagem.volumeEspecial
+        );
+    }
+
+    void DesativarEspadaEmChamas()
+    {
+        espadaEmChamasAtiva = false;
+    }
+
+    // Drena energia por segundo enquanto o especial estiver ativo, chamado todo
+    // Update() (independe de estado/animação — roda em paralelo a qualquer coisa
+    // que o personagem esteja fazendo). Desativa sozinho ao zerar a energia.
+    void DrenarEspadaEmChamasSeAtiva()
+    {
+        if (!espadaEmChamasAtiva || dadosPersonagem == null) return;
+
+        float dreno = dadosPersonagem.drenoPorSegundoEspecialAlternavel / 100f * dadosPersonagem.energiaMax * Time.deltaTime;
+        energiaAtual -= dreno;
+
+        if (energiaAtual <= 0f)
+        {
+            energiaAtual = 0f;
+            espadaEmChamasAtiva = false;
+        }
+    }
+
+    // Chamada pelo ATACANTE no oponente que acabou de ser acertado por um golpe com
+    // a espada em chamas. A queimação em si nunca é reduzida pela defesa — só a
+    // DURAÇÃO é mais curta se o alvo estava defendendo no instante do impacto (ver
+    // AplicarDanoAtaquePorFrame). Reinicia a contagem em vez de empilhar se já
+    // estiver queimando — assim golpes seguidos não somam dano por segundo.
+    public void AplicarQueimadura(int danoPorSegundo, float duracao)
+    {
+        if (morreu) return;
+        if (rotinaQueimacao != null) StopCoroutine(rotinaQueimacao);
+        rotinaQueimacao = StartCoroutine(RotinaQueimacao(danoPorSegundo, duracao));
+    }
+
+    IEnumerator RotinaQueimacao(int danoPorSegundo, float duracao)
+    {
+        int ticks = Mathf.Max(1, Mathf.RoundToInt(duracao)); // 1 tick por segundo
+        for (int i = 0; i < ticks; i++)
+        {
+            yield return new WaitForSeconds(1f);
+            if (morreu) break;
+            AplicarDanoQueimacaoTick(danoPorSegundo);
+        }
+        rotinaQueimacao = null;
+    }
+
+    // Dano de queimação é aplicado direto na vida, sem passar pela redução de
+    // defesa de ReceberDano (a queimação "não pode ser defendida") e sem disparar
+    // a animação de Hit a cada tick — senão o personagem ficaria travado em
+    // stagger constante enquanto queimasse, em vez de continuar lutando normalmente.
+    void AplicarDanoQueimacaoTick(int dano)
+    {
+        if (morreu) return;
+
+        vidaAtual -= dano;
+        if (vidaAtual < 0) vidaAtual = 0;
+
+        if (vidaAtual <= 0)
+            Morrer();
     }
 
     // ── Golpe único: salto normal + rachaduras no chão (ex: Jamanta) ────────
@@ -1302,7 +1430,7 @@ public class LutadorController2D : MonoBehaviour
     // sprites — se tiver só 1, fica só nele; se tiver mais de 2, os extras não são usados.
     void AtualizarFrameJump()
     {
-        Sprite[] frames = dadosPersonagem != null ? dadosPersonagem.framesJump : null;
+        Sprite[] frames = ObterFramesDoEstado(EstadoAnim.Jump);
         if (frames == null || frames.Length == 0 || spriteRenderer == null) return;
 
         int novoFrame;
@@ -1338,17 +1466,26 @@ public class LutadorController2D : MonoBehaviour
         if (dadosPersonagem == null) return null;
         switch (estado)
         {
-            case EstadoAnim.Idle: return dadosPersonagem.framesIdle;
-            case EstadoAnim.Move: return dadosPersonagem.framesMove;
-            case EstadoAnim.Jump: return dadosPersonagem.framesJump;
-            case EstadoAnim.Defend: return dadosPersonagem.framesDefend;
-            case EstadoAnim.Attack: return dadosPersonagem.framesAttack;
+            case EstadoAnim.Idle: return ComVarianteFogo(dadosPersonagem.framesIdle, dadosPersonagem.framesIdleFogo);
+            case EstadoAnim.Move: return ComVarianteFogo(dadosPersonagem.framesMove, dadosPersonagem.framesMoveFogo);
+            case EstadoAnim.Jump: return ComVarianteFogo(dadosPersonagem.framesJump, dadosPersonagem.framesJumpFogo);
+            case EstadoAnim.Defend: return ComVarianteFogo(dadosPersonagem.framesDefend, dadosPersonagem.framesDefendFogo);
+            case EstadoAnim.Attack: return ComVarianteFogo(dadosPersonagem.framesAttack, dadosPersonagem.framesAttackFogo);
             case EstadoAnim.Special: return dadosPersonagem.framesSpecial;
             case EstadoAnim.Ultimate: return dadosPersonagem.framesUltimate;
             case EstadoAnim.Hit: return dadosPersonagem.framesHit;
             case EstadoAnim.Death: return dadosPersonagem.framesDeath;
             default: return dadosPersonagem.framesIdle;
         }
+    }
+
+    // Enquanto a espada em chamas estiver ativa, troca pela variante em chamas do
+    // estado — mas só se ela estiver preenchida. Personagem sem a variante (ou sem
+    // o especial alternável ligado) continua usando os frames normais de sempre.
+    Sprite[] ComVarianteFogo(Sprite[] normal, Sprite[] fogo)
+    {
+        if (espadaEmChamasAtiva && fogo != null && fogo.Length > 0) return fogo;
+        return normal;
     }
 
     float ObterFpsDoEstado(EstadoAnim estado)

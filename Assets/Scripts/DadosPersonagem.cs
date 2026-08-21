@@ -96,22 +96,50 @@ public class DadosPersonagem : ScriptableObject
     [Header("Energia")]
     public float velocidadeRecargaEnergia = 10f;
 
+    // ── Especial alternável — Espada em Chamas (ex: Diego) ──────────────────
+    // Diferente do especial padrão (toca uma vez e acaba), esse é LIGA/DESLIGA:
+    // primeiro toque ativa (custa uma % da energia máxima na hora), enquanto fica
+    // ativo drena energia por segundo até acabar sozinho, e um segundo toque
+    // desativa manualmente antes disso. Ativo, o ataque básico passa a aplicar
+    // queimação (dano contínuo que ignora bloqueio) além do dano normal do golpe.
+    [Header("Especial Alternável — Espada em Chamas (ex: Diego)")]
+    [Tooltip("Ligue só no personagem que usa esse tipo de especial (liga/desliga, ex: Diego) — substitui o especial padrão por completo nele.")]
+    public bool especialAlternavelComQueimadura = false;
+    [Tooltip("Quanto da energia MÁXIMA (%) é gasto no instante em que o especial é ATIVADO")]
+    public float custoAtivarEspecialAlternavel = 30f;
+    [Tooltip("Quanto da energia MÁXIMA (%) é drenado POR SEGUNDO enquanto o especial está ativo — ele desativa sozinho quando a energia chega a zero")]
+    public float drenoPorSegundoEspecialAlternavel = 3f;
+    [Tooltip("Dano de queimação por segundo, aplicado pelo ataque básico enquanto o especial estiver ativo")]
+    public int danoQueimacaoPorSegundo = 3;
+    [Tooltip("Duração da queimação (segundos) quando o golpe acerta um oponente que NÃO está defendendo")]
+    public float duracaoQueimacao = 5f;
+    [Tooltip("Duração da queimação (segundos) quando o golpe acerta um oponente que ESTÁ defendendo no momento do impacto — a queimação em si nunca é bloqueada, só a duração fica mais curta")]
+    public float duracaoQueimacaoDefendendo = 3f;
+
     // ── Animações ──────────────────────────────────────────────────────────
     [Header("Animação — Idle (parado)")]
     public Sprite[] framesIdle;
     public float fpsIdle = 6f;
+    [Tooltip("Variante com a espada em chamas (especial alternável ativo). Vazio = usa os frames normais acima.")]
+    public Sprite[] framesIdleFogo;
 
     [Header("Animação — Move (andando)")]
     public Sprite[] framesMove;
     public float fpsMove = 10f;
+    [Tooltip("Variante com a espada em chamas (especial alternável ativo). Vazio = usa os frames normais acima.")]
+    public Sprite[] framesMoveFogo;
 
     [Header("Animação — Jump (no ar)")]
     public Sprite[] framesJump;
     public float fpsJump = 8f;
+    [Tooltip("Variante com a espada em chamas (especial alternável ativo). Vazio = usa os frames normais acima.")]
+    public Sprite[] framesJumpFogo;
 
     [Header("Animação — Defend (defendendo)")]
     public Sprite[] framesDefend;
     public float fpsDefend = 8f;
+    [Tooltip("Variante com a espada em chamas (especial alternável ativo). Vazio = usa os frames normais acima.")]
+    public Sprite[] framesDefendFogo;
 
     [Header("Animação — Attack (ataque normal) — toca uma vez")]
     public Sprite[] framesAttack;
@@ -120,6 +148,8 @@ public class DadosPersonagem : ScriptableObject
     public int frameInicioHitbox = 1;
     [Tooltip("Frame (0-based) do follow-through com dano reduzido. -1 para desativar")]
     public int frameFollowThrough = -1;
+    [Tooltip("Variante com a espada em chamas (especial alternável ativo). Vazio = usa os frames normais acima.")]
+    public Sprite[] framesAttackFogo;
 
     [Header("Animação — Special (especial) — toca uma vez")]
     public Sprite[] framesSpecial;
