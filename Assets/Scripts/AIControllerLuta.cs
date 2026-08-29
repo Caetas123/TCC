@@ -250,6 +250,11 @@ public class AIControllerLuta : MonoBehaviour
         if (cronometroAcao <= 0f)
         {
             ExecutarAcoesDoEstado();
+            // Fora do switch de estado de propósito — é uma decisão de POSTURA
+            // ("devia estar ligada agora?"), não uma ação pontual de um estado
+            // específico, então precisa ser reavaliada não importa em qual
+            // comportamento a IA está.
+            GerenciarEspecialAlternavel();
             cronometroAcao = Random.Range(tempoReacaoMin, tempoReacaoMax) * 0.6f;
         }
 
@@ -675,9 +680,20 @@ public class AIControllerLuta : MonoBehaviour
     }
 
     // ── Ações de combate ──────────────────────────────────────────────────
+    // Guarda única e central: nenhum golpe (ataque/especial/ultimate) sai
+    // enquanto a IA estiver comprometida com o bloqueio (cronometroDefesa > 0).
+    // LutadorController2D recusa o golpe de qualquer forma quando defendendo
+    // está ativo — sem essa checagem aqui, várias combinações de estado (ex:
+    // Defender decidindo "talvez bloqueie + talvez contra-ataque" no mesmo
+    // instante, ou TentarEsquivar segurando bloqueio no mesmo frame em que
+    // Pressionar tenta atacar) gastavam o cooldown do golpe sem ele realmente
+    // sair, porque o personagem ainda estava travado defendendo.
+    bool ComprometidaComBloqueio() => cronometroDefesa > 0f;
+
     void TentarAtacarSeNoAlcance(float distancia)
     {
         if (lutador.dadosPersonagem == null) return;
+        if (ComprometidaComBloqueio()) return;
         if (cronometroAtaqueCooldown > 0f) return;
 
         float alcance = lutador.dadosPersonagem.alcanceAtaque;
@@ -719,10 +735,15 @@ public class AIControllerLuta : MonoBehaviour
         comboSegundoHitPendente = false;
         if (lutador.dadosPersonagem == null) return;
 
+        if (ComprometidaComBloqueio()) { hitsDoComboAtual = 0; return; }
+
         float distancia = lutador.DistanciaDoOponente();
         bool encadeou = false;
 
-        if (distancia <= lutador.dadosPersonagem.alcanceEspecial
+        // Especial alternável não entra em combo como um golpe normal — é
+        // liga/desliga, gerenciado à parte (ver GerenciarEspecialAlternavel).
+        if (!lutador.TemEspecialAlternavel()
+            && distancia <= lutador.dadosPersonagem.alcanceEspecial
             && cronometroEspecialCooldown <= 0f
             && !DevoGuardarEnergiaParaUltimate()
             && Random.value < chanceEspecialBase)
@@ -756,9 +777,60 @@ public class AIControllerLuta : MonoBehaviour
         }
     }
 
+    // ── Especial alternável (ex: espada em chamas do Diego) ─────────────────
+    // Diferente do especial normal ("vale a pena castar agora?"), esse é
+    // liga/desliga — a decisão certa é "devia estar ligado NESSE MOMENTO?", não
+    // "vou usar agora". Sem essa gestão dedicada, a IA trataria como um golpe
+    // de "usar e esquecer" (podendo ligar e desligar à toa a cada tentativa) e
+    // nunca aproveitaria que atacar com ele ativo aplica queimação extra.
+    void GerenciarEspecialAlternavel()
+    {
+        if (!lutador.TemEspecialAlternavel()) return;
+        if (cronometroEspecialCooldown > 0f) return; // evita ligar/desligar rápido demais
+
+        bool ativo = lutador.EstaComEspecialAlternavelAtivo();
+        float energia = lutador.ObterEnergiaNormalizada();
+        bool devesEstarAtiva;
+
+        if (!ativo)
+        {
+            // Só ativa numa postura que vai realmente aproveitar (pressionando de
+            // verdade, não zoneando/recuando) e com energia de sobra — o custo de
+            // ativação já consome uma fatia, e ainda drena por segundo depois.
+            bool posturaAgressiva = estadoAtual == EstadoComportamento.Pressionar
+                || estadoAtual == EstadoComportamento.Finalizar
+                || estadoAtual == EstadoComportamento.Aproximar;
+            devesEstarAtiva = posturaAgressiva && energia > 0.5f && Random.value < chanceEspecialBase;
+        }
+        else
+        {
+            // Desliga se a postura virou defensiva (sem motivo pra continuar
+            // drenando energia enquanto foge/segura bloqueio) ou se a energia já
+            // ficou curta demais pra sustentar mais um pouco.
+            bool posturaDefensiva = estadoAtual == EstadoComportamento.Defender
+                || estadoAtual == EstadoComportamento.Recuar
+                || estadoAtual == EstadoComportamento.Recuperar;
+            devesEstarAtiva = !(posturaDefensiva || energia < 0.15f);
+        }
+
+        if (devesEstarAtiva != ativo)
+        {
+            lutador.IA_SolicitarEspecial();
+            // Cooldown mais curto que o de um especial normal — é só um toggle,
+            // não uma animação de golpe — mas ainda evita ligar/desligar em ticks
+            // consecutivos por causa de flutuação de estado/energia.
+            cronometroEspecialCooldown = cooldownEspecial * 0.5f;
+        }
+    }
+
     void TentarEspecialSeVale(float distancia)
     {
         if (lutador.dadosPersonagem == null) return;
+        // Especial alternável (ex: espada em chamas do Diego) é gerenciado à
+        // parte, por postura (ver GerenciarEspecialAlternavel) — não por "vale a
+        // pena castar agora", já que não é um golpe único, é um liga/desliga.
+        if (lutador.TemEspecialAlternavel()) return;
+        if (ComprometidaComBloqueio()) return;
         if (distancia > lutador.dadosPersonagem.alcanceEspecial) return;
         if (cronometroEspecialCooldown > 0f) return;
         if (DevoGuardarEnergiaParaUltimate()) return;
@@ -790,7 +862,13 @@ public class AIControllerLuta : MonoBehaviour
     void TentarUltimateSeVale(float distancia)
     {
         if (lutador.dadosPersonagem == null) return;
-        if (distancia > lutador.dadosPersonagem.alcanceUltimate) return;
+        if (ComprometidaComBloqueio()) return;
+        // O ultimate de raio único (ex: Jamanta) atravessa a tela inteira — não é
+        // um golpe corpo a corpo, então não faz sentido travar pelo alcanceUltimate
+        // "normal". Sem isso a IA praticamente nunca soltava o golpe mais vistoso
+        // do personagem, só quando por acaso já estava perto.
+        bool respeitaAlcance = lutador.dadosPersonagem.spriteRaioUltimate == null;
+        if (respeitaAlcance && distancia > lutador.dadosPersonagem.alcanceUltimate) return;
         if (cronometroUltimateCooldown > 0f) return;
         if (lutador.ObterEnergiaNormalizada() < 0.85f) return;
         // Com energia cheia e no alcance, o ultimate DEVE sair — é o momento de

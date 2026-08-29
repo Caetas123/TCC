@@ -1529,6 +1529,12 @@ public class LutadorController2D : MonoBehaviour
     public bool EstaLevandoHit() => animacaoUmaVezAtiva && estadoAtual == EstadoAnim.Hit;
     public EstadoAnim ObterEstadoAnim() => estadoAtual;
 
+    // Consultado pela IA pra saber se esse personagem usa o especial alternável
+    // (liga/desliga) e se ele está ligado agora — sem isso ela trata a espada em
+    // chamas como um especial "usar e esquecer" igual aos outros.
+    public bool TemEspecialAlternavel() => dadosPersonagem != null && dadosPersonagem.especialAlternavelComQueimadura;
+    public bool EstaComEspecialAlternavelAtivo() => espadaEmChamasAtiva;
+
     public float DistanciaDoOponente()
     {
         if (oponente == null) return Mathf.Infinity;
