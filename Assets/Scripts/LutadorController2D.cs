@@ -131,6 +131,13 @@ public class LutadorController2D : MonoBehaviour
     // velocidadeX é recalculada do zero a cada frame).
     private float velocidadeRecuoX = 0f;
 
+    // true entre o instante do disparo e o raio sumir da tela — AtualizarAnimacao()
+    // usa isso pra congelar no frame de lançamento em vez de deixar a animação de
+    // Ultimate terminar sozinha (só 7 frames, bem mais rápido que o raio fica
+    // visível) e voltar o personagem a andar enquanto o próprio golpe ainda está
+    // acontecendo na tela.
+    private bool travandoUltimateAteRaioSumir = false;
+
     void Start()
     {
         if (rb == null) rb = GetComponent<Rigidbody2D>();
@@ -306,6 +313,7 @@ public class LutadorController2D : MonoBehaviour
         morreu = false;
         espadaEmChamasAtiva = false;
         velocidadeRecuoX = 0f;
+        travandoUltimateAteRaioSumir = false;
         if (rotinaQueimacao != null) { StopCoroutine(rotinaQueimacao); rotinaQueimacao = null; }
 
         // Aplica o primeiro frame do Idle imediatamente
@@ -335,6 +343,7 @@ public class LutadorController2D : MonoBehaviour
         estaNoChao = false;
         espadaEmChamasAtiva = false;
         velocidadeRecuoX = 0f;
+        travandoUltimateAteRaioSumir = false;
         if (rotinaQueimacao != null) { StopCoroutine(rotinaQueimacao); rotinaQueimacao = null; }
 
         movimentoIA = 0f;
@@ -1098,26 +1107,40 @@ public class LutadorController2D : MonoBehaviour
     // 2) Espera até o frame configurado como lançamento — sincroniza o recuo e o
     //    raio com o momento exato em que ele solta o golpe, não com o instante em
     //    que o botão foi apertado.
-    // 3) Nesse instante: aplica o recuo (empurrão suave pra trás, decai sozinho) e
-    //    mostra o raio (com lampejo inicial opcional).
+    // 3) Nesse instante: CONGELA na pose de lançamento (travandoUltimateAteRaioSumir
+    //    — sem isso a animação de Ultimate, com só 7 frames, terminava e voltava
+    //    o personagem a andar bem antes do raio sumir da tela), aplica o recuo
+    //    (empurrão suave pra trás, decai sozinho) e mostra o raio (com lampejo
+    //    inicial opcional).
     // 4) Espera um delay bem curto (delayRaioUltimate) — só pra dar a sensação de
     //    trajeto, nem instantâneo nem lento feito a rachadura.
-    // 5) Aplica o dano. O raio some sozinho depois de duracaoVisualRaioUltimate
-    //    (agendado no passo 3, não bloqueia a coroutine).
+    // 5) Aplica o dano, então segura a pose pelo tempo que falta até o raio sumir
+    //    de vez (duracaoVisualRaioUltimate) e só então libera o personagem — igual
+    //    ao que a animação faria sozinha ao chegar no último frame.
     IEnumerator UltimateRaioComRecuo(LutadorController2D alvo)
     {
         float fps = dadosPersonagem.fpsUltimate > 0f ? dadosPersonagem.fpsUltimate : 10f;
         float tempoAteLancamento = Mathf.Max(0f, dadosPersonagem.frameLancamentoRaioUltimate) / fps;
         yield return new WaitForSeconds(tempoAteLancamento);
 
+        frameAtual = Mathf.Max(0, dadosPersonagem.frameLancamentoRaioUltimate);
+        AplicarFrameAtual();
+        travandoUltimateAteRaioSumir = true;
+
         // Recuo: empurra pra trás, na direção oposta a quem ele está olhando
         float direcaoRecuo = transform.localScale.x > 0f ? -1f : 1f;
         StartCoroutine(RotinaRecuoUltimate(direcaoRecuo, dadosPersonagem.forcaRecuoUltimate, dadosPersonagem.duracaoRecuoUltimate));
 
+        // Lampejo primeiro, sozinho na tela por duracaoLampejoRaioUltimate, e SÓ
+        // DEPOIS o raio cheio nasce — antes os dois eram criados no mesmo instante
+        // (sem yield entre eles), então visualmente sempre apareciam sobrepostos
+        // desde o primeiro frame renderizado: o retângulo grande do raio "engolia"
+        // o lampejo pequeno, que nunca dava tempo de ser percebido sozinho.
         if (dadosPersonagem.spriteRaioUltimateInicio != null)
         {
             GameObject lampejo = CriarLampejoRaioUltimate();
-            if (lampejo != null) Destroy(lampejo, Mathf.Max(0.03f, dadosPersonagem.delayRaioUltimate));
+            yield return new WaitForSeconds(Mathf.Max(0.03f, dadosPersonagem.duracaoLampejoRaioUltimate));
+            if (lampejo != null) Destroy(lampejo);
         }
 
         GameObject raio = CriarRaioUltimate(alvo);
@@ -1127,6 +1150,26 @@ public class LutadorController2D : MonoBehaviour
 
         if (alvo != null && !alvo.EstaMorto())
             alvo.ReceberDano(dadosPersonagem.danoUltimate);
+
+        // Já esperamos delayRaioUltimate acima — só falta o restante até bater
+        // com duracaoVisualRaioUltimate (quando o raio de fato some da tela).
+        float tempoRestante = dadosPersonagem.duracaoVisualRaioUltimate - dadosPersonagem.delayRaioUltimate;
+        if (tempoRestante > 0f)
+            yield return new WaitForSeconds(tempoRestante);
+
+        travandoUltimateAteRaioSumir = false;
+
+        // Só libera se ninguém mais mexeu no estado nesse meio tempo (ex: o
+        // personagem levou um Hit, que tem prioridade maior e já assumiu sozinho
+        // — nesse caso não é a gente que deve decidir pra onde a animação volta).
+        if (estadoAtual == EstadoAnim.Ultimate)
+        {
+            animacaoUmaVezAtiva = false;
+            estadoAtual = estadoAnterior;
+            frameAtual = 0;
+            cronometroFrame = 0f;
+            AplicarFrameAtual();
+        }
     }
 
     // Decaimento suave (ease-out): forte no início, esvaindo até 0 — sensação de
@@ -1475,6 +1518,16 @@ public class LutadorController2D : MonoBehaviour
             AtualizarFrameJump();
             return;
         }
+
+        // ── Ultimate único: segura a pose de disparo enquanto o raio estiver na
+        // tela ────────────────────────────────────────────────────────────────
+        // Sem isso, a animação de Ultimate (só 7 frames, ~0.7s) terminava e
+        // voltava pro Idle/Move MUITO antes do raio sumir (que pode durar vários
+        // segundos, configurável) — o personagem já andando de novo enquanto o
+        // próprio golpe dele ainda estava na tela. UltimateRaioComRecuo() controla
+        // quando essa trava liga/desliga.
+        if (travandoUltimateAteRaioSumir && estadoAtual == EstadoAnim.Ultimate)
+            return;
 
         // ── Avança o frame ────────────────────────────────────────────────
         Sprite[] frames = ObterFramesDoEstado(estadoAtual);

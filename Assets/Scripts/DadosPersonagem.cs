@@ -73,6 +73,8 @@ public class DadosPersonagem : ScriptableObject
     public Sprite spriteRaioUltimate;
     [Tooltip("Sprite do lampejo/clarão no instante do disparo, antes do raio esticar de verdade. Opcional — deixe vazio pra pular direto pro raio cheio.")]
     public Sprite spriteRaioUltimateInicio;
+    [Tooltip("Quanto tempo (segundos) o lampejo fica sozinho na tela ANTES do raio cheio aparecer — sem isso os dois nasciam juntos no mesmo instante e o lampejo nunca era percebido, só o raio grande já pronto.")]
+    public float duracaoLampejoRaioUltimate = 0.08f;
     [Tooltip("Frame (0-based) da animação de Ultimate em que o raio de fato dispara — os frames antes disso são só o personagem se posicionando")]
     public int frameLancamentoRaioUltimate = 4;
     [Range(0f, 1f)]
