@@ -1134,7 +1134,12 @@ public class LutadorController2D : MonoBehaviour
 
             SpriteRenderer sr = p.AddComponent<SpriteRenderer>();
             sr.sprite = spriteParticula;
-            sr.color = Color.white;
+            // Marrom-acinzentado, imitando a cor da própria rachadura (pedaço de
+            // chão se soltando) — antes era branco puro, destoava do resto do
+            // efeito. Duas variações pra não ficar tudo idêntico.
+            sr.color = Random.value < 0.5f
+                ? new Color(0.45f, 0.4f, 0.35f)
+                : new Color(0.58f, 0.52f, 0.46f);
             // Mesma sorting layer do personagem, mas sempre por cima dele — garante
             // que aparecem visíveis independente de como as layers do projeto estão
             // configuradas.
