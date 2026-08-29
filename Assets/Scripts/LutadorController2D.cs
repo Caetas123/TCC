@@ -1064,15 +1064,14 @@ public class LutadorController2D : MonoBehaviour
         if (!PodeUsarUltimate()) return;
 
         // Personagem com spriteRaioUltimate configurado usa o ultimate único (raio
-        // com recuo) em vez do dano instantâneo padrão.
+        // com recuo) em vez do dano instantâneo padrão. Diferente do ultimate
+        // genérico abaixo, esse NÃO checa alcanceUltimate — é um projétil que
+        // atravessa a tela até o oponente, não um golpe corpo a corpo, então
+        // sempre dispara independente da distância entre os dois.
         if (dadosPersonagem.spriteRaioUltimate != null)
         {
-            float distanciaRaio = Vector2.Distance(transform.position, oponente.transform.position);
-            if (distanciaRaio <= dadosPersonagem.alcanceUltimate)
-            {
-                GastarEnergiaUltimate();
-                StartCoroutine(UltimateRaioComRecuo(oponente));
-            }
+            GastarEnergiaUltimate();
+            StartCoroutine(UltimateRaioComRecuo(oponente));
 
             TocarSom(dadosPersonagem.somUltimate, dadosPersonagem.volumeUltimate);
             IniciarAnimacaoUmaVez(EstadoAnim.Ultimate);
