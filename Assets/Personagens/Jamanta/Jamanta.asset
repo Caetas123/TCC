@@ -38,13 +38,14 @@ MonoBehaviour:
   danoUltimate: 55
   alcanceUltimate: 3
   tipoUsoUltimate: 1
-  spriteRaioUltimate: {fileID: 2098203685382816704, guid: 0fa9bb6a537c04c46a8db8b5ba7aec4f, type: 3}
-  spriteRaioUltimateInicio: {fileID: 3203022328712661734, guid: 36a1fa83752ced74ab5985abc2d5272f, type: 3}
-  duracaoLampejoRaioUltimate: 0.08
+  spriteRaioUltimate: {fileID: 1273242584523100952, guid: ca75610c65b93cc468bad14139dbc3c6, type: 3}
   frameLancamentoRaioUltimate: 4
   fracaoAlturaRaioUltimate: 0.7
+  duracaoCrescimentoRaio: 0.08
   delayRaioUltimate: 0.05
   duracaoVisualRaioUltimate: 0.15
+  duracaoEnfraquecimentoRaio: 0.25
+  energiaDrenoRaioEnfraquecendo: 15
   forcaRecuoUltimate: 6
   duracaoRecuoUltimate: 0.25
   custoUltimate: 80

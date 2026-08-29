@@ -65,25 +65,29 @@ public class DadosPersonagem : ScriptableObject
     // ── Ultimate Único — Raio com Recuo (ex: Jamanta) ────────────────────────
     // Diferente do ultimate padrão (dano instantâneo no aperto do botão), esse
     // sincroniza o dano com um frame específico da animação de Ultimate (o
-    // personagem se posiciona antes) e some com o disparo em duas etapas: recuo +
-    // raio, com um atraso bem curto antes do dano — não é instantâneo, mas também
-    // não é lento feito a rachadura.
+    // personagem se posiciona antes) e o raio tem ciclo de vida em 3 fases:
+    // CRESCE (rápido, saindo da origem até o alvo) → fica CHEIO (dano aplicado
+    // aqui) → ENFRAQUECE (esmaece até sumir, e nessa fase dá um dreno de ENERGIA
+    // no alvo em vez de dano de vida — o raio "morrendo" ainda entrega um resíduo,
+    // só que mais fraco).
     [Header("Ultimate Único — Raio com Recuo (ex: Jamanta)")]
-    [Tooltip("Sprite do raio disparado. Deixe VAZIO pra esse personagem usar o ultimate padrão (dano instantâneo, sem recuo, sem raio).")]
+    [Tooltip("Sprite ÚNICO do raio, já com a ponta de origem (brilho) e o corpo do raio no mesmo desenho — não precisa mais de um sprite de lampejo separado.")]
     public Sprite spriteRaioUltimate;
-    [Tooltip("Sprite do lampejo/clarão no instante do disparo, antes do raio esticar de verdade. Opcional — deixe vazio pra pular direto pro raio cheio.")]
-    public Sprite spriteRaioUltimateInicio;
-    [Tooltip("Quanto tempo (segundos) o lampejo fica sozinho na tela ANTES do raio cheio aparecer — sem isso os dois nasciam juntos no mesmo instante e o lampejo nunca era percebido, só o raio grande já pronto.")]
-    public float duracaoLampejoRaioUltimate = 0.08f;
     [Tooltip("Frame (0-based) da animação de Ultimate em que o raio de fato dispara — os frames antes disso são só o personagem se posicionando")]
     public int frameLancamentoRaioUltimate = 4;
     [Range(0f, 1f)]
     [Tooltip("A que altura do corpo o raio sai, como FRAÇÃO da altura real do personagem na cena (0 = pé, 1 = topo da cabeça) — não é um valor fixo, porque a escala dos personagens muda de cena pra cena")]
     public float fracaoAlturaRaioUltimate = 0.7f;
-    [Tooltip("Atraso (segundos) entre o disparo e o dano realmente acertar — só pra dar a sensação de trajeto. Bem mais curto que duracaoHitboxRachadura.")]
+    [Tooltip("Duração (segundos) do crescimento do raio, saindo da origem até alcançar o alvo — rápido e natural, não instantâneo (tipo o corte em pedaços da rachadura, só que revelado por escala em vez de pedaços fixos)")]
+    public float duracaoCrescimentoRaio = 0.08f;
+    [Tooltip("Atraso (segundos) entre o raio terminar de crescer e o dano realmente acertar — só pra dar uma sensação extra de impacto, além do próprio crescimento")]
     public float delayRaioUltimate = 0.05f;
-    [Tooltip("Quanto tempo (segundos) o sprite do raio cheio fica visível na tela")]
+    [Tooltip("Quanto tempo (segundos) o raio fica CHEIO (força total, depois de crescer e antes de começar a enfraquecer)")]
     public float duracaoVisualRaioUltimate = 0.15f;
+    [Tooltip("Duração (segundos) do enfraquecimento do raio — esmaece (fade) até sumir de vez, em vez de cortar de uma vez")]
+    public float duracaoEnfraquecimentoRaio = 0.25f;
+    [Tooltip("Quanto de ENERGIA (não vida) o oponente perde quando o raio começa a enfraquecer — o resíduo do golpe morrendo ainda drena algo, só que energia em vez de dano")]
+    public float energiaDrenoRaioEnfraquecendo = 15f;
     [Tooltip("Força do recuo (empurrão pra trás) no instante em que o raio dispara")]
     public float forcaRecuoUltimate = 6f;
     [Tooltip("Duração do recuo (segundos) — decai suavemente até parar, não é um teleporte instantâneo")]

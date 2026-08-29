@@ -774,6 +774,16 @@ public class LutadorController2D : MonoBehaviour
             Morrer();
     }
 
+    // Dreno de energia "puro" — usado pelo raio do ultimate do Jamanta na fase em
+    // que ele está enfraquecendo (perdendo força): nessa hora o resíduo do golpe
+    // não tira mais vida, só energia. Não mexe em vida nem dispara Hit — bem mais
+    // parecido com "custo" do que com dano de combate.
+    public void DrenarEnergia(float quantidade)
+    {
+        if (morreu || dadosPersonagem == null) return;
+        energiaAtual = Mathf.Clamp(energiaAtual - quantidade, 0f, dadosPersonagem.energiaMax);
+    }
+
     // ── Golpe único: salto normal + rachaduras no chão (ex: Jamanta) ────────
     // 1) Windup (2 frames do Special) parado no chão
     // 2) Salto — MESMA força/altura do pulo normal (não mexe nisso)
@@ -1109,14 +1119,11 @@ public class LutadorController2D : MonoBehaviour
     //    que o botão foi apertado.
     // 3) Nesse instante: CONGELA na pose de lançamento (travandoUltimateAteRaioSumir
     //    — sem isso a animação de Ultimate, com só 7 frames, terminava e voltava
-    //    o personagem a andar bem antes do raio sumir da tela), aplica o recuo
-    //    (empurrão suave pra trás, decai sozinho) e mostra o raio (com lampejo
-    //    inicial opcional).
-    // 4) Espera um delay bem curto (delayRaioUltimate) — só pra dar a sensação de
-    //    trajeto, nem instantâneo nem lento feito a rachadura.
-    // 5) Aplica o dano, então segura a pose pelo tempo que falta até o raio sumir
-    //    de vez (duracaoVisualRaioUltimate) e só então libera o personagem — igual
-    //    ao que a animação faria sozinha ao chegar no último frame.
+    //    o personagem a andar bem antes do raio sumir da tela) e aplica o recuo
+    //    (empurrão suave pra trás, decai sozinho).
+    // 4) O raio propriamente dito tem 3 fases (RotinaCicloDeVidaDoRaio): CRESCE →
+    //    CHEIO (dano aqui) → ENFRAQUECE (drena energia do alvo, não vida).
+    // 5) Só libera o personagem quando o raio efetivamente sumir de vez.
     IEnumerator UltimateRaioComRecuo(LutadorController2D alvo)
     {
         float fps = dadosPersonagem.fpsUltimate > 0f ? dadosPersonagem.fpsUltimate : 10f;
@@ -1131,33 +1138,7 @@ public class LutadorController2D : MonoBehaviour
         float direcaoRecuo = transform.localScale.x > 0f ? -1f : 1f;
         StartCoroutine(RotinaRecuoUltimate(direcaoRecuo, dadosPersonagem.forcaRecuoUltimate, dadosPersonagem.duracaoRecuoUltimate));
 
-        // Lampejo primeiro, sozinho na tela por duracaoLampejoRaioUltimate (o
-        // "carregar" antes de soltar o golpe) — só DEPOIS o raio cheio nasce. Mas
-        // o lampejo continua na tela junto com o raio depois disso: ele É a ponta
-        // de origem do raio (onde o raio "nasce" na mão), não um efeito avulso que
-        // desaparece quando o raio completo aparece — os dois juntos formam o
-        // visual inteiro do golpe. Os dois somem juntos, no mesmo instante.
-        GameObject lampejo = null;
-        if (dadosPersonagem.spriteRaioUltimateInicio != null)
-        {
-            lampejo = CriarLampejoRaioUltimate();
-            yield return new WaitForSeconds(Mathf.Max(0.03f, dadosPersonagem.duracaoLampejoRaioUltimate));
-        }
-
-        GameObject raio = CriarRaioUltimate(alvo);
-        if (raio != null) Destroy(raio, dadosPersonagem.duracaoVisualRaioUltimate);
-        if (lampejo != null) Destroy(lampejo, dadosPersonagem.duracaoVisualRaioUltimate);
-
-        yield return new WaitForSeconds(Mathf.Max(0f, dadosPersonagem.delayRaioUltimate));
-
-        if (alvo != null && !alvo.EstaMorto())
-            alvo.ReceberDano(dadosPersonagem.danoUltimate);
-
-        // Já esperamos delayRaioUltimate acima — só falta o restante até bater
-        // com duracaoVisualRaioUltimate (quando o raio de fato some da tela).
-        float tempoRestante = dadosPersonagem.duracaoVisualRaioUltimate - dadosPersonagem.delayRaioUltimate;
-        if (tempoRestante > 0f)
-            yield return new WaitForSeconds(tempoRestante);
+        yield return StartCoroutine(RotinaCicloDeVidaDoRaio(alvo));
 
         travandoUltimateAteRaioSumir = false;
 
@@ -1172,6 +1153,87 @@ public class LutadorController2D : MonoBehaviour
             cronometroFrame = 0f;
             AplicarFrameAtual();
         }
+    }
+
+    // Cria e anima o raio inteiro em 3 fases, na MESMA instância (sem recriar
+    // objetos entre elas):
+    //   1. CRESCE — sai da origem (comprimento 0) e alcança o alvo rapidamente,
+    //      igual a rachadura "revela" em pedaços, só que aqui é por escala
+    //      contínua em vez de pedaços fixos — mais natural pra um raio.
+    //   2. CHEIO — aplica o dano (depois de um delay curtinho) e segura a força
+    //      total por um tempo.
+    //   3. ENFRAQUECE — esmaece (fade de alpha) até sumir, e no instante em que
+    //      começa a enfraquecer drena ENERGIA do alvo (não vida) — o resíduo do
+    //      golpe morrendo ainda entrega algo, só que mais fraco que o impacto.
+    IEnumerator RotinaCicloDeVidaDoRaio(LutadorController2D alvo)
+    {
+        if (dadosPersonagem.spriteRaioUltimate == null || alvo == null) yield break;
+
+        Vector3 origemJamanta = OrigemDoRaioUltimate();
+        Vector3 origemAlvo = alvo.OrigemDoRaioUltimate();
+        float distanciaTotal = Mathf.Abs(origemAlvo.x - origemJamanta.x);
+
+        GameObject obj = new GameObject("RaioUltimate");
+        SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
+        sr.sprite = dadosPersonagem.spriteRaioUltimate;
+        sr.sortingLayerName = spriteRenderer != null ? spriteRenderer.sortingLayerName : "Default";
+        sr.sortingOrder = (spriteRenderer != null ? spriteRenderer.sortingOrder : 0) + 6;
+
+        float larguraOriginal = sr.sprite.bounds.size.x;
+        if (larguraOriginal <= 0.001f) { Destroy(obj); yield break; }
+
+        // Sinal da direção — o sprite tem a ponta de origem desenhada sempre do
+        // mesmo lado da imagem; sem espelhar, a ponta apareceria do lado errado
+        // (junto do alvo em vez de junto do Jamanta) sempre que o alvo estivesse
+        // à esquerda dele.
+        float direcao = origemAlvo.x >= origemJamanta.x ? 1f : -1f;
+        float escalaEspessura = EscalaVisualDoLutador();
+        AtualizarTransformRaio(obj, origemJamanta, direcao, 0f, larguraOriginal, escalaEspessura);
+
+        // ── Fase 1: cresce ──
+        float duracaoCrescimento = Mathf.Max(0.01f, dadosPersonagem.duracaoCrescimentoRaio);
+        float t = 0f;
+        while (t < duracaoCrescimento)
+        {
+            AtualizarTransformRaio(obj, origemJamanta, direcao, distanciaTotal * (t / duracaoCrescimento), larguraOriginal, escalaEspessura);
+            t += Time.deltaTime;
+            yield return null;
+        }
+        AtualizarTransformRaio(obj, origemJamanta, direcao, distanciaTotal, larguraOriginal, escalaEspessura);
+
+        // ── Fase 2: cheio — aplica o dano e segura a força total ──
+        yield return new WaitForSeconds(Mathf.Max(0f, dadosPersonagem.delayRaioUltimate));
+        if (!alvo.EstaMorto())
+            alvo.ReceberDano(dadosPersonagem.danoUltimate);
+
+        yield return new WaitForSeconds(Mathf.Max(0f, dadosPersonagem.duracaoVisualRaioUltimate));
+
+        // ── Fase 3: enfraquece — esmaece e drena energia (não vida) ──
+        if (!alvo.EstaMorto())
+            alvo.DrenarEnergia(dadosPersonagem.energiaDrenoRaioEnfraquecendo);
+
+        float duracaoEnfraquecimento = Mathf.Max(0.01f, dadosPersonagem.duracaoEnfraquecimentoRaio);
+        Color corCheia = sr.color;
+        t = 0f;
+        while (t < duracaoEnfraquecimento)
+        {
+            sr.color = new Color(corCheia.r, corCheia.g, corCheia.b, corCheia.a * (1f - t / duracaoEnfraquecimento));
+            t += Time.deltaTime;
+            yield return null;
+        }
+
+        Destroy(obj);
+    }
+
+    // Reposiciona/reescala o raio pra que a PONTA DE ORIGEM fique sempre fixa em
+    // "origem" e só a ponta oposta avance conforme "comprimento" cresce — funciona
+    // com o sprite de pivô central (import padrão), sem precisar de nenhum pivô
+    // especial. "direcao" espelha a escala X pra a ponta de origem do desenho
+    // ficar sempre do lado do personagem, nunca do lado do alvo.
+    void AtualizarTransformRaio(GameObject obj, Vector3 origem, float direcao, float comprimento, float larguraOriginal, float escalaEspessura)
+    {
+        obj.transform.position = origem + Vector3.right * (direcao * comprimento * 0.5f);
+        obj.transform.localScale = new Vector3(direcao * comprimento / larguraOriginal, escalaEspessura, 1f);
     }
 
     // Decaimento suave (ease-out): forte no início, esvaindo até 0 — sensação de
@@ -1203,62 +1265,12 @@ public class LutadorController2D : MonoBehaviour
     float AlturaRealDoLutador() => spriteRenderer != null ? spriteRenderer.bounds.size.y : 1f;
     float EscalaVisualDoLutador() => Mathf.Abs(transform.localScale.y);
 
-    // Ponto exato de onde o raio "nasce" — usado tanto pelo lampejo quanto pela
-    // ponta inicial do raio esticado, pra garantir que os dois fiquem no MESMO
-    // lugar (o lampejo é a ponta de origem do raio, não um efeito solto).
+    // Ponto exato de onde o raio "nasce" — usado por RotinaCicloDeVidaDoRaio pra
+    // ancorar tanto a origem em Jamanta quanto a origem "de chegada" no alvo.
     Vector3 OrigemDoRaioUltimate()
     {
         float altura = AlturaRealDoLutador() * dadosPersonagem.fracaoAlturaRaioUltimate;
         return transform.position + new Vector3(0f, altura, 0f);
-    }
-
-    GameObject CriarLampejoRaioUltimate()
-    {
-        if (dadosPersonagem.spriteRaioUltimateInicio == null) return null;
-
-        GameObject obj = new GameObject("LampejoRaioUltimate");
-        obj.transform.position = OrigemDoRaioUltimate();
-        obj.transform.localScale = Vector3.one * EscalaVisualDoLutador();
-
-        SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
-        sr.sprite = dadosPersonagem.spriteRaioUltimateInicio;
-        sr.sortingLayerName = spriteRenderer != null ? spriteRenderer.sortingLayerName : "Default";
-        sr.sortingOrder = (spriteRenderer != null ? spriteRenderer.sortingOrder : 0) + 5;
-
-        return obj;
-    }
-
-    // Estica o sprite do raio (pivô central — import padrão) no eixo X pra cobrir
-    // exatamente a distância até o oponente, sem precisar conhecer o pivô/recorte
-    // exato do sprite. A ponta de origem é a MESMA usada pelo lampejo
-    // (OrigemDoRaioUltimate) — os dois formam um único visual contínuo. A
-    // espessura (eixo Y) escala junto com o personagem, senão o raio fica
-    // fininho perto de um personagem bem maior que 1 unidade.
-    GameObject CriarRaioUltimate(LutadorController2D alvo)
-    {
-        if (dadosPersonagem.spriteRaioUltimate == null || alvo == null) return null;
-
-        Vector3 origemJamanta = OrigemDoRaioUltimate();
-        Vector3 origemAlvo = alvo.OrigemDoRaioUltimate();
-        Vector3 meio = (origemJamanta + origemAlvo) * 0.5f;
-        float distancia = Mathf.Abs(origemAlvo.x - origemJamanta.x);
-
-        GameObject obj = new GameObject("RaioUltimate");
-        obj.transform.position = meio;
-
-        SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
-        sr.sprite = dadosPersonagem.spriteRaioUltimate;
-        sr.sortingLayerName = spriteRenderer != null ? spriteRenderer.sortingLayerName : "Default";
-        // +6, um a mais que o lampejo (+5) — mesmo que algum dia os dois coexistam
-        // num mesmo frame por qualquer motivo, o raio sempre desenha na frente.
-        sr.sortingOrder = (spriteRenderer != null ? spriteRenderer.sortingOrder : 0) + 6;
-
-        float larguraOriginal = sr.sprite.bounds.size.x;
-        float escalaEspessura = EscalaVisualDoLutador();
-        if (larguraOriginal > 0.001f)
-            obj.transform.localScale = new Vector3(distancia / larguraOriginal, escalaEspessura, 1f);
-
-        return obj;
     }
 
     public void ReceberDano(int dano)
