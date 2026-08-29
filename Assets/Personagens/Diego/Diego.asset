@@ -61,19 +61,32 @@ MonoBehaviour:
   - {fileID: -3943748194325502948, guid: a2c48164b293adb408c484f447c41c92, type: 3}
   - {fileID: 4430578856213414250, guid: 6b9a39fbeb2c4eb4dbc1309f471f0155, type: 3}
   fpsIdle: 2.5
+  framesIdleFogo:
+  - {fileID: -3943748194325502948, guid: 4ffc43acf16cb08469563a8e4bc80420, type: 3}
+  - {fileID: 4430578856213414250, guid: ba68dd00d76c9f146bf87685a59b1bd4, type: 3}
   framesMove:
   - {fileID: 6962012266793356417, guid: 1febe409b001d9f42bf0e10d01d5201a, type: 3}
   - {fileID: 7987126252781811778, guid: e38126d9a0c6ad0498ed8b0738c34871, type: 3}
   - {fileID: 8898970892212714746, guid: 6228917339e0f1b46b33c8deb15d02a8, type: 3}
   - {fileID: 7987126252781811778, guid: e38126d9a0c6ad0498ed8b0738c34871, type: 3}
   fpsMove: 8
+  framesMoveFogo:
+  - {fileID: 6962012266793356417, guid: f5d0ce2c86cbcc646b5a22bf5396a777, type: 3}
+  - {fileID: 7987126252781811778, guid: 07d45c17de8bfed44ad822d3120b6927, type: 3}
+  - {fileID: 8898970892212714746, guid: 5724ebd8209ed094fb2675d21fa6604e, type: 3}
+  - {fileID: 7987126252781811778, guid: 07d45c17de8bfed44ad822d3120b6927, type: 3}
   framesJump:
   - {fileID: -3427226955350771988, guid: d6e840b3670765e43a82e4b294d87756, type: 3}
   - {fileID: -2442486290994169979, guid: 0764cc0dc74693c419c5edbbec0b99e7, type: 3}
   fpsJump: 8
+  framesJumpFogo:
+  - {fileID: -3427226955350771988, guid: 232024c323f1fce49a32a31754ba0c28, type: 3}
+  - {fileID: -2442486290994169979, guid: 912ffa6e599bba6449e72136aa57fab8, type: 3}
   framesDefend:
   - {fileID: 304031141522467898, guid: 37539f5d82928374b931f8283ca11c5c, type: 3}
   fpsDefend: 8
+  framesDefendFogo:
+  - {fileID: 304031141522467898, guid: e13876fd46394454680ff6ff6beeae95, type: 3}
   framesAttack:
   - {fileID: -5554947004528845678, guid: 48232b11b051a494186afc857439a3ab, type: 3}
   - {fileID: -6993321781276684507, guid: b40985a479484c645a8e0970fe877e48, type: 3}
@@ -82,6 +95,11 @@ MonoBehaviour:
   fpsAttack: 5
   frameInicioHitbox: 1
   frameFollowThrough: -1
+  framesAttackFogo:
+  - {fileID: -5554947004528845678, guid: faecacf246c9a0b458154ee883c896bd, type: 3}
+  - {fileID: -6993321781276684507, guid: 33782d439cfcbbd4b8f004e7f36cad84, type: 3}
+  - {fileID: -5829381242081245281, guid: 5fb7f9cbb304b194b8367e6dd4f801f2, type: 3}
+  - {fileID: 3870379457180716989, guid: 6ad548f1e467c3c43a9b20eef717efa5, type: 3}
   framesSpecial: []
   fpsSpecial: 12
   framesUltimate: []
