@@ -1140,7 +1140,15 @@ public class LutadorController2D : MonoBehaviour
         {
             GameObject lampejo = CriarLampejoRaioUltimate();
             yield return new WaitForSeconds(Mathf.Max(0.03f, dadosPersonagem.duracaoLampejoRaioUltimate));
-            if (lampejo != null) Destroy(lampejo);
+
+            // Destroy() só remove no FIM do frame — desativar na hora garante que o
+            // lampejo já não é mais desenhado no mesmo frame em que o raio nasce,
+            // em vez de sobrepor os dois por 1 frame antes do Destroy fazer efeito.
+            if (lampejo != null)
+            {
+                lampejo.SetActive(false);
+                Destroy(lampejo);
+            }
         }
 
         GameObject raio = CriarRaioUltimate(alvo);
@@ -1246,7 +1254,9 @@ public class LutadorController2D : MonoBehaviour
         SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
         sr.sprite = dadosPersonagem.spriteRaioUltimate;
         sr.sortingLayerName = spriteRenderer != null ? spriteRenderer.sortingLayerName : "Default";
-        sr.sortingOrder = (spriteRenderer != null ? spriteRenderer.sortingOrder : 0) + 5;
+        // +6, um a mais que o lampejo (+5) — mesmo que algum dia os dois coexistam
+        // num mesmo frame por qualquer motivo, o raio sempre desenha na frente.
+        sr.sortingOrder = (spriteRenderer != null ? spriteRenderer.sortingOrder : 0) + 6;
 
         float larguraOriginal = sr.sprite.bounds.size.x;
         float escalaEspessura = EscalaVisualDoLutador();
