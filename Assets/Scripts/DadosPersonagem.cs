@@ -83,9 +83,9 @@ public class DadosPersonagem : ScriptableObject
     [Tooltip("Atraso (segundos) entre o raio terminar de crescer e o dano realmente acertar — só pra dar uma sensação extra de impacto, além do próprio crescimento")]
     public float delayRaioUltimate = 0.05f;
     [Tooltip("Quanto tempo (segundos) o raio fica CHEIO (força total, depois de crescer e antes de começar a enfraquecer)")]
-    public float duracaoVisualRaioUltimate = 0.15f;
+    public float duracaoVisualRaioUltimate = 1f;
     [Tooltip("Duração (segundos) do enfraquecimento do raio — esmaece (fade) até sumir de vez, em vez de cortar de uma vez")]
-    public float duracaoEnfraquecimentoRaio = 0.25f;
+    public float duracaoEnfraquecimentoRaio = 0.75f;
     [Tooltip("Quanto de ENERGIA (não vida) o oponente perde quando o raio começa a enfraquecer — o resíduo do golpe morrendo ainda drena algo, só que energia em vez de dano")]
     public float energiaDrenoRaioEnfraquecendo = 15f;
     [Tooltip("Força do recuo (empurrão pra trás) no instante em que o raio dispara")]

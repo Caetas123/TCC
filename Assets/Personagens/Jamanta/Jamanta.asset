@@ -43,8 +43,8 @@ MonoBehaviour:
   fracaoAlturaRaioUltimate: 0.65
   duracaoCrescimentoRaio: 0.08
   delayRaioUltimate: 0.05
-  duracaoVisualRaioUltimate: 0.15
-  duracaoEnfraquecimentoRaio: 0.25
+  duracaoVisualRaioUltimate: 1
+  duracaoEnfraquecimentoRaio: 0.75
   energiaDrenoRaioEnfraquecendo: 15
   forcaRecuoUltimate: 6
   duracaoRecuoUltimate: 0.25
