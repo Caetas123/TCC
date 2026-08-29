@@ -580,6 +580,12 @@ public class LutadorController2D : MonoBehaviour
     void AtaqueNormal()
     {
         if (oponente == null || dadosPersonagem == null || morreu) return;
+        // Não dá pra atacar segurando o bloqueio — sem isso, apertar ataque
+        // enquanto defende trocava a pose de Defend por Attack de verdade (a
+        // animação nem tinha prioridade sobre Defend, já que Defend não passa
+        // por animacaoUmaVezAtiva), fazendo a defesa "sumir e voltar ao normal"
+        // assim que o ataque acabasse. Tem que soltar o bloqueio antes de atacar.
+        if (defendendo) return;
         if (EmAcaoOfensiva()) return;
         if (!TemEnergiaSuficiente(dadosPersonagem.custoAtaque)) return;
 
@@ -664,6 +670,9 @@ public class LutadorController2D : MonoBehaviour
             return;
         }
 
+        // Mesma regra do ataque básico: não dá pra soltar um golpe "toca uma vez"
+        // (troca a pose de Defend por Special) enquanto segura o bloqueio.
+        if (defendendo) return;
         if (EmAcaoOfensiva()) return;
         if (!PodeUsarEspecial()) return;
 
@@ -735,6 +744,10 @@ public class LutadorController2D : MonoBehaviour
         }
     }
 
+    // Cor de "pegando fogo" — tingimento alaranjado aplicado enquanto a
+    // queimação estiver ativa, revertido pra branco (cor normal) ao terminar.
+    private static readonly Color CorQueimando = new Color(1f, 0.55f, 0.25f);
+
     // Chamada pelo ATACANTE no oponente que acabou de ser acertado por um golpe com
     // a espada em chamas. A queimação em si nunca é reduzida pela defesa — só a
     // DURAÇÃO é mais curta se o alvo estava defendendo no instante do impacto (ver
@@ -744,19 +757,94 @@ public class LutadorController2D : MonoBehaviour
     {
         if (morreu) return;
         if (rotinaQueimacao != null) StopCoroutine(rotinaQueimacao);
+        if (spriteRenderer != null) spriteRenderer.color = CorQueimando;
         rotinaQueimacao = StartCoroutine(RotinaQueimacao(danoPorSegundo, duracao));
     }
 
+    // Enquanto durar: tingido de laranja + partículas de fogo saindo dele (pra
+    // deixar claro que ele está realmente pegando fogo, não só perdendo vida
+    // sem motivo visível), e ainda aplica o dano por segundo de sempre. Cor e
+    // partículas somem juntas quando a queimação acaba.
     IEnumerator RotinaQueimacao(int danoPorSegundo, float duracao)
     {
-        int ticks = Mathf.Max(1, Mathf.RoundToInt(duracao)); // 1 tick por segundo
-        for (int i = 0; i < ticks; i++)
+        const float intervaloParticula = 0.12f;
+        float tempoRestante = duracao;
+        float acumuladorTick = 0f;
+        float acumuladorParticula = 0f;
+
+        while (tempoRestante > 0f && !morreu)
         {
-            yield return new WaitForSeconds(1f);
-            if (morreu) break;
-            AplicarDanoQueimacaoTick(danoPorSegundo);
+            float dt = Time.deltaTime;
+            tempoRestante -= dt;
+            acumuladorTick += dt;
+            acumuladorParticula += dt;
+
+            if (acumuladorParticula >= intervaloParticula)
+            {
+                acumuladorParticula -= intervaloParticula;
+                CriarParticulaFogo();
+            }
+
+            if (acumuladorTick >= 1f)
+            {
+                acumuladorTick -= 1f;
+                AplicarDanoQueimacaoTick(danoPorSegundo);
+            }
+
+            yield return null;
         }
+
+        if (spriteRenderer != null) spriteRenderer.color = Color.white;
         rotinaQueimacao = null;
+    }
+
+    // Partícula de fogo saindo do personagem queimando — mesma técnica da
+    // partícula branca da rachadura (quadrado gerado na hora), só que tingida de
+    // vermelho/laranja e subindo (fogo sobe) em vez de cair com gravidade.
+    void CriarParticulaFogo()
+    {
+        Sprite spriteParticula = ObterSpriteParticulaBranca();
+        string layerPersonagem = spriteRenderer != null ? spriteRenderer.sortingLayerName : "Default";
+        int ordemPersonagem = spriteRenderer != null ? spriteRenderer.sortingOrder : 0;
+        float alturaPersonagem = AlturaRealDoLutador();
+
+        GameObject p = new GameObject("ParticulaFogo");
+        p.transform.position = transform.position + new Vector3(
+            Random.Range(-0.2f, 0.2f) * EscalaVisualDoLutador(),
+            Random.Range(0.1f, alturaPersonagem),
+            0f);
+
+        SpriteRenderer sr = p.AddComponent<SpriteRenderer>();
+        sr.sprite = spriteParticula;
+        sr.color = Random.value < 0.5f
+            ? new Color(1f, 0.35f, 0.1f)   // vermelho-alaranjado
+            : new Color(1f, 0.65f, 0.15f); // laranja mais claro
+        sr.sortingLayerName = layerPersonagem;
+        sr.sortingOrder = ordemPersonagem + 10;
+        p.transform.localScale = Vector3.one * Random.Range(0.15f, 0.3f) * EscalaVisualDoLutador();
+
+        Vector2 velocidadeInicial = new Vector2(Random.Range(-0.5f, 0.5f), Random.Range(1.5f, 3f));
+        StartCoroutine(AnimarParticulaFogo(p, sr, velocidadeInicial));
+    }
+
+    // Sobe e esmaece — diferente da partícula da rachadura (que cai com
+    // gravidade, feito estilhaço), fogo sobe e vai sumindo aos poucos.
+    IEnumerator AnimarParticulaFogo(GameObject obj, SpriteRenderer sr, Vector2 velocidade)
+    {
+        const float tempoVida = 0.5f;
+        float t = 0f;
+        Color corInicial = sr.color;
+
+        while (t < tempoVida && obj != null)
+        {
+            obj.transform.position += (Vector3)(velocidade * Time.deltaTime);
+            float progresso = t / tempoVida;
+            sr.color = new Color(corInicial.r, corInicial.g, corInicial.b, corInicial.a * (1f - progresso));
+            t += Time.deltaTime;
+            yield return null;
+        }
+
+        if (obj != null) Destroy(obj);
     }
 
     // Dano de queimação é aplicado direto na vida, sem passar pela redução de
@@ -1079,6 +1167,9 @@ public class LutadorController2D : MonoBehaviour
     void AtaqueUltimate()
     {
         if (oponente == null || dadosPersonagem == null || morreu) return;
+        // Mesma regra do ataque básico e do especial: não dá pra soltar o
+        // ultimate enquanto segura o bloqueio.
+        if (defendendo) return;
         if (EmAcaoOfensiva()) return;
         if (!PodeUsarUltimate()) return;
 

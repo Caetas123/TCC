@@ -40,7 +40,7 @@ MonoBehaviour:
   tipoUsoUltimate: 1
   spriteRaioUltimate: {fileID: 1273242584523100952, guid: ca75610c65b93cc468bad14139dbc3c6, type: 3}
   frameLancamentoRaioUltimate: 4
-  fracaoAlturaRaioUltimate: 0.7
+  fracaoAlturaRaioUltimate: 0.65
   duracaoCrescimentoRaio: 0.08
   delayRaioUltimate: 0.05
   duracaoVisualRaioUltimate: 0.15
