@@ -1131,28 +1131,22 @@ public class LutadorController2D : MonoBehaviour
         float direcaoRecuo = transform.localScale.x > 0f ? -1f : 1f;
         StartCoroutine(RotinaRecuoUltimate(direcaoRecuo, dadosPersonagem.forcaRecuoUltimate, dadosPersonagem.duracaoRecuoUltimate));
 
-        // Lampejo primeiro, sozinho na tela por duracaoLampejoRaioUltimate, e SÓ
-        // DEPOIS o raio cheio nasce — antes os dois eram criados no mesmo instante
-        // (sem yield entre eles), então visualmente sempre apareciam sobrepostos
-        // desde o primeiro frame renderizado: o retângulo grande do raio "engolia"
-        // o lampejo pequeno, que nunca dava tempo de ser percebido sozinho.
+        // Lampejo primeiro, sozinho na tela por duracaoLampejoRaioUltimate (o
+        // "carregar" antes de soltar o golpe) — só DEPOIS o raio cheio nasce. Mas
+        // o lampejo continua na tela junto com o raio depois disso: ele É a ponta
+        // de origem do raio (onde o raio "nasce" na mão), não um efeito avulso que
+        // desaparece quando o raio completo aparece — os dois juntos formam o
+        // visual inteiro do golpe. Os dois somem juntos, no mesmo instante.
+        GameObject lampejo = null;
         if (dadosPersonagem.spriteRaioUltimateInicio != null)
         {
-            GameObject lampejo = CriarLampejoRaioUltimate();
+            lampejo = CriarLampejoRaioUltimate();
             yield return new WaitForSeconds(Mathf.Max(0.03f, dadosPersonagem.duracaoLampejoRaioUltimate));
-
-            // Destroy() só remove no FIM do frame — desativar na hora garante que o
-            // lampejo já não é mais desenhado no mesmo frame em que o raio nasce,
-            // em vez de sobrepor os dois por 1 frame antes do Destroy fazer efeito.
-            if (lampejo != null)
-            {
-                lampejo.SetActive(false);
-                Destroy(lampejo);
-            }
         }
 
         GameObject raio = CriarRaioUltimate(alvo);
         if (raio != null) Destroy(raio, dadosPersonagem.duracaoVisualRaioUltimate);
+        if (lampejo != null) Destroy(lampejo, dadosPersonagem.duracaoVisualRaioUltimate);
 
         yield return new WaitForSeconds(Mathf.Max(0f, dadosPersonagem.delayRaioUltimate));
 
@@ -1209,18 +1203,22 @@ public class LutadorController2D : MonoBehaviour
     float AlturaRealDoLutador() => spriteRenderer != null ? spriteRenderer.bounds.size.y : 1f;
     float EscalaVisualDoLutador() => Mathf.Abs(transform.localScale.y);
 
+    // Ponto exato de onde o raio "nasce" — usado tanto pelo lampejo quanto pela
+    // ponta inicial do raio esticado, pra garantir que os dois fiquem no MESMO
+    // lugar (o lampejo é a ponta de origem do raio, não um efeito solto).
+    Vector3 OrigemDoRaioUltimate()
+    {
+        float altura = AlturaRealDoLutador() * dadosPersonagem.fracaoAlturaRaioUltimate;
+        return transform.position + new Vector3(0f, altura, 0f);
+    }
+
     GameObject CriarLampejoRaioUltimate()
     {
         if (dadosPersonagem.spriteRaioUltimateInicio == null) return null;
 
-        float escala = EscalaVisualDoLutador();
-        float direcao = transform.localScale.x > 0f ? 1f : -1f;
-        float altura = AlturaRealDoLutador() * dadosPersonagem.fracaoAlturaRaioUltimate;
-        Vector3 posicao = transform.position + new Vector3(direcao * altura * 0.3f, altura, 0f);
-
         GameObject obj = new GameObject("LampejoRaioUltimate");
-        obj.transform.position = posicao;
-        obj.transform.localScale = Vector3.one * escala;
+        obj.transform.position = OrigemDoRaioUltimate();
+        obj.transform.localScale = Vector3.one * EscalaVisualDoLutador();
 
         SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
         sr.sprite = dadosPersonagem.spriteRaioUltimateInicio;
@@ -1232,19 +1230,16 @@ public class LutadorController2D : MonoBehaviour
 
     // Estica o sprite do raio (pivô central — import padrão) no eixo X pra cobrir
     // exatamente a distância até o oponente, sem precisar conhecer o pivô/recorte
-    // exato do sprite. A altura de origem (mão/peito) é uma FRAÇÃO da altura real
-    // do personagem (fracaoAlturaRaioUltimate, 0 a 1), não um valor fixo — assim
-    // funciona igual em qualquer escala de cena. A espessura (eixo Y) escala junto
-    // com o personagem, senão o raio fica fininho perto de um personagem bem maior
-    // que 1 unidade.
+    // exato do sprite. A ponta de origem é a MESMA usada pelo lampejo
+    // (OrigemDoRaioUltimate) — os dois formam um único visual contínuo. A
+    // espessura (eixo Y) escala junto com o personagem, senão o raio fica
+    // fininho perto de um personagem bem maior que 1 unidade.
     GameObject CriarRaioUltimate(LutadorController2D alvo)
     {
         if (dadosPersonagem.spriteRaioUltimate == null || alvo == null) return null;
 
-        float alturaOrigem = AlturaRealDoLutador() * dadosPersonagem.fracaoAlturaRaioUltimate;
-        float alturaAlvo = alvo.AlturaRealDoLutador() * dadosPersonagem.fracaoAlturaRaioUltimate;
-        Vector3 origemJamanta = transform.position + new Vector3(0f, alturaOrigem, 0f);
-        Vector3 origemAlvo = alvo.transform.position + new Vector3(0f, alturaAlvo, 0f);
+        Vector3 origemJamanta = OrigemDoRaioUltimate();
+        Vector3 origemAlvo = alvo.OrigemDoRaioUltimate();
         Vector3 meio = (origemJamanta + origemAlvo) * 0.5f;
         float distancia = Mathf.Abs(origemAlvo.x - origemJamanta.x);
 
