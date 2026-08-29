@@ -652,6 +652,9 @@ public class LutadorController2D : MonoBehaviour
             ? dadosPersonagem.duracaoQueimacaoDefendendo
             : dadosPersonagem.duracaoQueimacao;
 
+        // TODO-DEBUG: remover depois de confirmar a duração certa em jogo.
+        Debug.Log($"[Queimadura] oponente defendendo? {oponenteDefendendo} -> duração aplicada: {duracao}s");
+
         oponente.AplicarQueimadura(dadosPersonagem.danoQueimacaoPorSegundo, duracao);
     }
 

@@ -93,7 +93,7 @@ MonoBehaviour:
   - {fileID: -5829381242081245281, guid: 353a77ed21d5c0a4db1ae755cbd1c0bb, type: 3}
   - {fileID: 3870379457180716989, guid: 7943b3b76d95f5147989d8247313e7bc, type: 3}
   fpsAttack: 5
-  frameInicioHitbox: 1
+  frameInicioHitbox: 2
   frameFollowThrough: -1
   framesAttackFogo:
   - {fileID: -5554947004528845678, guid: faecacf246c9a0b458154ee883c896bd, type: 3}

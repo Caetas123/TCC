@@ -35,7 +35,7 @@ MonoBehaviour:
   intervaloRachaduras: 0.5
   multiplicadorDanoRachadura: 1.5
   duracaoHitboxRachadura: 0.2
-  danoUltimate: 55
+  danoUltimate: 25
   alcanceUltimate: 3
   tipoUsoUltimate: 1
   spriteRaioUltimate: {fileID: 1273242584523100952, guid: ca75610c65b93cc468bad14139dbc3c6, type: 3}
