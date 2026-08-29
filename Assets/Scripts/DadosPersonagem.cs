@@ -75,6 +75,9 @@ public class DadosPersonagem : ScriptableObject
     public Sprite spriteRaioUltimateInicio;
     [Tooltip("Frame (0-based) da animação de Ultimate em que o raio de fato dispara — os frames antes disso são só o personagem se posicionando")]
     public int frameLancamentoRaioUltimate = 4;
+    [Range(0f, 1f)]
+    [Tooltip("A que altura do corpo o raio sai, como FRAÇÃO da altura real do personagem na cena (0 = pé, 1 = topo da cabeça) — não é um valor fixo, porque a escala dos personagens muda de cena pra cena")]
+    public float fracaoAlturaRaioUltimate = 0.7f;
     [Tooltip("Atraso (segundos) entre o disparo e o dano realmente acertar — só pra dar a sensação de trajeto. Bem mais curto que duracaoHitboxRachadura.")]
     public float delayRaioUltimate = 0.05f;
     [Tooltip("Quanto tempo (segundos) o sprite do raio cheio fica visível na tela")]

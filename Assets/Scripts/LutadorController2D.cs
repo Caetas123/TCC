@@ -1147,15 +1147,29 @@ public class LutadorController2D : MonoBehaviour
         velocidadeRecuoX = 0f;
     }
 
+    // A cena usa personagens com localScale bem maior que 1 (o sprite "cru" é
+    // pequeno, e o GameObject escala ele pra cima) — um deslocamento fixo tipo
+    // "0.6 unidades" é praticamente zero perto do tamanho real do lutador na tela,
+    // por isso o raio aparecia baixo demais (quase no chão) e fino demais. Essas
+    // duas funções dão a altura e a escala REAIS (já em unidades de mundo,
+    // considerando o localScale), pra qualquer efeito gerado na hora acompanhar o
+    // tamanho de verdade do personagem em vez de um número fixo que só funcionaria
+    // numa cena sem escala nenhuma.
+    float AlturaRealDoLutador() => spriteRenderer != null ? spriteRenderer.bounds.size.y : 1f;
+    float EscalaVisualDoLutador() => Mathf.Abs(transform.localScale.y);
+
     GameObject CriarLampejoRaioUltimate()
     {
         if (dadosPersonagem.spriteRaioUltimateInicio == null) return null;
 
+        float escala = EscalaVisualDoLutador();
         float direcao = transform.localScale.x > 0f ? 1f : -1f;
-        Vector3 posicao = transform.position + new Vector3(direcao * 0.4f, 0.6f, 0f);
+        float altura = AlturaRealDoLutador() * dadosPersonagem.fracaoAlturaRaioUltimate;
+        Vector3 posicao = transform.position + new Vector3(direcao * altura * 0.3f, altura, 0f);
 
         GameObject obj = new GameObject("LampejoRaioUltimate");
         obj.transform.position = posicao;
+        obj.transform.localScale = Vector3.one * escala;
 
         SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
         sr.sprite = dadosPersonagem.spriteRaioUltimateInicio;
@@ -1167,15 +1181,19 @@ public class LutadorController2D : MonoBehaviour
 
     // Estica o sprite do raio (pivô central — import padrão) no eixo X pra cobrir
     // exatamente a distância até o oponente, sem precisar conhecer o pivô/recorte
-    // exato do sprite. Se o sprite do raio usar outro pivô, o comprimento continua
-    // certo mas a ancoragem pode precisar de ajuste visual depois.
+    // exato do sprite. A altura de origem (mão/peito) é uma FRAÇÃO da altura real
+    // do personagem (fracaoAlturaRaioUltimate, 0 a 1), não um valor fixo — assim
+    // funciona igual em qualquer escala de cena. A espessura (eixo Y) escala junto
+    // com o personagem, senão o raio fica fininho perto de um personagem bem maior
+    // que 1 unidade.
     GameObject CriarRaioUltimate(LutadorController2D alvo)
     {
         if (dadosPersonagem.spriteRaioUltimate == null || alvo == null) return null;
 
-        const float alturaRaio = 0.6f; // aproximadamente altura do peito/braço
-        Vector3 origemJamanta = transform.position + new Vector3(0f, alturaRaio, 0f);
-        Vector3 origemAlvo = alvo.transform.position + new Vector3(0f, alturaRaio, 0f);
+        float alturaOrigem = AlturaRealDoLutador() * dadosPersonagem.fracaoAlturaRaioUltimate;
+        float alturaAlvo = alvo.AlturaRealDoLutador() * dadosPersonagem.fracaoAlturaRaioUltimate;
+        Vector3 origemJamanta = transform.position + new Vector3(0f, alturaOrigem, 0f);
+        Vector3 origemAlvo = alvo.transform.position + new Vector3(0f, alturaAlvo, 0f);
         Vector3 meio = (origemJamanta + origemAlvo) * 0.5f;
         float distancia = Mathf.Abs(origemAlvo.x - origemJamanta.x);
 
@@ -1188,8 +1206,9 @@ public class LutadorController2D : MonoBehaviour
         sr.sortingOrder = (spriteRenderer != null ? spriteRenderer.sortingOrder : 0) + 5;
 
         float larguraOriginal = sr.sprite.bounds.size.x;
+        float escalaEspessura = EscalaVisualDoLutador();
         if (larguraOriginal > 0.001f)
-            obj.transform.localScale = new Vector3(distancia / larguraOriginal, 1f, 1f);
+            obj.transform.localScale = new Vector3(distancia / larguraOriginal, escalaEspessura, 1f);
 
         return obj;
     }
