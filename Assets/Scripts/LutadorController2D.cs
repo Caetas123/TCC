@@ -1302,9 +1302,18 @@ public class LutadorController2D : MonoBehaviour
         if (vidaAtual < 0) vidaAtual = 0;
 
         if (vidaAtual <= 0)
-            Morrer();
-        else
         {
+            Morrer();
+        }
+        else if (!defendendo)
+        {
+            // Só entra no stagger de Hit se NÃO estava defendendo. Antes disparava
+            // sempre, mesmo com o bloqueio ativo — como Defend é um estado
+            // contínuo (não passa por animacaoUmaVezAtiva), o Hit sempre conseguia
+            // interromper, piscando pra Hit e voltando pra Defend a cada golpe
+            // bloqueado. Visualmente parecia a pose de defesa "reiniciando toda
+            // hora", e quem segurava o botão via a própria defesa sumir da tela
+            // por um instante a cada golpe, mesmo sem nunca soltar o botão.
             TocarSom(
                 dadosPersonagem.somHit,
                 dadosPersonagem.volumeHit
