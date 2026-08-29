@@ -38,6 +38,13 @@ MonoBehaviour:
   danoUltimate: 55
   alcanceUltimate: 3
   tipoUsoUltimate: 1
+  spriteRaioUltimate: {fileID: 2098203685382816704, guid: 0fa9bb6a537c04c46a8db8b5ba7aec4f, type: 3}
+  spriteRaioUltimateInicio: {fileID: 3203022328712661734, guid: 36a1fa83752ced74ab5985abc2d5272f, type: 3}
+  frameLancamentoRaioUltimate: 4
+  delayRaioUltimate: 0.05
+  duracaoVisualRaioUltimate: 0.15
+  forcaRecuoUltimate: 6
+  duracaoRecuoUltimate: 0.25
   custoUltimate: 80
   porcentagemBloqueioDefesa: 0.9
   custoDefesa: 18
@@ -70,7 +77,14 @@ MonoBehaviour:
   - {fileID: -5841085671733655206, guid: 73b649f62ff45cd41806d6955f51bc3e, type: 3}
   - {fileID: -2981911525744825914, guid: 6404f72d212a0fe40970a893fd6cfa14, type: 3}
   fpsSpecial: 8
-  framesUltimate: []
+  framesUltimate:
+  - {fileID: 5842061013323682839, guid: aa5b413405b87cc4d88e1b15174125fb, type: 3}
+  - {fileID: 2373202581526317407, guid: 6a16e93f76589b548b0c3c8403936222, type: 3}
+  - {fileID: -4948317176695912611, guid: a12ae4cad0d6a8c419daed5bb7797ec5, type: 3}
+  - {fileID: 1594419505777412364, guid: 5dbefd27184416c4fad9db447199e217, type: 3}
+  - {fileID: -8216978599883599613, guid: ecb32c34291901d40b6624662ffc84f5, type: 3}
+  - {fileID: -3702697646905476307, guid: ed7e6dd074b94f9418f753eb5b67be91, type: 3}
+  - {fileID: 3666141332053311443, guid: 589698d12f7a8e844af41460dd154d94, type: 3}
   fpsUltimate: 10
   framesHit: []
   fpsHit: 12

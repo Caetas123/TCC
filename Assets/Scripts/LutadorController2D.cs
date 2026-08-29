@@ -124,6 +124,13 @@ public class LutadorController2D : MonoBehaviour
     // antes da anterior acabar, em vez de empilhar múltiplas queimações somando dano.
     private Coroutine rotinaQueimacao;
 
+    // ── Ultimate único — Raio com Recuo (ex: Jamanta) ────────────────────────
+    // Somado à velocidade normal em FixedUpdate; RotinaRecuoUltimate decai isso
+    // suavemente até 0 sozinha — não é um único impulso instantâneo (rb.AddForce
+    // seria sobrescrito no próximo FixedUpdate de qualquer forma, já que
+    // velocidadeX é recalculada do zero a cada frame).
+    private float velocidadeRecuoX = 0f;
+
     void Start()
     {
         if (rb == null) rb = GetComponent<Rigidbody2D>();
@@ -250,6 +257,12 @@ public class LutadorController2D : MonoBehaviour
         float velocidadeX = movimento * dadosPersonagem.velocidade;
         velocidadeX *= ObterMultiplicadorMovimentoAtual();
 
+        // Recuo do ultimate único (ex: Jamanta) — soma-se por cima do movimento
+        // normal, decaindo sozinho até 0 (ver RotinaRecuoUltimate). Fica ANTES do
+        // empurrão entre lutadores de propósito: se o recuo jogar alguém pra dentro
+        // do oponente, o empurrão abaixo ainda impede a sobreposição.
+        velocidadeX += velocidadeRecuoX;
+
         // ── Empurrão entre lutadores ────────────────────────────────────────
         // Antes isso só ZERAVA a velocidade de quem tentava se aproximar demais —
         // um bloqueio duro, não um empurrão: o personagem simplesmente travava no
@@ -292,6 +305,7 @@ public class LutadorController2D : MonoBehaviour
         energiaAtual = 0f;
         morreu = false;
         espadaEmChamasAtiva = false;
+        velocidadeRecuoX = 0f;
         if (rotinaQueimacao != null) { StopCoroutine(rotinaQueimacao); rotinaQueimacao = null; }
 
         // Aplica o primeiro frame do Idle imediatamente
@@ -320,6 +334,7 @@ public class LutadorController2D : MonoBehaviour
         morreu = false;
         estaNoChao = false;
         espadaEmChamasAtiva = false;
+        velocidadeRecuoX = 0f;
         if (rotinaQueimacao != null) { StopCoroutine(rotinaQueimacao); rotinaQueimacao = null; }
 
         movimentoIA = 0f;
@@ -1048,6 +1063,22 @@ public class LutadorController2D : MonoBehaviour
         if (EmAcaoOfensiva()) return;
         if (!PodeUsarUltimate()) return;
 
+        // Personagem com spriteRaioUltimate configurado usa o ultimate único (raio
+        // com recuo) em vez do dano instantâneo padrão.
+        if (dadosPersonagem.spriteRaioUltimate != null)
+        {
+            float distanciaRaio = Vector2.Distance(transform.position, oponente.transform.position);
+            if (distanciaRaio <= dadosPersonagem.alcanceUltimate)
+            {
+                GastarEnergiaUltimate();
+                StartCoroutine(UltimateRaioComRecuo(oponente));
+            }
+
+            TocarSom(dadosPersonagem.somUltimate, dadosPersonagem.volumeUltimate);
+            IniciarAnimacaoUmaVez(EstadoAnim.Ultimate);
+            return;
+        }
+
         float distancia = Vector2.Distance(transform.position, oponente.transform.position);
         if (distancia <= dadosPersonagem.alcanceUltimate)
         {
@@ -1060,6 +1091,108 @@ public class LutadorController2D : MonoBehaviour
             dadosPersonagem.volumeUltimate
         );
         IniciarAnimacaoUmaVez(EstadoAnim.Ultimate);
+    }
+
+    // ── Ultimate único: raio com recuo (ex: Jamanta) ─────────────────────────
+    // 1) A animação de Ultimate já está tocando por fora (IniciarAnimacaoUmaVez,
+    //    frames de "se posicionar" configurados em framesUltimate).
+    // 2) Espera até o frame configurado como lançamento — sincroniza o recuo e o
+    //    raio com o momento exato em que ele solta o golpe, não com o instante em
+    //    que o botão foi apertado.
+    // 3) Nesse instante: aplica o recuo (empurrão suave pra trás, decai sozinho) e
+    //    mostra o raio (com lampejo inicial opcional).
+    // 4) Espera um delay bem curto (delayRaioUltimate) — só pra dar a sensação de
+    //    trajeto, nem instantâneo nem lento feito a rachadura.
+    // 5) Aplica o dano. O raio some sozinho depois de duracaoVisualRaioUltimate
+    //    (agendado no passo 3, não bloqueia a coroutine).
+    IEnumerator UltimateRaioComRecuo(LutadorController2D alvo)
+    {
+        float fps = dadosPersonagem.fpsUltimate > 0f ? dadosPersonagem.fpsUltimate : 10f;
+        float tempoAteLancamento = Mathf.Max(0f, dadosPersonagem.frameLancamentoRaioUltimate) / fps;
+        yield return new WaitForSeconds(tempoAteLancamento);
+
+        // Recuo: empurra pra trás, na direção oposta a quem ele está olhando
+        float direcaoRecuo = transform.localScale.x > 0f ? -1f : 1f;
+        StartCoroutine(RotinaRecuoUltimate(direcaoRecuo, dadosPersonagem.forcaRecuoUltimate, dadosPersonagem.duracaoRecuoUltimate));
+
+        if (dadosPersonagem.spriteRaioUltimateInicio != null)
+        {
+            GameObject lampejo = CriarLampejoRaioUltimate();
+            if (lampejo != null) Destroy(lampejo, Mathf.Max(0.03f, dadosPersonagem.delayRaioUltimate));
+        }
+
+        GameObject raio = CriarRaioUltimate(alvo);
+        if (raio != null) Destroy(raio, dadosPersonagem.duracaoVisualRaioUltimate);
+
+        yield return new WaitForSeconds(Mathf.Max(0f, dadosPersonagem.delayRaioUltimate));
+
+        if (alvo != null && !alvo.EstaMorto())
+            alvo.ReceberDano(dadosPersonagem.danoUltimate);
+    }
+
+    // Decaimento suave (ease-out): forte no início, esvaindo até 0 — sensação de
+    // onda de pressão empurrando e se dissipando, não um solavanco constante nem
+    // um teleporte instantâneo.
+    IEnumerator RotinaRecuoUltimate(float direcao, float forca, float duracao)
+    {
+        if (duracao <= 0f) yield break;
+
+        float t = 0f;
+        while (t < duracao)
+        {
+            float progresso = t / duracao;
+            velocidadeRecuoX = direcao * forca * (1f - progresso * progresso);
+            t += Time.deltaTime;
+            yield return null;
+        }
+        velocidadeRecuoX = 0f;
+    }
+
+    GameObject CriarLampejoRaioUltimate()
+    {
+        if (dadosPersonagem.spriteRaioUltimateInicio == null) return null;
+
+        float direcao = transform.localScale.x > 0f ? 1f : -1f;
+        Vector3 posicao = transform.position + new Vector3(direcao * 0.4f, 0.6f, 0f);
+
+        GameObject obj = new GameObject("LampejoRaioUltimate");
+        obj.transform.position = posicao;
+
+        SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
+        sr.sprite = dadosPersonagem.spriteRaioUltimateInicio;
+        sr.sortingLayerName = spriteRenderer != null ? spriteRenderer.sortingLayerName : "Default";
+        sr.sortingOrder = (spriteRenderer != null ? spriteRenderer.sortingOrder : 0) + 5;
+
+        return obj;
+    }
+
+    // Estica o sprite do raio (pivô central — import padrão) no eixo X pra cobrir
+    // exatamente a distância até o oponente, sem precisar conhecer o pivô/recorte
+    // exato do sprite. Se o sprite do raio usar outro pivô, o comprimento continua
+    // certo mas a ancoragem pode precisar de ajuste visual depois.
+    GameObject CriarRaioUltimate(LutadorController2D alvo)
+    {
+        if (dadosPersonagem.spriteRaioUltimate == null || alvo == null) return null;
+
+        const float alturaRaio = 0.6f; // aproximadamente altura do peito/braço
+        Vector3 origemJamanta = transform.position + new Vector3(0f, alturaRaio, 0f);
+        Vector3 origemAlvo = alvo.transform.position + new Vector3(0f, alturaRaio, 0f);
+        Vector3 meio = (origemJamanta + origemAlvo) * 0.5f;
+        float distancia = Mathf.Abs(origemAlvo.x - origemJamanta.x);
+
+        GameObject obj = new GameObject("RaioUltimate");
+        obj.transform.position = meio;
+
+        SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
+        sr.sprite = dadosPersonagem.spriteRaioUltimate;
+        sr.sortingLayerName = spriteRenderer != null ? spriteRenderer.sortingLayerName : "Default";
+        sr.sortingOrder = (spriteRenderer != null ? spriteRenderer.sortingOrder : 0) + 5;
+
+        float larguraOriginal = sr.sprite.bounds.size.x;
+        if (larguraOriginal > 0.001f)
+            obj.transform.localScale = new Vector3(distancia / larguraOriginal, 1f, 1f);
+
+        return obj;
     }
 
     public void ReceberDano(int dano)

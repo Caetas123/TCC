@@ -62,6 +62,28 @@ public class DadosPersonagem : ScriptableObject
     public float alcanceUltimate = 3f;
     public TipoUsoUltimate tipoUsoUltimate = TipoUsoUltimate.BarraCheia;
 
+    // ── Ultimate Único — Raio com Recuo (ex: Jamanta) ────────────────────────
+    // Diferente do ultimate padrão (dano instantâneo no aperto do botão), esse
+    // sincroniza o dano com um frame específico da animação de Ultimate (o
+    // personagem se posiciona antes) e some com o disparo em duas etapas: recuo +
+    // raio, com um atraso bem curto antes do dano — não é instantâneo, mas também
+    // não é lento feito a rachadura.
+    [Header("Ultimate Único — Raio com Recuo (ex: Jamanta)")]
+    [Tooltip("Sprite do raio disparado. Deixe VAZIO pra esse personagem usar o ultimate padrão (dano instantâneo, sem recuo, sem raio).")]
+    public Sprite spriteRaioUltimate;
+    [Tooltip("Sprite do lampejo/clarão no instante do disparo, antes do raio esticar de verdade. Opcional — deixe vazio pra pular direto pro raio cheio.")]
+    public Sprite spriteRaioUltimateInicio;
+    [Tooltip("Frame (0-based) da animação de Ultimate em que o raio de fato dispara — os frames antes disso são só o personagem se posicionando")]
+    public int frameLancamentoRaioUltimate = 4;
+    [Tooltip("Atraso (segundos) entre o disparo e o dano realmente acertar — só pra dar a sensação de trajeto. Bem mais curto que duracaoHitboxRachadura.")]
+    public float delayRaioUltimate = 0.05f;
+    [Tooltip("Quanto tempo (segundos) o sprite do raio cheio fica visível na tela")]
+    public float duracaoVisualRaioUltimate = 0.15f;
+    [Tooltip("Força do recuo (empurrão pra trás) no instante em que o raio dispara")]
+    public float forcaRecuoUltimate = 6f;
+    [Tooltip("Duração do recuo (segundos) — decai suavemente até parar, não é um teleporte instantâneo")]
+    public float duracaoRecuoUltimate = 0.25f;
+
     // ── Movimento durante cada animação ─────────────────────────────────────
     // Pra cada animação: "Pode Se Mover" desligado = personagem trava completamente
     // no lugar (equivale a multiplicador 0, mas mais claro de configurar). Ligado =
