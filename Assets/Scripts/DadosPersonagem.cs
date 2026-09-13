@@ -76,6 +76,8 @@ public class DadosPersonagem : ScriptableObject
     public int frameCravarLavaUltimate = 2;
     [Tooltip("Quanto tempo (segundos) o sprite da lava fica visível na tela")]
     public float duracaoVisualLavaUltimate = 3f;
+    [Tooltip("Multiplicador de tamanho da lava — 1 = tamanho natural do sprite (não escala pelo tamanho do personagem, que é um número bem maior e deixava a lava gigante)")]
+    public float escalaLavaUltimate = 0.6f;
 
     // ── Ultimate Único — Raio com Recuo (ex: Jamanta) ────────────────────────
     // Diferente do ultimate padrão (dano instantâneo no aperto do botão), esse

@@ -1406,17 +1406,18 @@ public class LutadorController2D : MonoBehaviour
         }
     }
 
-    // Lava nasce nos pés do OPONENTE (não do Diego), escalada pra combinar com o
-    // tamanho real dele na cena — mesma lógica de escala usada no raio do
-    // Jamanta (EscalaVisualDoLutador), só que aqui não precisa esticar, só
-    // aparecer do tamanho certo no lugar certo.
+    // Lava nasce nos pés do OPONENTE (não do Diego). Diferente do raio do
+    // Jamanta, NÃO escala pelo tamanho do personagem (EscalaVisualDoLutador é
+    // ~5x nessa cena — multiplicar por isso é o que deixava a lava gigante,
+    // cobrindo o personagem inteiro). O sprite da lava já tem seu próprio
+    // tamanho desenhado; escalaLavaUltimate é só um multiplicador fino de ajuste.
     GameObject CriarLavaUltimate(LutadorController2D alvo)
     {
         if (dadosPersonagem.spriteLavaUltimate == null || alvo == null) return null;
 
         GameObject obj = new GameObject("LavaUltimate");
         obj.transform.position = alvo.transform.position;
-        obj.transform.localScale = Vector3.one * alvo.EscalaVisualDoLutador();
+        obj.transform.localScale = Vector3.one * dadosPersonagem.escalaLavaUltimate;
 
         SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
         sr.sprite = dadosPersonagem.spriteLavaUltimate;
