@@ -1196,6 +1196,24 @@ public class LutadorController2D : MonoBehaviour
             return;
         }
 
+        // Personagem com spriteLavaUltimate configurado (ex: Diego) crava a
+        // espada em chamas no chão em vez do dano instantâneo padrão — a lava
+        // nasce embaixo do OPONENTE, então continua fazendo sentido respeitar
+        // alcanceUltimate (é um golpe corpo a corpo, diferente do raio acima).
+        if (dadosPersonagem.spriteLavaUltimate != null)
+        {
+            float distanciaLava = Vector2.Distance(transform.position, oponente.transform.position);
+            if (distanciaLava <= dadosPersonagem.alcanceUltimate)
+            {
+                GastarEnergiaUltimate();
+                StartCoroutine(UltimateLavaSobPes(oponente));
+            }
+
+            TocarSom(dadosPersonagem.somUltimate, dadosPersonagem.volumeUltimate);
+            IniciarAnimacaoUmaVez(EstadoAnim.Ultimate);
+            return;
+        }
+
         float distancia = Vector2.Distance(transform.position, oponente.transform.position);
         if (distancia <= dadosPersonagem.alcanceUltimate)
         {
@@ -1333,6 +1351,52 @@ public class LutadorController2D : MonoBehaviour
     {
         obj.transform.position = origem + Vector3.right * (direcao * comprimento * 0.5f);
         obj.transform.localScale = new Vector3(direcao * comprimento / larguraOriginal, escalaEspessura, 1f);
+    }
+
+    // ── Ultimate único: espada cravada + lava sob os pés do oponente (ex: Diego) ──
+    // A animação de Ultimate toca por fora (framesUltimate: de pé -> agachando ->
+    // espada cravada). No frame configurado como "cravar" (a espada já firme no
+    // chão), aplica o dano normal + a MESMA queimação do ataque com a espada em
+    // chamas (duração reduzida se o alvo estiver defendendo no instante — igual
+    // ao AplicarQueimacaoSeEspadaEmChamas) e faz a lava nascer embaixo dele.
+    IEnumerator UltimateLavaSobPes(LutadorController2D alvo)
+    {
+        float fps = dadosPersonagem.fpsUltimate > 0f ? dadosPersonagem.fpsUltimate : 10f;
+        float tempoAteCravar = Mathf.Max(0f, dadosPersonagem.frameCravarLavaUltimate) / fps;
+        yield return new WaitForSeconds(tempoAteCravar);
+
+        if (alvo == null || alvo.EstaMorto()) yield break;
+
+        alvo.ReceberDano(dadosPersonagem.danoUltimate);
+
+        bool alvoDefendendo = alvo.EstaDefendendo();
+        float duracaoQueimacao = alvoDefendendo
+            ? dadosPersonagem.duracaoQueimacaoDefendendo
+            : dadosPersonagem.duracaoQueimacao;
+        alvo.AplicarQueimadura(dadosPersonagem.danoQueimacaoPorSegundo, duracaoQueimacao);
+
+        GameObject lava = CriarLavaUltimate(alvo);
+        if (lava != null) Destroy(lava, dadosPersonagem.duracaoVisualLavaUltimate);
+    }
+
+    // Lava nasce nos pés do OPONENTE (não do Diego), escalada pra combinar com o
+    // tamanho real dele na cena — mesma lógica de escala usada no raio do
+    // Jamanta (EscalaVisualDoLutador), só que aqui não precisa esticar, só
+    // aparecer do tamanho certo no lugar certo.
+    GameObject CriarLavaUltimate(LutadorController2D alvo)
+    {
+        if (dadosPersonagem.spriteLavaUltimate == null || alvo == null) return null;
+
+        GameObject obj = new GameObject("LavaUltimate");
+        obj.transform.position = alvo.transform.position;
+        obj.transform.localScale = Vector3.one * alvo.EscalaVisualDoLutador();
+
+        SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
+        sr.sprite = dadosPersonagem.spriteLavaUltimate;
+        sr.sortingLayerName = spriteRenderer != null ? spriteRenderer.sortingLayerName : "Default";
+        sr.sortingOrder = -1; // no chão, atrás dos personagens — mesmo padrão da rachadura
+
+        return obj;
     }
 
     // Decaimento suave (ease-out): forte no início, esvaindo até 0 — sensação de

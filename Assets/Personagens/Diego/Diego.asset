@@ -37,6 +37,9 @@ MonoBehaviour:
   danoUltimate: 50
   alcanceUltimate: 3
   tipoUsoUltimate: 1
+  spriteLavaUltimate: {fileID: -3238010355354068270, guid: 0a2b7404d99f4e54fb74074816524ece, type: 3}
+  frameCravarLavaUltimate: 2
+  duracaoVisualLavaUltimate: 2
   podeSeMoverDuranteAtaque: 1
   multiplicadorMovimentoAtaque: 0.2
   podeSeMoverDuranteEspecial: 1
@@ -102,8 +105,11 @@ MonoBehaviour:
   - {fileID: 3870379457180716989, guid: 6ad548f1e467c3c43a9b20eef717efa5, type: 3}
   framesSpecial: []
   fpsSpecial: 12
-  framesUltimate: []
-  fpsUltimate: 10
+  framesUltimate:
+  - {fileID: 7330180728591824884, guid: 769ad9bf4f323e04cb7f2bb876138705, type: 3}
+  - {fileID: -4224868820169787767, guid: 6c9d44e9bfae7d84ba16f1b21b7285f4, type: 3}
+  - {fileID: -2911770359958473256, guid: 256f773c0f5c8854f93c74fd45e70ace, type: 3}
+  fpsUltimate: 8
   framesHit: []
   fpsHit: 12
   framesDeath: []

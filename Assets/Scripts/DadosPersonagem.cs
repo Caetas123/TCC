@@ -62,6 +62,21 @@ public class DadosPersonagem : ScriptableObject
     public float alcanceUltimate = 3f;
     public TipoUsoUltimate tipoUsoUltimate = TipoUsoUltimate.BarraCheia;
 
+    // ── Ultimate Único — Espada Cravada + Lava (ex: Diego) ───────────────────
+    // Diferente do ultimate padrão, esse crava a espada em chamas no chão (a
+    // animação de Ultimate mostra o personagem se abaixando e cravando) e, no
+    // frame certo, faz aparecer um poço de lava embaixo do OPONENTE — que
+    // aplica dano normal + a mesma queimação do ataque com a espada em chamas
+    // (reaproveita danoQueimacaoPorSegundo/duracaoQueimacao/
+    // duracaoQueimacaoDefendendo, já configurados ali em cima).
+    [Header("Ultimate Único — Espada Cravada + Lava (ex: Diego)")]
+    [Tooltip("Sprite da lava que aparece embaixo do oponente. Deixe VAZIO pra esse personagem usar o ultimate padrão (dano instantâneo, sem lava).")]
+    public Sprite spriteLavaUltimate;
+    [Tooltip("Frame (0-based) da animação de Ultimate em que a espada crava no chão de verdade — é nesse frame que o dano e a lava aparecem")]
+    public int frameCravarLavaUltimate = 2;
+    [Tooltip("Quanto tempo (segundos) o sprite da lava fica visível na tela")]
+    public float duracaoVisualLavaUltimate = 2f;
+
     // ── Ultimate Único — Raio com Recuo (ex: Jamanta) ────────────────────────
     // Diferente do ultimate padrão (dano instantâneo no aperto do botão), esse
     // sincroniza o dano com um frame específico da animação de Ultimate (o
