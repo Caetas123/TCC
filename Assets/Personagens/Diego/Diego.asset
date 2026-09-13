@@ -39,7 +39,7 @@ MonoBehaviour:
   tipoUsoUltimate: 1
   spriteLavaUltimate: {fileID: -3238010355354068270, guid: 0a2b7404d99f4e54fb74074816524ece, type: 3}
   frameCravarLavaUltimate: 2
-  duracaoVisualLavaUltimate: 2
+  duracaoVisualLavaUltimate: 3
   podeSeMoverDuranteAtaque: 1
   multiplicadorMovimentoAtaque: 0.2
   podeSeMoverDuranteEspecial: 1

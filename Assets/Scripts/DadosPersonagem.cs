@@ -75,7 +75,7 @@ public class DadosPersonagem : ScriptableObject
     [Tooltip("Frame (0-based) da animação de Ultimate em que a espada crava no chão de verdade — é nesse frame que o dano e a lava aparecem")]
     public int frameCravarLavaUltimate = 2;
     [Tooltip("Quanto tempo (segundos) o sprite da lava fica visível na tela")]
-    public float duracaoVisualLavaUltimate = 2f;
+    public float duracaoVisualLavaUltimate = 3f;
 
     // ── Ultimate Único — Raio com Recuo (ex: Jamanta) ────────────────────────
     // Diferente do ultimate padrão (dano instantâneo no aperto do botão), esse

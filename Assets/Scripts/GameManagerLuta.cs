@@ -318,7 +318,7 @@ public class GameManagerLuta : MonoBehaviour
             string def = FormatarTecla(PlayerPrefs.GetString("P2_Defender", "DownArrow"));
             string atk = FormatarTecla(PlayerPrefs.GetString("P2_Ataque", "K"));
             string esp = FormatarTecla(PlayerPrefs.GetString("P2_Especial", "L"));
-            string ult = FormatarTecla(PlayerPrefs.GetString("P2_Ultimate", "Semicolon"));
+            string ult = FormatarTecla(PlayerPrefs.GetString("P2_Ultimate", "M"));
 
             controlesP2.text = $"P2 {esq}/{dir} P:{pulo} D:{def} A:{atk} E:{esp} U:{ult}";
             controlesP2.enableAutoSizing = true;

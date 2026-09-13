@@ -51,7 +51,7 @@ public class ControleManager : MonoBehaviour
         { "P2_Defender", "DownArrow" },
         { "P2_Ataque", "K" },
         { "P2_Especial", "L" },
-        { "P2_Ultimate", "Semicolon" },
+        { "P2_Ultimate", "M" },
     };
 
     private string teclaAtual = string.Empty;

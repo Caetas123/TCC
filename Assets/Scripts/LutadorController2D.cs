@@ -410,7 +410,7 @@ public class LutadorController2D : MonoBehaviour
             teclaPular = StringParaKeyCodeSeguro("P2_Pular", KeyCode.UpArrow);
             teclaAtaque = StringParaKeyCodeSeguro("P2_Ataque", KeyCode.K);
             teclaEspecial = StringParaKeyCodeSeguro("P2_Especial", KeyCode.L);
-            teclaUltimate = StringParaKeyCodeSeguro("P2_Ultimate", KeyCode.Semicolon);
+            teclaUltimate = StringParaKeyCodeSeguro("P2_Ultimate", KeyCode.M);
             teclaDefender = StringParaKeyCodeSeguro("P2_Defender", KeyCode.DownArrow);
         }
     }
@@ -1197,17 +1197,15 @@ public class LutadorController2D : MonoBehaviour
         }
 
         // Personagem com spriteLavaUltimate configurado (ex: Diego) crava a
-        // espada em chamas no chão em vez do dano instantâneo padrão — a lava
-        // nasce embaixo do OPONENTE, então continua fazendo sentido respeitar
-        // alcanceUltimate (é um golpe corpo a corpo, diferente do raio acima).
+        // espada em chamas no chão em vez do dano instantâneo padrão. A lava
+        // nasce embaixo do OPONENTE (não onde o Diego está), então — mesmo
+        // motivo do raio do Jamanta acima — NÃO checa alcanceUltimate: exigir
+        // corpo a corpo fazia o golpe "errar" silenciosamente (só som+animação,
+        // sem dano/lava) sempre que os dois não estivessem bem colados.
         if (dadosPersonagem.spriteLavaUltimate != null)
         {
-            float distanciaLava = Vector2.Distance(transform.position, oponente.transform.position);
-            if (distanciaLava <= dadosPersonagem.alcanceUltimate)
-            {
-                GastarEnergiaUltimate();
-                StartCoroutine(UltimateLavaSobPes(oponente));
-            }
+            GastarEnergiaUltimate();
+            StartCoroutine(UltimateLavaSobPes(oponente));
 
             TocarSom(dadosPersonagem.somUltimate, dadosPersonagem.volumeUltimate);
             IniciarAnimacaoUmaVez(EstadoAnim.Ultimate);
@@ -1365,7 +1363,18 @@ public class LutadorController2D : MonoBehaviour
         float tempoAteCravar = Mathf.Max(0f, dadosPersonagem.frameCravarLavaUltimate) / fps;
         yield return new WaitForSeconds(tempoAteCravar);
 
-        if (alvo == null || alvo.EstaMorto()) yield break;
+        // Congela na pose de espada cravada (mesma trava usada no raio do
+        // Jamanta) — sem isso a animação de só 3 frames terminava sozinha e o
+        // Diego voltava a andar bem antes da lava sumir da tela.
+        frameAtual = Mathf.Max(0, dadosPersonagem.frameCravarLavaUltimate);
+        AplicarFrameAtual();
+        travandoUltimateAteRaioSumir = true;
+
+        if (alvo == null || alvo.EstaMorto())
+        {
+            travandoUltimateAteRaioSumir = false;
+            yield break;
+        }
 
         alvo.ReceberDano(dadosPersonagem.danoUltimate);
 
@@ -1377,6 +1386,24 @@ public class LutadorController2D : MonoBehaviour
 
         GameObject lava = CriarLavaUltimate(alvo);
         if (lava != null) Destroy(lava, dadosPersonagem.duracaoVisualLavaUltimate);
+
+        // Segura a pose pelo mesmo tempo que a lava fica na tela, e só então
+        // libera — igual ao que a animação faria sozinha ao chegar no último
+        // frame, só que esticado até o efeito de verdade acabar.
+        yield return new WaitForSeconds(dadosPersonagem.duracaoVisualLavaUltimate);
+
+        travandoUltimateAteRaioSumir = false;
+
+        // Só libera se ninguém mais mexeu no estado nesse meio tempo (ex: o
+        // Diego levou um Hit, que tem prioridade maior e já assumiu sozinho).
+        if (estadoAtual == EstadoAnim.Ultimate)
+        {
+            animacaoUmaVezAtiva = false;
+            estadoAtual = estadoAnterior;
+            frameAtual = 0;
+            cronometroFrame = 0f;
+            AplicarFrameAtual();
+        }
     }
 
     // Lava nasce nos pés do OPONENTE (não do Diego), escalada pra combinar com o
