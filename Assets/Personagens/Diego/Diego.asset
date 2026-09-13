@@ -41,7 +41,17 @@ MonoBehaviour:
   frameCravarLavaUltimate: 2
   duracaoVisualLavaUltimate: 3
   escalaLavaUltimate: 1.5
-  offsetVerticalLavaUltimate: -0.15
+  offsetVerticalLavaUltimate: -0.5
+  spriteRaioUltimate: {fileID: 0}
+  frameLancamentoRaioUltimate: 4
+  fracaoAlturaRaioUltimate: 0.7
+  duracaoCrescimentoRaio: 0.08
+  delayRaioUltimate: 0.05
+  duracaoVisualRaioUltimate: 1
+  duracaoEnfraquecimentoRaio: 0.75
+  energiaDrenoRaioEnfraquecendo: 15
+  forcaRecuoUltimate: 6
+  duracaoRecuoUltimate: 0.25
   podeSeMoverDuranteAtaque: 1
   multiplicadorMovimentoAtaque: 0.2
   podeSeMoverDuranteEspecial: 1
