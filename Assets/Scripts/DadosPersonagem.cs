@@ -78,6 +78,8 @@ public class DadosPersonagem : ScriptableObject
     public float duracaoVisualLavaUltimate = 3f;
     [Tooltip("Multiplicador de tamanho da lava — 1 = tamanho natural do sprite (não escala pelo tamanho do personagem, que é um número bem maior e deixava a lava gigante)")]
     public float escalaLavaUltimate = 0.6f;
+    [Tooltip("Ajuste fino de altura (unidades) pra descer/subir a lava em relação aos pés do oponente — negativo desce. O sprite não é recortado rente ao desenho, então sobra uma margem que pode deixar a base visual um pouco acima do pé.")]
+    public float offsetVerticalLavaUltimate = -0.15f;
 
     // ── Ultimate Único — Raio com Recuo (ex: Jamanta) ────────────────────────
     // Diferente do ultimate padrão (dano instantâneo no aperto do botão), esse

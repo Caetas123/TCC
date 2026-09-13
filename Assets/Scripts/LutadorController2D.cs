@@ -1416,7 +1416,7 @@ public class LutadorController2D : MonoBehaviour
         if (dadosPersonagem.spriteLavaUltimate == null || alvo == null) return null;
 
         GameObject obj = new GameObject("LavaUltimate");
-        obj.transform.position = alvo.transform.position;
+        obj.transform.position = alvo.transform.position + new Vector3(0f, dadosPersonagem.offsetVerticalLavaUltimate, 0f);
         obj.transform.localScale = Vector3.one * dadosPersonagem.escalaLavaUltimate;
 
         SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
