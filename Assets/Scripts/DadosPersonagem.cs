@@ -59,6 +59,9 @@ public class DadosPersonagem : ScriptableObject
 
     [Header("Ultimate")]
     public int danoUltimate = 45;
+    [Min(1)]
+    [Tooltip("Quantidade de pulsos de dano do raio. Usado pelo ultimate do Jamanta; 1 mantém o comportamento de golpe único.")]
+    public int quantidadePulsosRaioUltimate = 1;
     public float alcanceUltimate = 3f;
     public TipoUsoUltimate tipoUsoUltimate = TipoUsoUltimate.BarraCheia;
 

@@ -35,7 +35,8 @@ MonoBehaviour:
   intervaloRachaduras: 0.5
   multiplicadorDanoRachadura: 1.5
   duracaoHitboxRachadura: 0.2
-  danoUltimate: 25
+  danoUltimate: 12
+  quantidadePulsosRaioUltimate: 5
   alcanceUltimate: 3
   tipoUsoUltimate: 1
   spriteRaioUltimate: {fileID: 1273242584523100952, guid: ca75610c65b93cc468bad14139dbc3c6, type: 3}
@@ -63,7 +64,9 @@ MonoBehaviour:
   - {fileID: -4331865995899174025, guid: 676e6a040a69cf342bfda7a48bfc36e6, type: 3}
   - {fileID: 7802682012112467970, guid: a27965233d115004686a70d32d583a78, type: 3}
   fpsMove: 8
-  framesJump: []
+  framesJump:
+  - {fileID: -185078663419797197, guid: ae49bcf102f73214e93eaa77274d21d1, type: 3}
+  - {fileID: -8661660940810137673, guid: c580ebbbd47b3a84788321774f7fa081, type: 3}
   fpsJump: 8
   framesDefend:
   - {fileID: -1489712888088583096, guid: 46d4083b812d3bc4ebdd33be4f83a113, type: 3}

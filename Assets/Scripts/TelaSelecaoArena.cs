@@ -1101,7 +1101,9 @@ public class TelaSelecaoArena : MonoBehaviour
     void MostrarAvisoArenaObrigatoria()
     {
         if (textoAviso != null)
-            textoAviso.text = "Selecione uma arena";
+            textoAviso.text = LanguageManager.Instance != null
+                ? LanguageManager.Instance.GetText("ARENA_SELECIONE_AVISO")
+                : "Selecione uma arena";
 
         StartCoroutine(LimparAvisoDepois(2f));
     }

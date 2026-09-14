@@ -59,6 +59,13 @@ public class ControleManager : MonoBehaviour
     private bool esperandoTecla = false;
     private Coroutine rotinaAviso;
 
+    string Traduzir(string chave, string fallback)
+    {
+        return LanguageManager.Instance != null
+            ? LanguageManager.Instance.GetText(chave)
+            : fallback;
+    }
+
     private void Start()
     {
         GarantirPadroes();
@@ -86,13 +93,13 @@ public class ControleManager : MonoBehaviour
                     AtualizarTextoBotao(botaoAtual, teclaAtual);
 
                 CancelarRemapeamento();
-                MostrarAviso("Cancelado!");
+                MostrarAviso(Traduzir("CTRL_CANCELADO", "Cancelado!"));
                 return;
             }
 
             if (TeclaProibida(tecla))
             {
-                MostrarAviso("Tecla não permitida!");
+                MostrarAviso(Traduzir("CTRL_PROIBIDA", "Tecla não permitida!"));
                 return;
             }
 
@@ -102,7 +109,7 @@ public class ControleManager : MonoBehaviour
             {
                 CancelarRemapeamento();
                 AtualizarTexto();
-                MostrarAviso("Tecla já está em uso!");
+                MostrarAviso(Traduzir("CTRL_EM_USO", "Tecla já está em uso!"));
                 return;
             }
 
@@ -121,7 +128,7 @@ public class ControleManager : MonoBehaviour
             teclaAtual = string.Empty;
             botaoAtual = null;
 
-            MostrarAviso("Tecla salva!");
+            MostrarAviso(Traduzir("CTRL_SALVA", "Tecla salva!"));
             return;
         }
     }
@@ -199,7 +206,7 @@ public class ControleManager : MonoBehaviour
         if (textoBotao != null)
             textoBotao.text = "...";
 
-        MostrarAviso("Pressione uma tecla");
+        MostrarAviso(Traduzir("CTRL_PRESSIONE", "Pressione uma tecla"));
     }
 
     private void CancelarRemapeamento()
@@ -329,7 +336,7 @@ public class ControleManager : MonoBehaviour
         PlayerPrefs.Save();
         AplicarTeclasNosLutadoresEmCena();
         AtualizarTexto();
-        MostrarAviso("Controles restaurados!");
+        MostrarAviso(Traduzir("CTRL_RESTAURADO", "Controles restaurados!"));
     }
 
     // Empurra as teclas recém-salvas pra qualquer LutadorController2D já vivo na

@@ -247,14 +247,10 @@ public class AIControllerLuta : MonoBehaviour
         AtualizarMovimentoDoEstado();
 
         // ── CAMADA 3 — BOTÕES: limitada pelo relógio de reação ────────────
+        bool acaoSolicitadaNesteCiclo = false;
         if (cronometroAcao <= 0f)
         {
-            ExecutarAcoesDoEstado();
-            // Fora do switch de estado de propósito — é uma decisão de POSTURA
-            // ("devia estar ligada agora?"), não uma ação pontual de um estado
-            // específico, então precisa ser reavaliada não importa em qual
-            // comportamento a IA está.
-            GerenciarEspecialAlternavel();
+            acaoSolicitadaNesteCiclo = ExecutarAcoesDoEstado();
             cronometroAcao = Random.Range(tempoReacaoMin, tempoReacaoMax) * 0.6f;
         }
 
@@ -274,7 +270,7 @@ public class AIControllerLuta : MonoBehaviour
         lutador.IA_DefinirDefesa(cronometroDefesa > 0f);
 
         // Combo: segundo hit pendente dentro da janela
-        if (comboSegundoHitPendente && cronometroCombo > 0f)
+        if (!acaoSolicitadaNesteCiclo && comboSegundoHitPendente && cronometroCombo > 0f)
             TentarSegundoHitCombo();
     }
 
@@ -592,91 +588,117 @@ public class AIControllerLuta : MonoBehaviour
     }
 
     // ── CAMADA 3: BOTÕES — limitados pelo relógio de reação ───────────────
-    void ExecutarAcoesDoEstado()
+    bool ExecutarAcoesDoEstado()
     {
-        if (lutador.dadosPersonagem == null) return;
+        if (lutador.dadosPersonagem == null) return false;
 
         float distancia = lutador.DistanciaDoOponente();
         float dir       = DirecaoParaOponente();
         float recuo     = -dir;
 
+        // Um único comando ofensivo por ciclo. Antes o bot podia enfileirar
+        // ataque + especial + ultimate no mesmo Update; o LutadorController2D
+        // processava o ataque primeiro e descartava os demais por já estar em
+        // ação ofensiva, embora a IA consumisse os cooldowns dos três.
+        if (GerenciarEspecialAlternavel()) return true;
+        if (TentarUltimateSeVale(distancia)) return true;
+        if (TentarEspecialSeVale(distancia)) return true;
+
         switch (estadoAtual)
         {
             case EstadoComportamento.Aproximar:
-                TentarAtacarSeNoAlcance(distancia);
-                break;
+                return TentarAtacarSeNoAlcance(distancia);
 
             case EstadoComportamento.Pressionar:
-                TentarAtacarSeNoAlcance(distancia);
-                TentarEspecialSeVale(distancia);
-                TentarUltimateSeVale(distancia);
+                if (TentarAtacarSeNoAlcance(distancia)) return true;
 
                 if (usaFinta && lutador.EstaNoChao() && cronometroPuloCooldown <= 0f
                     && Random.value < chancePuloBase)
                 {
                     lutador.IA_SolicitarPulo();
                     cronometroPuloCooldown = cooldownPulo;
+                    return true;
                 }
 
                 if (usaFinta && cronometroFintaCooldown <= 0f && Random.value < chanceFintaBase)
+                {
                     IniciarFinta(dir, recuo);
-                break;
+                    return true;
+                }
+                return false;
 
             case EstadoComportamento.Recuar:
                 // Ataca se o oponente entrar no alcance mesmo recuando
                 if (distancia <= distanciaAtaque && Random.value < chanceAtaqueBase * 0.7f)
-                    TentarAtacarSeNoAlcance(distancia);
+                    if (TentarAtacarSeNoAlcance(distancia)) return true;
                 if (Random.value < chanceDefesaBase * multDefesa)
+                {
                     cronometroDefesa = Random.Range(0.2f, 0.5f);
-                break;
+                    return true;
+                }
+                return false;
 
             case EstadoComportamento.Defender:
-                if (Random.value < chanceDefesaBase * multDefesa)
-                    cronometroDefesa = Random.Range(0.3f, 0.8f);
                 // Contra-ataca na abertura do oponente
                 if (distancia <= distanciaAtaque && Random.value < chanceAtaqueBase)
-                    TentarAtacarSeNoAlcance(distancia);
-                break;
+                    if (TentarAtacarSeNoAlcance(distancia)) return true;
+                if (Random.value < chanceDefesaBase * multDefesa)
+                {
+                    cronometroDefesa = Random.Range(0.3f, 0.8f);
+                    return true;
+                }
+                return false;
 
             case EstadoComportamento.Flanquear:
                 if (usaFinta && cronometroFintaCooldown <= 0f && Random.value < chanceFintaBase * 1.5f)
+                {
                     IniciarFinta(dir, recuo);
-                TentarAtacarSeNoAlcance(distancia);
-                break;
+                    return true;
+                }
+                return TentarAtacarSeNoAlcance(distancia);
 
             case EstadoComportamento.Espacamento:
                 // A punição em si é feita dentro de TentarAtacarSeNoAlcance, que já
                 // trata janelaPunicao/janelaAntiAereo ignorando o filtro de chance.
-                TentarAtacarSeNoAlcance(distancia);
+                if (TentarAtacarSeNoAlcance(distancia)) return true;
 
                 // Se o oponente está atacando e estamos no alcance dele, bloqueia —
                 // o zoneador não come golpe de graça enquanto espera.
                 if (oponente.EstaAtacando() && distancia <= distanciaAtaque * 1.2f
                     && Random.value < Mathf.Max(chanceDefesaBase * multDefesa, capacidadeLeitura * 0.7f))
+                {
                     cronometroDefesa = Random.Range(0.25f, 0.5f);
+                    return true;
+                }
 
                 // Poke ocasional pra não virar estátua e forçar reação do oponente
                 if (usaFinta && cronometroFintaCooldown <= 0f && Random.value < chanceFintaBase)
+                {
                     IniciarFinta(dir, recuo);
-                break;
+                    return true;
+                }
+                return false;
 
             case EstadoComportamento.Finalizar:
-                TentarAtacarSeNoAlcance(distancia);
-                TentarEspecialSeVale(distancia);
-                TentarUltimateSeVale(distancia);
+                if (TentarAtacarSeNoAlcance(distancia)) return true;
                 if (lutador.EstaNoChao() && cronometroPuloCooldown <= 0f && Random.value < 0.12f)
                 {
                     lutador.IA_SolicitarPulo();
                     cronometroPuloCooldown = cooldownPulo;
+                    return true;
                 }
-                break;
+                return false;
 
             case EstadoComportamento.Recuperar:
                 if (Random.value < chanceDefesaBase * multDefesa * 1.4f)
+                {
                     cronometroDefesa = Random.Range(0.4f, 0.9f);
-                TentarEspecialSeVale(distancia);
-                break;
+                    return true;
+                }
+                return false;
         }
+
+        return false;
     }
 
     // ── Ações de combate ──────────────────────────────────────────────────
@@ -690,11 +712,12 @@ public class AIControllerLuta : MonoBehaviour
     // sair, porque o personagem ainda estava travado defendendo.
     bool ComprometidaComBloqueio() => cronometroDefesa > 0f;
 
-    void TentarAtacarSeNoAlcance(float distancia)
+    bool TentarAtacarSeNoAlcance(float distancia)
     {
-        if (lutador.dadosPersonagem == null) return;
-        if (ComprometidaComBloqueio()) return;
-        if (cronometroAtaqueCooldown > 0f) return;
+        if (lutador.dadosPersonagem == null) return false;
+        if (ComprometidaComBloqueio()) return false;
+        if (cronometroAtaqueCooldown > 0f) return false;
+        if (lutador.EstaAtacando() || lutador.EstaLevandoHit()) return false;
 
         float alcance = lutador.dadosPersonagem.alcanceAtaque;
 
@@ -704,7 +727,7 @@ public class AIControllerLuta : MonoBehaviour
         bool impreciso = Random.value < chanceAcaoImprecisa;
         float alcanceEfetivo = impreciso ? alcance * 1.40f : alcance;
 
-        if (distancia > alcanceEfetivo) return;
+        if (distancia > alcanceEfetivo) return false;
 
         // Oportunidades de punição: o oponente acabou de sair de um ataque (recuperação)
         // ou acabou de POUSAR de um pulo. Nos dois casos ele está vulnerável — a IA
@@ -716,7 +739,7 @@ public class AIControllerLuta : MonoBehaviour
         // destrava lutas CVC em que os dois lados ficam se olhando.
         bool forcandoPorImpasse = EmImpasse();
 
-        if (!aproveitandoAbertura && !forcandoPorImpasse && Random.value > chanceAtaqueBase) return;
+        if (!aproveitandoAbertura && !forcandoPorImpasse && Random.value > chanceAtaqueBase) return false;
 
         lutador.IA_SolicitarAtaque();
         cronometroAtaqueCooldown = cooldownAtaque;
@@ -728,23 +751,29 @@ public class AIControllerLuta : MonoBehaviour
             hitsDoComboAtual = 1;
             cronometroCombo = Random.Range(0.15f, 0.35f);
         }
+
+        return true;
     }
 
-    void TentarSegundoHitCombo()
+    bool TentarSegundoHitCombo()
     {
         comboSegundoHitPendente = false;
-        if (lutador.dadosPersonagem == null) return;
+        if (lutador.dadosPersonagem == null) return false;
 
-        if (ComprometidaComBloqueio()) { hitsDoComboAtual = 0; return; }
+        if (ComprometidaComBloqueio()) { hitsDoComboAtual = 0; return false; }
+        if (lutador.EstaAtacando() || lutador.EstaLevandoHit())
+            return false;
 
         float distancia = lutador.DistanciaDoOponente();
         bool encadeou = false;
 
         // Especial alternável não entra em combo como um golpe normal — é
         // liga/desliga, gerenciado à parte (ver GerenciarEspecialAlternavel).
+        bool especialGlobal = lutador.dadosPersonagem.spriteRachadura != null;
         if (!lutador.TemEspecialAlternavel()
-            && distancia <= lutador.dadosPersonagem.alcanceEspecial
+            && (especialGlobal || distancia <= lutador.dadosPersonagem.alcanceEspecial)
             && cronometroEspecialCooldown <= 0f
+            && lutador.IA_PodeUsarEspecial()
             && !DevoGuardarEnergiaParaUltimate()
             && Random.value < chanceEspecialBase)
         {
@@ -760,7 +789,7 @@ public class AIControllerLuta : MonoBehaviour
             encadeou = true;
         }
 
-        if (!encadeou) { hitsDoComboAtual = 0; return; }
+        if (!encadeou) { hitsDoComboAtual = 0; return false; }
 
         hitsDoComboAtual++;
 
@@ -775,6 +804,8 @@ public class AIControllerLuta : MonoBehaviour
         {
             hitsDoComboAtual = 0;
         }
+
+        return true;
     }
 
     // ── Especial alternável (ex: espada em chamas do Diego) ─────────────────
@@ -783,10 +814,11 @@ public class AIControllerLuta : MonoBehaviour
     // "vou usar agora". Sem essa gestão dedicada, a IA trataria como um golpe
     // de "usar e esquecer" (podendo ligar e desligar à toa a cada tentativa) e
     // nunca aproveitaria que atacar com ele ativo aplica queimação extra.
-    void GerenciarEspecialAlternavel()
+    bool GerenciarEspecialAlternavel()
     {
-        if (!lutador.TemEspecialAlternavel()) return;
-        if (cronometroEspecialCooldown > 0f) return; // evita ligar/desligar rápido demais
+        if (!lutador.TemEspecialAlternavel()) return false;
+        if (cronometroEspecialCooldown > 0f) return false; // evita ligar/desligar rápido demais
+        if (lutador.EstaAtacando() || lutador.EstaLevandoHit()) return false;
 
         bool ativo = lutador.EstaComEspecialAlternavelAtivo();
         float energia = lutador.ObterEnergiaNormalizada();
@@ -820,24 +852,32 @@ public class AIControllerLuta : MonoBehaviour
             // não uma animação de golpe — mas ainda evita ligar/desligar em ticks
             // consecutivos por causa de flutuação de estado/energia.
             cronometroEspecialCooldown = cooldownEspecial * 0.5f;
+            return true;
         }
+
+        return false;
     }
 
-    void TentarEspecialSeVale(float distancia)
+    bool TentarEspecialSeVale(float distancia)
     {
-        if (lutador.dadosPersonagem == null) return;
+        if (lutador.dadosPersonagem == null) return false;
         // Especial alternável (ex: espada em chamas do Diego) é gerenciado à
         // parte, por postura (ver GerenciarEspecialAlternavel) — não por "vale a
         // pena castar agora", já que não é um golpe único, é um liga/desliga.
-        if (lutador.TemEspecialAlternavel()) return;
-        if (ComprometidaComBloqueio()) return;
-        if (distancia > lutador.dadosPersonagem.alcanceEspecial) return;
-        if (cronometroEspecialCooldown > 0f) return;
-        if (DevoGuardarEnergiaParaUltimate()) return;
-        if (Random.value > chanceEspecialBase) return;
+        if (lutador.TemEspecialAlternavel()) return false;
+        if (ComprometidaComBloqueio()) return false;
+        if (lutador.EstaAtacando() || lutador.EstaLevandoHit()) return false;
+
+        bool especialGlobal = lutador.dadosPersonagem.spriteRachadura != null;
+        if (!especialGlobal && distancia > lutador.dadosPersonagem.alcanceEspecial) return false;
+        if (cronometroEspecialCooldown > 0f) return false;
+        if (!lutador.IA_PodeUsarEspecial()) return false;
+        if (DevoGuardarEnergiaParaUltimate()) return false;
+        if (Random.value > chanceEspecialBase) return false;
 
         lutador.IA_SolicitarEspecial();
         cronometroEspecialCooldown = cooldownEspecial;
+        return true;
     }
 
     // Gestão de energia: se o oponente já está perto de poder ser finalizado e a energia
@@ -859,25 +899,28 @@ public class AIControllerLuta : MonoBehaviour
         return false;
     }
 
-    void TentarUltimateSeVale(float distancia)
+    bool TentarUltimateSeVale(float distancia)
     {
-        if (lutador.dadosPersonagem == null) return;
-        if (ComprometidaComBloqueio()) return;
+        if (lutador.dadosPersonagem == null) return false;
+        if (ComprometidaComBloqueio()) return false;
+        if (lutador.EstaAtacando() || lutador.EstaLevandoHit()) return false;
         // O ultimate de raio único (ex: Jamanta) atravessa a tela inteira — não é
         // um golpe corpo a corpo, então não faz sentido travar pelo alcanceUltimate
         // "normal". Sem isso a IA praticamente nunca soltava o golpe mais vistoso
         // do personagem, só quando por acaso já estava perto.
-        bool respeitaAlcance = lutador.dadosPersonagem.spriteRaioUltimate == null;
-        if (respeitaAlcance && distancia > lutador.dadosPersonagem.alcanceUltimate) return;
-        if (cronometroUltimateCooldown > 0f) return;
-        if (lutador.ObterEnergiaNormalizada() < 0.85f) return;
+        bool ultimateGlobal = lutador.dadosPersonagem.spriteRaioUltimate != null ||
+                              lutador.dadosPersonagem.spriteLavaUltimate != null;
+        if (!ultimateGlobal && distancia > lutador.dadosPersonagem.alcanceUltimate) return false;
+        if (cronometroUltimateCooldown > 0f) return false;
+        if (!lutador.IA_PodeUsarUltimate()) return false;
         // Com energia cheia e no alcance, o ultimate DEVE sair — é o momento de
         // espetáculo do personagem. Antes era filtrado por chance * precisão e
         // praticamente nunca aparecia nas dificuldades baixas.
-        if (Random.value > chanceUltimateBase) return;
+        if (Random.value > chanceUltimateBase) return false;
 
         lutador.IA_SolicitarUltimate();
         cronometroUltimateCooldown = cooldownUltimate;
+        return true;
     }
 
     void TentarEsquivar()

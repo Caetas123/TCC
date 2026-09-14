@@ -138,6 +138,13 @@ public class LutadorController2D : MonoBehaviour
     // acontecendo na tela.
     private bool travandoUltimateAteRaioSumir = false;
 
+    // Permite cancelar corretamente um ultimate quando o lutador é atingido.
+    // Sem guardar essas referências, a animação era interrompida pelo Hit, mas
+    // a coroutine continuava criando dano/efeito em segundo plano.
+    private Coroutine rotinaUltimateAtiva;
+    private Coroutine rotinaRecuoUltimate;
+    private GameObject efeitoUltimateAtivo;
+
     void Start()
     {
         if (rb == null) rb = GetComponent<Rigidbody2D>();
@@ -306,6 +313,7 @@ public class LutadorController2D : MonoBehaviour
     {
         if (dadosPersonagem == null) return;
 
+        CancelarUltimateAtivo();
         vidaAtual = dadosPersonagem.vidaMax;
         // Energia começa ZERADA no início da luta — combinado com o time pra ninguém
         // conseguir usar Especial/Ultimate de cara, sem precisar lutar pra carregar energia.
@@ -314,6 +322,12 @@ public class LutadorController2D : MonoBehaviour
         espadaEmChamasAtiva = false;
         velocidadeRecuoX = 0f;
         travandoUltimateAteRaioSumir = false;
+        emHabilidadeUnica = false;
+        estadoAtual = EstadoAnim.Idle;
+        estadoAnterior = EstadoAnim.Idle;
+        frameAtual = 0;
+        cronometroFrame = 0f;
+        animacaoUmaVezAtiva = false;
         if (rotinaQueimacao != null) { StopCoroutine(rotinaQueimacao); rotinaQueimacao = null; }
 
         // Aplica o primeiro frame do Idle imediatamente
@@ -333,6 +347,7 @@ public class LutadorController2D : MonoBehaviour
     {
         if (dadosPersonagem == null) return;
 
+        CancelarUltimateAtivo();
         vidaAtual = dadosPersonagem.vidaMax;
         // Mesma regra do início da luta: cada round novo também começa com energia
         // ZERADA, pra ninguém entrar no round já podendo soltar Especial/Ultimate.
@@ -340,7 +355,10 @@ public class LutadorController2D : MonoBehaviour
         movimento = 0f;
         defendendo = false;
         morreu = false;
-        estaNoChao = false;
+        // Os spawns da luta ficam no chão. Começar assim evita um frame de
+        // animação aérea/stale sprite antes da primeira colisão do novo round;
+        // se o spawn estiver no ar, OnCollisionExit2D corrige no frame seguinte.
+        estaNoChao = true;
         espadaEmChamasAtiva = false;
         velocidadeRecuoX = 0f;
         travandoUltimateAteRaioSumir = false;
@@ -370,6 +388,7 @@ public class LutadorController2D : MonoBehaviour
 
     public void TravarLutador()
     {
+        CancelarUltimateAtivo();
         movimento = 0f;
         defendendo = false;
         if (rb != null) rb.linearVelocity = Vector2.zero;
@@ -557,7 +576,11 @@ public class LutadorController2D : MonoBehaviour
     void RecarregarEnergiaParado()
     {
         if (dadosPersonagem == null) return;
-        bool paradoNoChao = Mathf.Abs(movimento) < 0.01f && estaNoChao && !defendendo;
+        // A espada em chamas já possui um dreno próprio. Não permita que a
+        // regeneração fique ativa ao mesmo tempo, pois isso fazia o especial
+        // do Diego aumentar a energia em vez de consumi-la.
+        bool paradoNoChao = Mathf.Abs(movimento) < 0.01f && estaNoChao &&
+                            !defendendo && !espadaEmChamasAtiva;
         if (paradoNoChao)
         {
             energiaAtual += dadosPersonagem.velocidadeRecargaEnergia * Time.deltaTime;
@@ -568,6 +591,10 @@ public class LutadorController2D : MonoBehaviour
     void Pular()
     {
         if (rb == null || dadosPersonagem == null) return;
+        // A flag de chão pode continuar verdadeira até o próximo passo de física.
+        // Atualizá-la aqui evita que o primeiro frame do salto seja tratado como
+        // Idle e também impede uma nova solicitação de pulo nesse intervalo.
+        estaNoChao = false;
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
         rb.AddForce(Vector2.up * dadosPersonagem.forcaPulo, ForceMode2D.Impulse);
         TocarSom(
@@ -1189,7 +1216,7 @@ public class LutadorController2D : MonoBehaviour
         if (dadosPersonagem.spriteRaioUltimate != null)
         {
             GastarEnergiaUltimate();
-            StartCoroutine(UltimateRaioComRecuo(oponente));
+            rotinaUltimateAtiva = StartCoroutine(UltimateRaioComRecuo(oponente));
 
             TocarSom(dadosPersonagem.somUltimate, dadosPersonagem.volumeUltimate);
             IniciarAnimacaoUmaVez(EstadoAnim.Ultimate);
@@ -1205,7 +1232,7 @@ public class LutadorController2D : MonoBehaviour
         if (dadosPersonagem.spriteLavaUltimate != null)
         {
             GastarEnergiaUltimate();
-            StartCoroutine(UltimateLavaSobPes(oponente));
+            rotinaUltimateAtiva = StartCoroutine(UltimateLavaSobPes(oponente));
 
             TocarSom(dadosPersonagem.somUltimate, dadosPersonagem.volumeUltimate);
             IniciarAnimacaoUmaVez(EstadoAnim.Ultimate);
@@ -1247,15 +1274,23 @@ public class LutadorController2D : MonoBehaviour
 
         frameAtual = Mathf.Max(0, dadosPersonagem.frameLancamentoRaioUltimate);
         AplicarFrameAtual();
-        travandoUltimateAteRaioSumir = true;
+
+        // O raio é um disparo: depois do lançamento o Jamanta pode terminar
+        // a animação e voltar ao Idle, inclusive quando estava no ar. A física
+        // continua atuando para ele retornar ao chão, sem deixar a mão presa
+        // na pose de ataque até o fim do laser.
 
         // Recuo: empurra pra trás, na direção oposta a quem ele está olhando
         float direcaoRecuo = transform.localScale.x > 0f ? -1f : 1f;
-        StartCoroutine(RotinaRecuoUltimate(direcaoRecuo, dadosPersonagem.forcaRecuoUltimate, dadosPersonagem.duracaoRecuoUltimate));
+        rotinaRecuoUltimate = StartCoroutine(RotinaRecuoUltimate(
+            direcaoRecuo,
+            dadosPersonagem.forcaRecuoUltimate,
+            dadosPersonagem.duracaoRecuoUltimate));
 
         yield return StartCoroutine(RotinaCicloDeVidaDoRaio(alvo));
 
         travandoUltimateAteRaioSumir = false;
+        FinalizarUltimateAtivo();
 
         // Só libera se ninguém mais mexeu no estado nesse meio tempo (ex: o
         // personagem levou um Hit, que tem prioridade maior e já assumiu sozinho
@@ -1285,10 +1320,15 @@ public class LutadorController2D : MonoBehaviour
         if (dadosPersonagem.spriteRaioUltimate == null || alvo == null) yield break;
 
         Vector3 origemJamanta = OrigemDoRaioUltimate();
-        Vector3 origemAlvo = alvo.OrigemDoRaioUltimate();
-        float distanciaTotal = Mathf.Abs(origemAlvo.x - origemJamanta.x);
+        float direcao = alvo.transform.position.x >= origemJamanta.x ? 1f : -1f;
+        float limiteCena = ObterLimiteHorizontalDoRaio(origemJamanta, direcao, alvo.transform.position.x);
+        float destinoX = direcao > 0f
+            ? Mathf.Max(limiteCena, alvo.transform.position.x + 1f)
+            : Mathf.Min(limiteCena, alvo.transform.position.x - 1f);
+        float distanciaTotal = Mathf.Abs(destinoX - origemJamanta.x);
 
         GameObject obj = new GameObject("RaioUltimate");
+        efeitoUltimateAtivo = obj;
         SpriteRenderer sr = obj.AddComponent<SpriteRenderer>();
         sr.sprite = dadosPersonagem.spriteRaioUltimate;
         sr.sortingLayerName = spriteRenderer != null ? spriteRenderer.sortingLayerName : "Default";
@@ -1301,7 +1341,6 @@ public class LutadorController2D : MonoBehaviour
         // mesmo lado da imagem; sem espelhar, a ponta apareceria do lado errado
         // (junto do alvo em vez de junto do Jamanta) sempre que o alvo estivesse
         // à esquerda dele.
-        float direcao = origemAlvo.x >= origemJamanta.x ? 1f : -1f;
         float escalaEspessura = EscalaVisualDoLutador();
         AtualizarTransformRaio(obj, origemJamanta, direcao, 0f, larguraOriginal, escalaEspessura);
 
@@ -1316,28 +1355,59 @@ public class LutadorController2D : MonoBehaviour
         }
         AtualizarTransformRaio(obj, origemJamanta, direcao, distanciaTotal, larguraOriginal, escalaEspessura);
 
-        // ── Fase 2: cheio — aplica o dano e segura a força total ──
+        // ── Fase 2/3: pulsos de dano e enfraquecimento ──
+        // O alvo recebe 5 pulsos de 12 (ou os valores configurados no asset).
+        // O dano só existe até a metade do fade; a metade final é apenas
+        // visual, evitando que o laser continue causando dano enquanto some.
         yield return new WaitForSeconds(Mathf.Max(0f, dadosPersonagem.delayRaioUltimate));
-        if (!alvo.EstaMorto())
-            alvo.ReceberDano(dadosPersonagem.danoUltimate);
 
-        yield return new WaitForSeconds(Mathf.Max(0f, dadosPersonagem.duracaoVisualRaioUltimate));
-
-        // ── Fase 3: enfraquece — esmaece e drena energia (não vida) ──
-        if (!alvo.EstaMorto())
-            alvo.DrenarEnergia(dadosPersonagem.energiaDrenoRaioEnfraquecendo);
-
+        int quantidadePulsos = Mathf.Max(1, dadosPersonagem.quantidadePulsosRaioUltimate);
+        float duracaoCheio = Mathf.Max(0f, dadosPersonagem.duracaoVisualRaioUltimate);
         float duracaoEnfraquecimento = Mathf.Max(0.01f, dadosPersonagem.duracaoEnfraquecimentoRaio);
+        float janelaDano = duracaoCheio + duracaoEnfraquecimento * 0.5f;
+        float intervaloPulso = quantidadePulsos > 1
+            ? janelaDano / quantidadePulsos
+            : janelaDano;
         Color corCheia = sr.color;
-        t = 0f;
-        while (t < duracaoEnfraquecimento)
+        float tempo = 0f;
+        float proximoPulso = 0f;
+        int pulsoAtual = 0;
+        bool drenouEnergia = false;
+
+        while (tempo < duracaoCheio + duracaoEnfraquecimento)
         {
-            sr.color = new Color(corCheia.r, corCheia.g, corCheia.b, corCheia.a * (1f - t / duracaoEnfraquecimento));
-            t += Time.deltaTime;
+            if (pulsoAtual < quantidadePulsos && tempo >= proximoPulso)
+            {
+                if (!alvo.EstaMorto())
+                    alvo.ReceberDano(dadosPersonagem.danoUltimate);
+
+                pulsoAtual++;
+                proximoPulso += intervaloPulso;
+            }
+
+            if (tempo >= duracaoCheio)
+            {
+                float progressoFade = (tempo - duracaoCheio) / duracaoEnfraquecimento;
+                sr.color = new Color(
+                    corCheia.r,
+                    corCheia.g,
+                    corCheia.b,
+                    corCheia.a * (1f - Mathf.Clamp01(progressoFade)));
+
+                if (!drenouEnergia)
+                {
+                    if (!alvo.EstaMorto())
+                        alvo.DrenarEnergia(dadosPersonagem.energiaDrenoRaioEnfraquecendo);
+                    drenouEnergia = true;
+                }
+            }
+
+            tempo += Time.deltaTime;
             yield return null;
         }
 
-        Destroy(obj);
+        if (obj != null) Destroy(obj);
+        if (efeitoUltimateAtivo == obj) efeitoUltimateAtivo = null;
     }
 
     // Reposiciona/reescala o raio pra que a PONTA DE ORIGEM fique sempre fixa em
@@ -1349,6 +1419,31 @@ public class LutadorController2D : MonoBehaviour
     {
         obj.transform.position = origem + Vector3.right * (direcao * comprimento * 0.5f);
         obj.transform.localScale = new Vector3(direcao * comprimento / larguraOriginal, escalaEspessura, 1f);
+    }
+
+    float ObterLimiteHorizontalDoRaio(Vector3 origem, float direcao, float fallbackAlvo)
+    {
+        Camera cameraCena = Camera.main;
+        if (cameraCena == null)
+            cameraCena = FindFirstObjectByType<Camera>();
+
+        if (cameraCena != null)
+        {
+            float distanciaCamera = Mathf.Abs(cameraCena.transform.position.z - origem.z);
+            Vector3 pontoBorda = cameraCena.ViewportToWorldPoint(new Vector3(
+                direcao > 0f ? 1f : 0f,
+                0.5f,
+                distanciaCamera));
+
+            if (direcao > 0f && pontoBorda.x > origem.x)
+                return pontoBorda.x;
+            if (direcao < 0f && pontoBorda.x < origem.x)
+                return pontoBorda.x;
+        }
+
+        // Fallback para cenas sem câmera principal configurada: ainda garante
+        // que o raio passe pelo alvo e continue além dele.
+        return fallbackAlvo + direcao * 10f;
     }
 
     // ── Ultimate único: espada cravada + lava sob os pés do oponente (ex: Diego) ──
@@ -1373,6 +1468,7 @@ public class LutadorController2D : MonoBehaviour
         if (alvo == null || alvo.EstaMorto())
         {
             travandoUltimateAteRaioSumir = false;
+            FinalizarUltimateAtivo();
             yield break;
         }
 
@@ -1385,7 +1481,11 @@ public class LutadorController2D : MonoBehaviour
         alvo.AplicarQueimadura(dadosPersonagem.danoQueimacaoPorSegundo, duracaoQueimacao);
 
         GameObject lava = CriarLavaUltimate(alvo);
-        if (lava != null) Destroy(lava, dadosPersonagem.duracaoVisualLavaUltimate);
+        if (lava != null)
+        {
+            efeitoUltimateAtivo = lava;
+            Destroy(lava, dadosPersonagem.duracaoVisualLavaUltimate);
+        }
 
         // Segura a pose pelo mesmo tempo que a lava fica na tela, e só então
         // libera — igual ao que a animação faria sozinha ao chegar no último
@@ -1393,6 +1493,7 @@ public class LutadorController2D : MonoBehaviour
         yield return new WaitForSeconds(dadosPersonagem.duracaoVisualLavaUltimate);
 
         travandoUltimateAteRaioSumir = false;
+        FinalizarUltimateAtivo();
 
         // Só libera se ninguém mais mexeu no estado nesse meio tempo (ex: o
         // Diego levou um Hit, que tem prioridade maior e já assumiu sozinho).
@@ -1432,7 +1533,11 @@ public class LutadorController2D : MonoBehaviour
     // um teleporte instantâneo.
     IEnumerator RotinaRecuoUltimate(float direcao, float forca, float duracao)
     {
-        if (duracao <= 0f) yield break;
+        if (duracao <= 0f)
+        {
+            rotinaRecuoUltimate = null;
+            yield break;
+        }
 
         float t = 0f;
         while (t < duracao)
@@ -1443,6 +1548,29 @@ public class LutadorController2D : MonoBehaviour
             yield return null;
         }
         velocidadeRecuoX = 0f;
+        rotinaRecuoUltimate = null;
+    }
+
+    void FinalizarUltimateAtivo()
+    {
+        if (efeitoUltimateAtivo != null)
+            Destroy(efeitoUltimateAtivo);
+        efeitoUltimateAtivo = null;
+
+        if (rotinaRecuoUltimate != null)
+            StopCoroutine(rotinaRecuoUltimate);
+        rotinaRecuoUltimate = null;
+        velocidadeRecuoX = 0f;
+        rotinaUltimateAtiva = null;
+        travandoUltimateAteRaioSumir = false;
+    }
+
+    void CancelarUltimateAtivo()
+    {
+        if (rotinaUltimateAtiva != null)
+            StopCoroutine(rotinaUltimateAtiva);
+
+        FinalizarUltimateAtivo();
     }
 
     // A cena usa personagens com localScale bem maior que 1 (o sprite "cru" é
@@ -1503,7 +1631,7 @@ public class LutadorController2D : MonoBehaviour
         {
             Morrer();
         }
-        else if (!defendendo)
+        else if (!defendendo && !EstaExecutandoUltimate())
         {
             // Só entra no stagger de Hit se NÃO estava defendendo. Antes disparava
             // sempre, mesmo com o bloqueio ativo — como Defend é um estado
@@ -1520,9 +1648,16 @@ public class LutadorController2D : MonoBehaviour
         }
     }
 
+    bool EstaExecutandoUltimate()
+    {
+        return rotinaUltimateAtiva != null ||
+               (animacaoUmaVezAtiva && estadoAtual == EstadoAnim.Ultimate);
+    }
+
     void Morrer()
     {
         morreu = true;
+        CancelarUltimateAtivo();
         if (audioSourcePassos != null) audioSourcePassos.Stop();
         if (rb != null) rb.linearVelocity = Vector2.zero;
         TocarSom(
@@ -1620,6 +1755,11 @@ public class LutadorController2D : MonoBehaviour
          estadoAtual == EstadoAnim.Ultimate);
     public bool EstaLevandoHit() => animacaoUmaVezAtiva && estadoAtual == EstadoAnim.Hit;
     public EstadoAnim ObterEstadoAnim() => estadoAtual;
+
+    // A IA consulta a mesma regra do jogador para não solicitar golpes que o
+    // controlador recusará por falta de energia.
+    public bool IA_PodeUsarEspecial() => PodeUsarEspecial();
+    public bool IA_PodeUsarUltimate() => PodeUsarUltimate();
 
     // Consultado pela IA pra saber se esse personagem usa o especial alternável
     // (liga/desliga) e se ele está ligado agora — sem isso ela trata a espada em

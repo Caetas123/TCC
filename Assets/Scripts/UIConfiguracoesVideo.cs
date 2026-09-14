@@ -148,6 +148,15 @@ public class UIConfiguracoesVideo : MonoBehaviour
 
         int hzAtual = ObterFPSPadraoMonitor();
 
+        // Alguns ambientes (editor, monitor virtual ou driver em inicialização)
+        // podem não fornecer Screen.resolutions. Não indexe uma lista vazia.
+        if (hzDisponiveis.Count == 0)
+        {
+            hzPendente = Mathf.Max(30, hzAtual);
+            AtualizarTextoHZ(hzPendente);
+            return;
+        }
+
         int indexAtual = hzDisponiveis.IndexOf(hzAtual);
 
         if (indexAtual < 0)

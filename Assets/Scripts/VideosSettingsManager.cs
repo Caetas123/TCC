@@ -23,11 +23,13 @@ public class VideoSettingsManager : MonoBehaviour
     private int indiceResolucaoSelecionada = 0;
     private int indiceModoTelaSelecionado  = 0;
     private bool inicializando = false;
+    private Camera cameraPrincipal;
+    private Camera cameraFundoBarrasPretas;
 
     private void Awake()
     {
-        larguraNativa = Screen.currentResolution.width;
-        alturaNativa  = Screen.currentResolution.height;
+        larguraNativa = ObterLarguraNativa();
+        alturaNativa  = ObterAlturaNativa();
 
         inicializando = true;
 
@@ -240,8 +242,8 @@ public class VideoSettingsManager : MonoBehaviour
 
     public void RestaurarPadraoVideo()
     {
-        int indice = EncontrarIndiceResolucao(1920, 1080);
-        if (indice < 0) indice = EncontrarIndiceResolucao(larguraNativa, alturaNativa);
+        // O padrão é a resolução real deste monitor, nunca uma resolução fixa.
+        int indice = EncontrarIndiceResolucao(larguraNativa, alturaNativa);
         if (indice < 0) indice = 0;
 
         indiceResolucaoSelecionada = indice;
@@ -279,6 +281,7 @@ public class VideoSettingsManager : MonoBehaviour
         indiceResolucaoSelecionada = indiceResolucao;
         indiceModoTelaSelecionado  = ConverterModoTelaParaIndiceDropdown(modo);
 
+        AplicarApresentacaoResolucao(resolucao, modo);
         AtualizarCanvasScalers();
     }
 
@@ -289,6 +292,80 @@ public class VideoSettingsManager : MonoBehaviour
             if (scaler == null) continue;
             scaler.enabled = false;
             scaler.enabled = true;
+        }
+    }
+
+    int ObterLarguraNativa()
+    {
+        if (Display.main != null && Display.main.systemWidth > 0)
+            return Display.main.systemWidth;
+        return Screen.currentResolution.width;
+    }
+
+    int ObterAlturaNativa()
+    {
+        if (Display.main != null && Display.main.systemHeight > 0)
+            return Display.main.systemHeight;
+        return Screen.currentResolution.height;
+    }
+
+    void AplicarApresentacaoResolucao(Resolution resolucao, FullScreenMode modo)
+    {
+        cameraPrincipal = Camera.main;
+        if (cameraPrincipal == null)
+            cameraPrincipal = FindFirstObjectByType<Camera>();
+        if (cameraPrincipal == null)
+            return;
+
+        bool janelaSemBorda = modo == FullScreenMode.FullScreenWindow;
+        bool resolucaoMenor = resolucao.width < larguraNativa ||
+                              resolucao.height < alturaNativa;
+        bool usarBarrasPretas = janelaSemBorda && resolucaoMenor;
+
+        float viewportWidth = usarBarrasPretas
+            ? Mathf.Min(1f, (float)resolucao.width / Mathf.Max(1, larguraNativa))
+            : 1f;
+        float viewportHeight = usarBarrasPretas
+            ? Mathf.Min(1f, (float)resolucao.height / Mathf.Max(1, alturaNativa))
+            : 1f;
+
+        // Em Janela sem borda o sistema mantém a tela do monitor na resolução
+        // nativa. Reduzir também o buffer interno entrega o ganho de desempenho
+        // esperado da resolução escolhida, enquanto o viewport + fundo preto
+        // preserva a apresentação sem esticar a imagem.
+        ScalableBufferManager.ResizeBuffers(viewportWidth, viewportHeight);
+
+        cameraPrincipal.rect = new Rect(
+            (1f - viewportWidth) * 0.5f,
+            (1f - viewportHeight) * 0.5f,
+            viewportWidth,
+            viewportHeight);
+
+        // Limpa de preto a área fora do viewport centralizado.
+        if (cameraFundoBarrasPretas == null)
+        {
+            GameObject objetoFundo = new GameObject("FundoBarrasPretas");
+            objetoFundo.transform.SetParent(transform, false);
+            cameraFundoBarrasPretas = objetoFundo.AddComponent<Camera>();
+            cameraFundoBarrasPretas.clearFlags = CameraClearFlags.SolidColor;
+            cameraFundoBarrasPretas.backgroundColor = Color.black;
+            cameraFundoBarrasPretas.cullingMask = 0;
+            cameraFundoBarrasPretas.depth = cameraPrincipal.depth - 1f;
+            cameraFundoBarrasPretas.rect = new Rect(0f, 0f, 1f, 1f);
+        }
+
+        cameraFundoBarrasPretas.enabled = usarBarrasPretas;
+
+        // ScreenSpaceOverlay ignora o viewport da câmera e esticava a interface.
+        // A UI passa a respeitar a mesma área central do jogo.
+        foreach (Canvas canvas in FindObjectsOfType<Canvas>())
+        {
+            if (canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                continue;
+
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = cameraPrincipal;
+            canvas.planeDistance = 100f;
         }
     }
 

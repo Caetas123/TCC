@@ -17,6 +17,7 @@ public class PauseManager : MonoBehaviour
     public GameManagerLuta gameManagerLuta;
 
     private bool pausado = false;
+    private ConfiguracoesManager configuracoesManager;
 
     void Start()
     {
@@ -25,12 +26,23 @@ public class PauseManager : MonoBehaviour
 
         if (gameManagerLuta == null)
             gameManagerLuta = FindFirstObjectByType<GameManagerLuta>();
+
+        configuracoesManager = FindFirstObjectByType<ConfiguracoesManager>();
     }
 
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            // Dentro das configurações abertas a partir do pause, o ESC deve
+            // voltar ao pause e manter a luta congelada.
+            if (pausado && configuracoesManager != null &&
+                configuracoesManager.EstaAberta())
+            {
+                configuracoesManager.FecharConfiguracoes();
+                return;
+            }
+
             // Não deixa abrir o pause em cima da tela de Round Win / Vencedor, nem depois
             // que a luta já terminou — era isso que abria o menu por cima do "WINNER".
             if (!pausado && gameManagerLuta != null && !gameManagerLuta.PodePausar())
@@ -51,6 +63,19 @@ public class PauseManager : MonoBehaviour
         Time.timeScale = 0f;
         pausado = true;
 
+        SelecionarBotaoComAtraso(primeiroBotaoPause);
+    }
+
+    public bool EstaPausado() => pausado;
+
+    public void ReabrirPainelPause()
+    {
+        if (!pausado) return;
+
+        if (painelPause != null)
+            painelPause.SetActive(true);
+
+        Time.timeScale = 0f;
         SelecionarBotaoComAtraso(primeiroBotaoPause);
     }
 
@@ -86,8 +111,12 @@ public class PauseManager : MonoBehaviour
 
     public void AbrirConfiguracoes()
     {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene("Configuracoes");
+        // A cena Configuracoes não existe; o fluxo atual usa o painel embutido.
+        if (configuracoesManager == null)
+            configuracoesManager = FindFirstObjectByType<ConfiguracoesManager>();
+
+        if (configuracoesManager != null)
+            configuracoesManager.AbrirPainelPrincipal();
     }
 
     void SelecionarBotaoComAtraso(GameObject botao)

@@ -10526,8 +10526,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Volume da M\xFAsica"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ae4c496acf3c002458f98c3bcb2d13a2, type: 2}
-  m_sharedMaterial: {fileID: 2176585569844109056, guid: ae4c496acf3c002458f98c3bcb2d13a2, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -13314,8 +13314,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Taxa de Atualiza\xE7\xE3o (Hz): 60"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 60659acb924cf9e4795418c86a437d59, type: 2}
-  m_sharedMaterial: {fileID: -8441506183177793085, guid: 60659acb924cf9e4795418c86a437d59, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -14497,8 +14497,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "Resolu\xE7\xE3o:"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 60659acb924cf9e4795418c86a437d59, type: 2}
-  m_sharedMaterial: {fileID: -8441506183177793085, guid: 60659acb924cf9e4795418c86a437d59, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
