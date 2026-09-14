@@ -13,7 +13,6 @@ public class TelaSelecaoPlayer : MonoBehaviour
     {
         SelecionandoPersonagens,
         ConfiguracaoIA,
-        Sorteando,
         Transicao
     }
 
@@ -369,7 +368,9 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
     void Update()
     {
-        if (estadoAtual == EstadoTela.Sorteando || estadoAtual == EstadoTela.Transicao)
+        // A transição para outra cena é global, mas o sorteio não: cada jogador
+        // precisa continuar podendo navegar enquanto o outro está na roleta.
+        if (estadoAtual == EstadoTela.Transicao)
             return;
 
         if (PainelConfiguracaoIAAberto())
@@ -706,12 +707,14 @@ public class TelaSelecaoPlayer : MonoBehaviour
     bool PermiteSelecaoP1()
     {
         if (PainelConfiguracaoIAAberto()) return false;
+        if (sorteandoP1) return false;
         return modoJogo == "PVP" || modoJogo == "PVC" || modoJogo == "CVC";
     }
 
     bool PermiteSelecaoP2()
     {
         if (PainelConfiguracaoIAAberto()) return false;
+        if (sorteandoP2) return false;
         return modoJogo == "PVP" || modoJogo == "PVC" || modoJogo == "CVC";
     }
 
@@ -1721,7 +1724,6 @@ public class TelaSelecaoPlayer : MonoBehaviour
         if (validos.Count == 0) yield break;
 
         sorteandoP1 = true;
-        estadoAtual = EstadoTela.Sorteando;
         ultimoLadoAtivo = 1;
 
         // Limpa o destaque do próprio botão Random — sem isso ele fica "preso"
@@ -1781,7 +1783,6 @@ public class TelaSelecaoPlayer : MonoBehaviour
         }
 
         sorteandoP2 = true;
-        estadoAtual = EstadoTela.Sorteando;
         ultimoLadoAtivo = 2;
 
         // Limpa o destaque do próprio botão Random — sem isso ele fica "preso"
