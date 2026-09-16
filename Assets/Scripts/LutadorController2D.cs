@@ -1333,6 +1333,9 @@ public class LutadorController2D : MonoBehaviour
         sr.sprite = dadosPersonagem.spriteRaioUltimate;
         sr.sortingLayerName = spriteRenderer != null ? spriteRenderer.sortingLayerName : "Default";
         sr.sortingOrder = (spriteRenderer != null ? spriteRenderer.sortingOrder : 0) + 6;
+        float opacidadeRaio = Mathf.Clamp01(dadosPersonagem.opacidadeRaioUltimate);
+        Color corRaio = sr.color;
+        sr.color = new Color(corRaio.r, corRaio.g, corRaio.b, corRaio.a * opacidadeRaio);
 
         float larguraOriginal = sr.sprite.bounds.size.x;
         if (larguraOriginal <= 0.001f) { Destroy(obj); yield break; }
@@ -1478,13 +1481,19 @@ public class LutadorController2D : MonoBehaviour
         float duracaoQueimacao = alvoDefendendo
             ? dadosPersonagem.duracaoQueimacaoDefendendo
             : dadosPersonagem.duracaoQueimacao;
-        alvo.AplicarQueimadura(dadosPersonagem.danoQueimacaoPorSegundo, duracaoQueimacao);
 
         GameObject lava = CriarLavaUltimate(alvo);
         if (lava != null)
         {
             efeitoUltimateAtivo = lava;
             Destroy(lava, dadosPersonagem.duracaoVisualLavaUltimate);
+
+            // Na ultimate do Diego, a queimação representa o fogo da lava.
+            // Ela não pode sobreviver ao efeito visual: antes usava a duração
+            // normal da espada (5s), enquanto a lava sumia após 3s.
+            float duracaoLava = Mathf.Max(0f, dadosPersonagem.duracaoVisualLavaUltimate);
+            duracaoQueimacao = Mathf.Min(duracaoQueimacao, duracaoLava);
+            alvo.AplicarQueimadura(dadosPersonagem.danoQueimacaoPorSegundo, duracaoQueimacao);
         }
 
         // Segura a pose pelo mesmo tempo que a lava fica na tela, e só então

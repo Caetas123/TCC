@@ -179,8 +179,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: MAQUINA vs MAQUINA
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ae4c496acf3c002458f98c3bcb2d13a2, type: 2}
-  m_sharedMaterial: {fileID: 2176585569844109056, guid: ae4c496acf3c002458f98c3bcb2d13a2, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 0083254f130544089d081bc49a995671, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 0083254f130544089d081bc49a995671, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -208,8 +208,8 @@ MonoBehaviour:
   m_fontSizeBase: 40
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 31.09
+  m_fontSizeMax: 124.36
   m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -652,6 +652,7 @@ MonoBehaviour:
   normalSprite: {fileID: -8545761501449185026, guid: 67126e4add1fa46418fb361aa3c1d719, type: 3}
   highlightedSprite: {fileID: -8458870281483718234, guid: 16e4327015c53004094f2a3cfb56a9da, type: 3}
   selectedSprite: {fileID: 7921646968328196971, guid: 9220cc34b441406489ed47f32bd45fbf, type: 3}
+  duracaoFlashSelected: 0.15
 --- !u!1 &751165997
 GameObject:
   m_ObjectHideFlags: 0
@@ -864,6 +865,7 @@ MonoBehaviour:
   normalSprite: {fileID: -8545761501449185026, guid: 67126e4add1fa46418fb361aa3c1d719, type: 3}
   highlightedSprite: {fileID: -8458870281483718234, guid: 16e4327015c53004094f2a3cfb56a9da, type: 3}
   selectedSprite: {fileID: 7921646968328196971, guid: 9220cc34b441406489ed47f32bd45fbf, type: 3}
+  duracaoFlashSelected: 0.15
 --- !u!1 &1035611397
 GameObject:
   m_ObjectHideFlags: 0
@@ -1044,6 +1046,7 @@ MonoBehaviour:
   normalSprite: {fileID: 5607819680231318820, guid: 57975f07f50637d438708b25d15a49a6, type: 3}
   highlightedSprite: {fileID: -8449135281859957533, guid: 6c0047dcb90b19b43b0e021f4132959c, type: 3}
   selectedSprite: {fileID: -8449135281859957533, guid: 6c0047dcb90b19b43b0e021f4132959c, type: 3}
+  duracaoFlashSelected: 0.15
 --- !u!1 &1115585306
 GameObject:
   m_ObjectHideFlags: 0
@@ -1104,8 +1107,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: PLAYER vs MAQUINA
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ae4c496acf3c002458f98c3bcb2d13a2, type: 2}
-  m_sharedMaterial: {fileID: 2176585569844109056, guid: ae4c496acf3c002458f98c3bcb2d13a2, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 0083254f130544089d081bc49a995671, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 0083254f130544089d081bc49a995671, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1133,8 +1136,8 @@ MonoBehaviour:
   m_fontSizeBase: 40
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 31.09
+  m_fontSizeMax: 124.36
   m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -1254,8 +1257,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: GAME MODE
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 60659acb924cf9e4795418c86a437d59, type: 2}
-  m_sharedMaterial: {fileID: -8441506183177793085, guid: 60659acb924cf9e4795418c86a437d59, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 0083254f130544089d081bc49a995671, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 0083254f130544089d081bc49a995671, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1279,12 +1282,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 40
-  m_fontSizeBase: 40
+  m_fontSize: 60
+  m_fontSizeBase: 60
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 31.09
+  m_fontSizeMax: 124.36
   m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
@@ -1481,6 +1484,7 @@ MonoBehaviour:
   normalSprite: {fileID: -8545761501449185026, guid: 67126e4add1fa46418fb361aa3c1d719, type: 3}
   highlightedSprite: {fileID: -8458870281483718234, guid: 16e4327015c53004094f2a3cfb56a9da, type: 3}
   selectedSprite: {fileID: 7921646968328196971, guid: 9220cc34b441406489ed47f32bd45fbf, type: 3}
+  duracaoFlashSelected: 0.15
 --- !u!1 &1732122511
 GameObject:
   m_ObjectHideFlags: 0
@@ -1541,8 +1545,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: PLAYER  vs  PLAYER
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ae4c496acf3c002458f98c3bcb2d13a2, type: 2}
-  m_sharedMaterial: {fileID: 2176585569844109056, guid: ae4c496acf3c002458f98c3bcb2d13a2, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 0083254f130544089d081bc49a995671, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 0083254f130544089d081bc49a995671, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1570,8 +1574,8 @@ MonoBehaviour:
   m_fontSizeBase: 40
   m_fontWeight: 400
   m_enableAutoSizing: 0
-  m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMin: 31.09
+  m_fontSizeMax: 124.36
   m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512

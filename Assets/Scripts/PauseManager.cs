@@ -3,6 +3,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using System.Collections;
+using System.Collections.Generic;
 
 public class PauseManager : MonoBehaviour
 {
@@ -18,6 +19,8 @@ public class PauseManager : MonoBehaviour
 
     private bool pausado = false;
     private ConfiguracoesManager configuracoesManager;
+    private readonly List<Renderer> renderizadoresLutadores = new List<Renderer>();
+    private readonly List<bool> estadoRenderizadoresLutadores = new List<bool>();
 
     void Start()
     {
@@ -57,9 +60,13 @@ public class PauseManager : MonoBehaviour
 
     public void Pausar()
     {
+        if (pausado)
+            return;
+
         if (painelPause != null)
             painelPause.SetActive(true);
 
+        OcultarLutadores();
         Time.timeScale = 0f;
         pausado = true;
 
@@ -75,6 +82,7 @@ public class PauseManager : MonoBehaviour
         if (painelPause != null)
             painelPause.SetActive(true);
 
+        OcultarLutadores();
         Time.timeScale = 0f;
         SelecionarBotaoComAtraso(primeiroBotaoPause);
     }
@@ -84,6 +92,7 @@ public class PauseManager : MonoBehaviour
         if (painelPause != null)
             painelPause.SetActive(false);
 
+        RestaurarLutadores();
         Time.timeScale = 1f;
         pausado = false;
 
@@ -117,6 +126,46 @@ public class PauseManager : MonoBehaviour
 
         if (configuracoesManager != null)
             configuracoesManager.AbrirPainelPrincipal();
+    }
+
+    // Pausar o tempo não remove os sprites já renderizados. Na luta, os
+    // lutadores também precisam ficar invisíveis enquanto o pause ou as
+    // configurações estiverem abertas, sem desativar os GameObjects e perder
+    // o estado da partida.
+    void OcultarLutadores()
+    {
+        RestaurarLutadores();
+
+        LutadorController2D[] lutadores = FindObjectsByType<LutadorController2D>(
+            FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+
+        foreach (LutadorController2D lutador in lutadores)
+        {
+            Renderer[] renderizadores = lutador.GetComponentsInChildren<Renderer>(true);
+            foreach (Renderer renderizador in renderizadores)
+            {
+                if (renderizador == null)
+                    continue;
+
+                renderizadoresLutadores.Add(renderizador);
+                estadoRenderizadoresLutadores.Add(renderizador.enabled);
+                renderizador.enabled = false;
+            }
+        }
+    }
+
+    void RestaurarLutadores()
+    {
+        for (int i = 0; i < renderizadoresLutadores.Count; i++)
+        {
+            Renderer renderizador = renderizadoresLutadores[i];
+            if (renderizador != null)
+                renderizador.enabled = estadoRenderizadoresLutadores[i];
+        }
+
+        renderizadoresLutadores.Clear();
+        estadoRenderizadoresLutadores.Clear();
     }
 
     void SelecionarBotaoComAtraso(GameObject botao)

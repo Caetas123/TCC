@@ -73,17 +73,17 @@ public class LanguageManager : MonoBehaviour
         {
             // ── Menu principal ────────────────────────────────────────────
             { "MENU_GAME_MODE", "JOGAR" },
-            { "MENU_CREDITS",   "CRÉDITOS" },
+            { "MENU_CREDITS",   "CREDITOS" },
             { "MENU_EXIT",      "SAIR" },
-            { "CONF_OP",        "OPÇÕES" },
+            { "CONF_OP",        "OPCOES" },
 
-            // ── Confirmação de saída ──────────────────────────────────────
+            // ── Confirmacao de saída ──────────────────────────────────────
             { "EXIT_CONFIRM", "Deseja realmente sair?" },
             { "EXIT_YES",     "SIM" },
             { "EXIT_NO",      "NÃO" },
 
-            // ── Configurações ─────────────────────────────────────────────
-            { "SETTINGS_TITLE",    "CONFIGURAÇÕES" },
+            // ── Configuracoes ─────────────────────────────────────────────
+            { "SETTINGS_TITLE",    "CONFIGURACOES" },
             { "SETTINGS_AUDIO",    "ÁUDIO" },
             { "SETTINGS_VIDEO",    "VÍDEO" },
             { "SETTINGS_CONTROLS", "CONTROLE" },
@@ -96,11 +96,11 @@ public class LanguageManager : MonoBehaviour
             { "AUDIO_MUTE",   "Sem Áudio" },
 
             // ── Vídeo ─────────────────────────────────────────────────────
-            { "VIDEO_RESOLUTION", "Resolução" },
+            { "VIDEO_RESOLUTION", "Resolucao" },
             { "VIDEO_MODE",       "Modo de Tela" },
             { "VIDEO_APPLY",      "Aplicar" },
             { "VIDEO_RESTORE",    "Restaurar" },
-            { "HZ",               "Taxa de Atualização (Hz):" },
+            { "HZ",               "Taxa de Atualizacao (Hz):" },
             { "VIDEO_RECOMENDADO",   "(Recomendado)" },
             { "VIDEO_TELA_CHEIA",    "Tela cheia" },
             { "VIDEO_JANELA_SEM_BORDA", "Janela sem borda" },
@@ -134,8 +134,8 @@ public class LanguageManager : MonoBehaviour
             { "MODE_CPU",     "Jogador vs CPU" },
             { "MODE_CPU_CPU", "CPU vs CPU" },
 
-            // ── Seleção de personagem ─────────────────────────────────────
-            { "SELECT_PLAYER",    "SELEÇÃO DE JOGADOR" },
+            // ── Selecao de personagem ─────────────────────────────────────
+            { "SELECT_PLAYER",    "SELECAO DE JOGADOR" },
             { "START_GAME",       "INICIAR" },
             { "BTN_SALVAR",       "SALVAR" },
             { "BTN_DESELECIONAR", "DESELECIONAR" },
@@ -143,13 +143,13 @@ public class LanguageManager : MonoBehaviour
             { "AVISO_DESCP2",     "Tecla Deselecionar: M" },
             { "RANDOM_CHARACTER", "ALEATÓRIO" },
 
-            // ── Avisos de seleção ─────────────────────────────────────────
+            // ── Avisos de selecao ─────────────────────────────────────────
             { "AVISO_SELECIONE_AMBOS", "Selecione um personagem para cada jogador antes de iniciar!" },
             { "AVISO_SELECIONE_P1",    "Selecione um personagem para o Jogador 1 antes de iniciar!" },
             { "AVISO_SELECIONE_CPU",   "Selecione o personagem da CPU antes de iniciar!" },
             { "AVISO_SELECIONE_BOTS",  "Selecione personagens para os bots antes de iniciar!" },
 
-            // ── Configuração de IA ────────────────────────────────────────
+            // ── Configuracao de IA ────────────────────────────────────────
             { "TXT_DIFICUL",           "DIFICULDADE" },
             { "TXT_ESTILO",            "ESTILO" },
             { "IA_ESTILO",             "Estilo" },
@@ -183,7 +183,7 @@ public class LanguageManager : MonoBehaviour
             { "PAUSE_TITLE",     "MENU DE JOGO" },
             { "PAUSE_CONT",      "CONTINUAR" },
             { "PAUSE_REBOOT",    "REINICIAR" },
-            { "PAUSE_SELECTION", "SELEÇÃO JOGADOR" },
+            { "PAUSE_SELECTION", "SELECAO JOGADOR" },
             { "PAUSE_EXIT",      "SAIR" },
             { "PAUSE_WIN",       "VENCEU!" },
 
@@ -213,12 +213,12 @@ public class LanguageManager : MonoBehaviour
             { "MENU_EXIT",      "EXIT" },
             { "CONF_OP",        "OPTIONS" },
 
-            // ── Confirmação de saída ──────────────────────────────────────
+            // ── Confirmacao de saída ──────────────────────────────────────
             { "EXIT_CONFIRM", "Do you really want to exit?" },
             { "EXIT_YES",     "YES" },
             { "EXIT_NO",      "NO" },
 
-            // ── Configurações ─────────────────────────────────────────────
+            // ── Configuracoes ─────────────────────────────────────────────
             { "SETTINGS_TITLE",    "SETTINGS" },
             { "SETTINGS_AUDIO",    "AUDIO" },
             { "SETTINGS_VIDEO",    "VIDEO" },
@@ -270,7 +270,7 @@ public class LanguageManager : MonoBehaviour
             { "MODE_CPU",     "Player vs CPU" },
             { "MODE_CPU_CPU", "CPU vs CPU" },
 
-            // ── Seleção de personagem ─────────────────────────────────────
+            // ── Selecao de personagem ─────────────────────────────────────
             { "SELECT_PLAYER",    "PLAYER SELECT" },
             { "START_GAME",       "START" },
             { "BTN_SALVAR",       "SAVE" },
@@ -279,13 +279,13 @@ public class LanguageManager : MonoBehaviour
             { "AVISO_DESCP2",     "Deselect Key: M" },
             { "RANDOM_CHARACTER", "RANDOM" },
 
-            // ── Avisos de seleção ─────────────────────────────────────────
+            // ── Avisos de selecao ─────────────────────────────────────────
             { "AVISO_SELECIONE_AMBOS", "Select a character for each player before starting!" },
             { "AVISO_SELECIONE_P1",    "Select a character for Player 1 before starting!" },
             { "AVISO_SELECIONE_CPU",   "Select the CPU character before starting!" },
             { "AVISO_SELECIONE_BOTS",  "Select characters for the bots before starting!" },
 
-            // ── Configuração de IA ────────────────────────────────────────
+            // ── Configuracao de IA ────────────────────────────────────────
             { "TXT_DIFICUL",           "DIFFICULTY" },
             { "TXT_ESTILO",            "STYLE" },
             { "IA_ESTILO",             "Style" },

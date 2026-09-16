@@ -45,6 +45,7 @@ MonoBehaviour:
   duracaoCrescimentoRaio: 0.08
   delayRaioUltimate: 0.05
   duracaoVisualRaioUltimate: 1
+  opacidadeRaioUltimate: 0.75
   duracaoEnfraquecimentoRaio: 0.75
   energiaDrenoRaioEnfraquecendo: 15
   forcaRecuoUltimate: 6
