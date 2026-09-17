@@ -26,10 +26,13 @@ public class LanguageManager : MonoBehaviour
         }
 
         Instance = this;
+        // DontDestroyOnLoad exige um objeto na raiz da hierarquia.
+        transform.SetParent(null, true);
         DontDestroyOnLoad(gameObject);
 
         SetupDictionaries();
         CarregarIdioma();
+        OnLanguageChanged?.Invoke();
     }
 
     private void CarregarIdioma()
@@ -72,10 +75,10 @@ public class LanguageManager : MonoBehaviour
         pt = new Dictionary<string, string>()
         {
             // ── Menu principal ────────────────────────────────────────────
-            { "MENU_GAME_MODE", "JOGAR" },
+            { "MENU_GAME_MODE", "INICIAR" },
             { "MENU_CREDITS",   "CREDITOS" },
             { "MENU_EXIT",      "SAIR" },
-            { "CONF_OP",        "OPCOES" },
+            { "CONF_OP",        "CONFIGURAR" },
 
             // ── Confirmacao de saída ──────────────────────────────────────
             { "EXIT_CONFIRM", "Deseja realmente sair?" },
@@ -135,7 +138,7 @@ public class LanguageManager : MonoBehaviour
             { "MODE_CPU_CPU", "CPU vs CPU" },
 
             // ── Selecao de personagem ─────────────────────────────────────
-            { "SELECT_PLAYER",    "SELECAO DE JOGADOR" },
+            { "SELECT_PLAYER",    "SELECIONAR PLAYER" },
             { "START_GAME",       "INICIAR" },
             { "BTN_SALVAR",       "SALVAR" },
             { "BTN_DESELECIONAR", "DESELECIONAR" },
@@ -183,7 +186,7 @@ public class LanguageManager : MonoBehaviour
             { "PAUSE_TITLE",     "MENU DE JOGO" },
             { "PAUSE_CONT",      "CONTINUAR" },
             { "PAUSE_REBOOT",    "REINICIAR" },
-            { "PAUSE_SELECTION", "SELECAO JOGADOR" },
+            { "PAUSE_SELECTION", "SELECIONAR PLAYER" },
             { "PAUSE_EXIT",      "SAIR" },
             { "PAUSE_WIN",       "VENCEU!" },
 

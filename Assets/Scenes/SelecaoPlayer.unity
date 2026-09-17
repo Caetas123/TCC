@@ -4012,7 +4012,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: START
+  m_text: INICIAR
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0083254f130544089d081bc49a995671, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 0083254f130544089d081bc49a995671, type: 2}
@@ -8842,7 +8842,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: SELECTION PLAYER
+  m_text: SELECIONAR PLAYER
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0083254f130544089d081bc49a995671, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 0083254f130544089d081bc49a995671, type: 2}

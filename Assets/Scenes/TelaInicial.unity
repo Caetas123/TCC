@@ -1672,7 +1672,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: START
+  m_text: INICIAR
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0083254f130544089d081bc49a995671, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 0083254f130544089d081bc49a995671, type: 2}
@@ -2435,7 +2435,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: EXIT
+  m_text: SAIR
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0083254f130544089d081bc49a995671, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 0083254f130544089d081bc49a995671, type: 2}
@@ -3114,7 +3114,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a77a8dfb17e24024a9ae4f22639c8e53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  key: CREDITOS_DES
+  key: CREDITOS_DIS
 --- !u!114 &1546446438
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3135,7 +3135,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: DISIGNER
+  m_text: DESIGNER
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0083254f130544089d081bc49a995671, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 0083254f130544089d081bc49a995671, type: 2}
@@ -3489,7 +3489,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: CREDITS
+  m_text: CREDITOS
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0083254f130544089d081bc49a995671, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 0083254f130544089d081bc49a995671, type: 2}
@@ -3824,7 +3824,7 @@ GameObject:
   - component: {fileID: 1781329715}
   m_Layer: 5
   m_Name: Canvas
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3901,14 +3901,14 @@ RectTransform:
   m_GameObject: {fileID: 1781329710}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1705759659}
   - {fileID: 1569803183}
   - {fileID: 507396704}
   - {fileID: 962313017}
-  m_Father: {fileID: 1941036835}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -4135,7 +4135,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: OPTIONS
+  m_text: CONFIGURAR
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 0083254f130544089d081bc49a995671, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 0083254f130544089d081bc49a995671, type: 2}
@@ -4318,8 +4318,7 @@ Transform:
   m_LocalPosition: {x: 966.74, y: 537.3662, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1781329714}
+  m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1941036836
@@ -4777,4 +4776,5 @@ SceneRoots:
   m_Roots:
   - {fileID: 110666214}
   - {fileID: 1941036835}
+  - {fileID: 1781329714}
   - {fileID: 1779859630}
