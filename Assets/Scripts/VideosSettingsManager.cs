@@ -14,15 +14,23 @@ public class VideoSettingsManager : MonoBehaviour
     private readonly List<Resolution> resolucoesDisponiveis = new List<Resolution>();
 
     private const string CHAVE_RESOLUCAO_LARGURA = "ResolucaoLargura";
-    private const string CHAVE_RESOLUCAO_ALTURA = "ResolucaoAltura";
-    private const string CHAVE_MODO_TELA = "ModoTela";
+    private const string CHAVE_RESOLUCAO_ALTURA  = "ResolucaoAltura";
+    private const string CHAVE_MODO_TELA         = "ModoTela";
+
+    private int larguraNativa;
+    private int alturaNativa;
 
     private int indiceResolucaoSelecionada = 0;
-    private int indiceModoTelaSelecionado = 0;
+    private int indiceModoTelaSelecionado  = 0;
     private bool inicializando = false;
+    private Camera cameraPrincipal;
+    private Camera cameraFundoBarrasPretas;
 
     private void Awake()
     {
+        larguraNativa = ObterLarguraNativa();
+        alturaNativa  = ObterAlturaNativa();
+
         inicializando = true;
 
         ConfigurarDropdownResolucoes();
@@ -31,13 +39,54 @@ public class VideoSettingsManager : MonoBehaviour
         RegistrarEventos();
 
         inicializando = false;
+
+        // Reconstrói os textos localizados (sufixo "(Recomendado)" e as opções do
+        // dropdown de Modo de Tela) sempre que o idioma mudar — sem isso eles ficavam
+        // presos no idioma em que o painel foi aberto pela primeira vez.
+        LanguageManager.OnLanguageChanged += AtualizarTextosIdioma;
     }
 
+    private void OnDestroy()
+    {
+        LanguageManager.OnLanguageChanged -= AtualizarTextosIdioma;
+    }
+
+    private string ObterTexto(string chave, string fallback)
+    {
+        return LanguageManager.Instance != null ? LanguageManager.Instance.GetText(chave) : fallback;
+    }
+
+    private void AtualizarTextosIdioma()
+    {
+        bool estavaInicializando = inicializando;
+        inicializando = true;
+
+        ConfigurarDropdownResolucoes();
+        ConfigurarDropdownModoTela();
+
+        if (resolucaoDropdown != null)
+        {
+            resolucaoDropdown.SetValueWithoutNotify(indiceResolucaoSelecionada);
+            resolucaoDropdown.RefreshShownValue();
+        }
+
+        if (modoTelaDropdown != null)
+        {
+            modoTelaDropdown.SetValueWithoutNotify(indiceModoTelaSelecionado);
+            modoTelaDropdown.RefreshShownValue();
+        }
+
+        inicializando = estavaInicializando;
+    }
+
+    // ─────────────────────────────────────────────
+    // RESOLUÇÕES COM FILTRO DE RESOLUÇÕES PARECIDAS
+    // ─────────────────────────────────────────────
     private void ConfigurarDropdownResolucoes()
     {
         if (resolucaoDropdown == null)
         {
-            Debug.LogWarning("VideoSettingsManager: resolucaoDropdown não foi configurado no Inspector.");
+            Debug.LogWarning("VideoSettingsManager: resolucaoDropdown não configurado.");
             return;
         }
 
@@ -46,26 +95,62 @@ public class VideoSettingsManager : MonoBehaviour
 
         Resolution[] resolucoesSistema = Screen.resolutions;
         HashSet<string> resolucoesUnicas = new HashSet<string>();
-        List<string> opcoes = new List<string>();
+        List<Resolution> listaTemp = new List<Resolution>();
 
+        // Remove duplicatas
         for (int i = 0; i < resolucoesSistema.Length; i++)
         {
-            Resolution resolucao = resolucoesSistema[i];
-            string chave = resolucao.width + "x" + resolucao.height;
-
-            if (resolucoesUnicas.Contains(chave))
-                continue;
-
+            Resolution r = resolucoesSistema[i];
+            string chave = r.width + "x" + r.height;
+            if (resolucoesUnicas.Contains(chave)) continue;
             resolucoesUnicas.Add(chave);
-            resolucoesDisponiveis.Add(resolucao);
-            opcoes.Add(resolucao.width + " x " + resolucao.height);
+            listaTemp.Add(r);
         }
 
-        if (resolucoesDisponiveis.Count == 0)
+        // Ordena da maior para a menor
+        listaTemp.Sort((a, b) =>
         {
-            Resolution fallback = Screen.currentResolution;
-            resolucoesDisponiveis.Add(fallback);
-            opcoes.Add(fallback.width + " x " + fallback.height);
+            int compW = b.width.CompareTo(a.width);
+            return compW != 0 ? compW : b.height.CompareTo(a.height);
+        });
+
+        if (listaTemp.Count == 0)
+            listaTemp.Add(Screen.currentResolution);
+
+        // FILTRO DE RESOLUÇÕES MUITO PARECIDAS
+        List<Resolution> listaFiltrada = new List<Resolution>();
+
+        for (int i = 0; i < listaTemp.Count; i++)
+        {
+            Resolution atual = listaTemp[i];
+
+            if (listaFiltrada.Count == 0)
+            {
+                listaFiltrada.Add(atual);
+                continue;
+            }
+
+            Resolution ultima = listaFiltrada[listaFiltrada.Count - 1];
+
+            int diferencaLargura = Mathf.Abs(atual.width - ultima.width);
+            int diferencaAltura  = Mathf.Abs(atual.height - ultima.height);
+
+            bool muitoParecida = diferencaLargura < 120 && diferencaAltura < 80;
+
+            if (!muitoParecida)
+                listaFiltrada.Add(atual);
+        }
+
+        List<string> opcoes = new List<string>();
+
+        foreach (Resolution r in listaFiltrada)
+        {
+            resolucoesDisponiveis.Add(r);
+
+            bool ehNativa = r.width == larguraNativa && r.height == alturaNativa;
+            string label = r.width + " x " + r.height
+                + (ehNativa ? "  " + ObterTexto("VIDEO_RECOMENDADO", "(Recomendado)") : "");
+            opcoes.Add(label);
         }
 
         resolucaoDropdown.AddOptions(opcoes);
@@ -76,16 +161,16 @@ public class VideoSettingsManager : MonoBehaviour
     {
         if (modoTelaDropdown == null)
         {
-            Debug.LogWarning("VideoSettingsManager: modoTelaDropdown não foi configurado no Inspector.");
+            Debug.LogWarning("VideoSettingsManager: modoTelaDropdown não configurado.");
             return;
         }
 
         modoTelaDropdown.ClearOptions();
         modoTelaDropdown.AddOptions(new List<string>
         {
-            "Tela cheia",
-            "Janela sem borda",
-            "Janela"
+            ObterTexto("VIDEO_TELA_CHEIA", "Tela cheia"),
+            ObterTexto("VIDEO_JANELA_SEM_BORDA", "Janela sem borda"),
+            ObterTexto("VIDEO_JANELA", "Janela")
         });
 
         modoTelaDropdown.RefreshShownValue();
@@ -106,29 +191,32 @@ public class VideoSettingsManager : MonoBehaviour
             botaoRestaurar.onClick.AddListener(RestaurarPadraoVideo);
     }
 
+    private void OnResolucaoAlterada(int novoIndice)
+    {
+        if (inicializando) return;
+        if (novoIndice < 0 || novoIndice >= resolucoesDisponiveis.Count) return;
+        indiceResolucaoSelecionada = novoIndice;
+    }
+
+    private void OnModoTelaAlterado(int novoIndice)
+    {
+        if (inicializando) return;
+        indiceModoTelaSelecionado = Mathf.Clamp(novoIndice, 0, 2);
+    }
+
     private void CarregarConfiguracoesSalvas()
     {
-        int larguraSalva = PlayerPrefs.GetInt(CHAVE_RESOLUCAO_LARGURA, Screen.currentResolution.width);
-        int alturaSalva = PlayerPrefs.GetInt(CHAVE_RESOLUCAO_ALTURA, Screen.currentResolution.height);
+        int larguraSalva = PlayerPrefs.GetInt(CHAVE_RESOLUCAO_LARGURA, larguraNativa);
+        int alturaSalva  = PlayerPrefs.GetInt(CHAVE_RESOLUCAO_ALTURA,  alturaNativa);
         FullScreenMode modoSalvo = (FullScreenMode)PlayerPrefs.GetInt(
-            CHAVE_MODO_TELA,
-            (int)FullScreenMode.FullScreenWindow
-        );
+            CHAVE_MODO_TELA, (int)FullScreenMode.FullScreenWindow);
 
-        int indiceResolucaoSalva = EncontrarIndiceResolucao(larguraSalva, alturaSalva);
-        if (indiceResolucaoSalva < 0)
-        {
-            indiceResolucaoSalva = EncontrarIndiceResolucao(
-                Screen.currentResolution.width,
-                Screen.currentResolution.height
-            );
-        }
+        int indice = EncontrarIndiceResolucao(larguraSalva, alturaSalva);
+        if (indice < 0) indice = EncontrarIndiceResolucao(larguraNativa, alturaNativa);
+        if (indice < 0) indice = 0;
 
-        if (indiceResolucaoSalva < 0)
-            indiceResolucaoSalva = 0;
-
-        indiceResolucaoSelecionada = indiceResolucaoSalva;
-        indiceModoTelaSelecionado = ConverterModoTelaParaIndiceDropdown(modoSalvo);
+        indiceResolucaoSelecionada = indice;
+        indiceModoTelaSelecionado  = ConverterModoTelaParaIndiceDropdown(modoSalvo);
 
         if (resolucaoDropdown != null)
         {
@@ -142,29 +230,8 @@ public class VideoSettingsManager : MonoBehaviour
             modoTelaDropdown.RefreshShownValue();
         }
 
-        AplicarResolucao(
-            indiceResolucaoSelecionada,
-            ConverterIndiceDropdownParaModoTela(indiceModoTelaSelecionado)
-        );
-    }
-
-    private void OnResolucaoAlterada(int novoIndice)
-    {
-        if (inicializando)
-            return;
-
-        if (novoIndice < 0 || novoIndice >= resolucoesDisponiveis.Count)
-            return;
-
-        indiceResolucaoSelecionada = novoIndice;
-    }
-
-    private void OnModoTelaAlterado(int novoIndice)
-    {
-        if (inicializando)
-            return;
-
-        indiceModoTelaSelecionado = Mathf.Clamp(novoIndice, 0, 2);
+        AplicarResolucao(indiceResolucaoSelecionada,
+            ConverterIndiceDropdownParaModoTela(indiceModoTelaSelecionado));
     }
 
     public void AplicarConfiguracoesVideo()
@@ -175,16 +242,12 @@ public class VideoSettingsManager : MonoBehaviour
 
     public void RestaurarPadraoVideo()
     {
-        int indiceResolucaoMonitor = EncontrarIndiceResolucao(
-            Screen.currentResolution.width,
-            Screen.currentResolution.height
-        );
+        // O padrão é a resolução real deste monitor, nunca uma resolução fixa.
+        int indice = EncontrarIndiceResolucao(larguraNativa, alturaNativa);
+        if (indice < 0) indice = 0;
 
-        if (indiceResolucaoMonitor < 0)
-            indiceResolucaoMonitor = 0;
-
-        indiceResolucaoSelecionada = indiceResolucaoMonitor;
-        indiceModoTelaSelecionado = ConverterModoTelaParaIndiceDropdown(FullScreenMode.FullScreenWindow);
+        indiceResolucaoSelecionada = indice;
+        indiceModoTelaSelecionado  = ConverterModoTelaParaIndiceDropdown(FullScreenMode.FullScreenWindow);
 
         if (resolucaoDropdown != null)
         {
@@ -203,9 +266,7 @@ public class VideoSettingsManager : MonoBehaviour
 
     private void AplicarResolucao(int indiceResolucao, FullScreenMode modo)
     {
-        if (resolucoesDisponiveis.Count == 0)
-            return;
-
+        if (resolucoesDisponiveis.Count == 0) return;
         if (indiceResolucao < 0 || indiceResolucao >= resolucoesDisponiveis.Count)
             indiceResolucao = 0;
 
@@ -213,12 +274,94 @@ public class VideoSettingsManager : MonoBehaviour
         Screen.SetResolution(resolucao.width, resolucao.height, modo);
 
         PlayerPrefs.SetInt(CHAVE_RESOLUCAO_LARGURA, resolucao.width);
-        PlayerPrefs.SetInt(CHAVE_RESOLUCAO_ALTURA, resolucao.height);
+        PlayerPrefs.SetInt(CHAVE_RESOLUCAO_ALTURA,  resolucao.height);
         PlayerPrefs.SetInt(CHAVE_MODO_TELA, (int)modo);
         PlayerPrefs.Save();
 
         indiceResolucaoSelecionada = indiceResolucao;
-        indiceModoTelaSelecionado = ConverterModoTelaParaIndiceDropdown(modo);
+        indiceModoTelaSelecionado  = ConverterModoTelaParaIndiceDropdown(modo);
+
+        AplicarApresentacaoResolucao(resolucao, modo);
+        AtualizarCanvasScalers();
+    }
+
+    private void AtualizarCanvasScalers()
+    {
+        foreach (CanvasScaler scaler in FindObjectsOfType<CanvasScaler>())
+        {
+            if (scaler == null) continue;
+            scaler.enabled = false;
+            scaler.enabled = true;
+        }
+    }
+
+    int ObterLarguraNativa()
+    {
+        if (Display.main != null && Display.main.systemWidth > 0)
+            return Display.main.systemWidth;
+        return Screen.currentResolution.width;
+    }
+
+    int ObterAlturaNativa()
+    {
+        if (Display.main != null && Display.main.systemHeight > 0)
+            return Display.main.systemHeight;
+        return Screen.currentResolution.height;
+    }
+
+    void AplicarApresentacaoResolucao(Resolution resolucao, FullScreenMode modo)
+    {
+        cameraPrincipal = Camera.main;
+        if (cameraPrincipal == null)
+            cameraPrincipal = FindFirstObjectByType<Camera>();
+        if (cameraPrincipal == null)
+            return;
+
+        bool janelaSemBorda = modo == FullScreenMode.FullScreenWindow;
+        bool resolucaoMenor = resolucao.width < larguraNativa ||
+                              resolucao.height < alturaNativa;
+        bool usarBarrasPretas = janelaSemBorda && resolucaoMenor;
+
+        float viewportWidth = usarBarrasPretas
+            ? Mathf.Min(1f, (float)resolucao.width / Mathf.Max(1, larguraNativa))
+            : 1f;
+        float viewportHeight = usarBarrasPretas
+            ? Mathf.Min(1f, (float)resolucao.height / Mathf.Max(1, alturaNativa))
+            : 1f;
+
+        // Em Janela sem borda o sistema mantém a tela do monitor na resolução
+        // nativa. Reduzir também o buffer interno entrega o ganho de desempenho
+        // esperado da resolução escolhida, enquanto o viewport + fundo preto
+        // preserva a apresentação sem esticar a imagem.
+        ScalableBufferManager.ResizeBuffers(viewportWidth, viewportHeight);
+
+        cameraPrincipal.rect = new Rect(
+            (1f - viewportWidth) * 0.5f,
+            (1f - viewportHeight) * 0.5f,
+            viewportWidth,
+            viewportHeight);
+
+        // Limpa de preto a área fora do viewport centralizado.
+        if (cameraFundoBarrasPretas == null)
+        {
+            GameObject objetoFundo = new GameObject("FundoBarrasPretas");
+            objetoFundo.transform.SetParent(transform, false);
+            cameraFundoBarrasPretas = objetoFundo.AddComponent<Camera>();
+            cameraFundoBarrasPretas.clearFlags = CameraClearFlags.SolidColor;
+            cameraFundoBarrasPretas.backgroundColor = Color.black;
+            cameraFundoBarrasPretas.cullingMask = 0;
+            cameraFundoBarrasPretas.depth = cameraPrincipal.depth - 1f;
+            cameraFundoBarrasPretas.rect = new Rect(0f, 0f, 1f, 1f);
+        }
+
+        cameraFundoBarrasPretas.enabled = usarBarrasPretas;
+
+        // A UI permanece em ScreenSpaceOverlay para ser renderizada diretamente
+        // na resolução da janela. Forçar todos os Canvas para ScreenSpaceCamera
+        // fazia os textos pixel art passarem pelo buffer escalável da câmera,
+        // deixando a TelaInicial borrada durante a execução.
+        // A resolução, o modo de janela e o buffer da câmera continuam sendo
+        // aplicados normalmente acima.
     }
 
     private int EncontrarIndiceResolucao(int largura, int altura)
@@ -227,11 +370,8 @@ public class VideoSettingsManager : MonoBehaviour
         {
             if (resolucoesDisponiveis[i].width == largura &&
                 resolucoesDisponiveis[i].height == altura)
-            {
                 return i;
-            }
         }
-
         return -1;
     }
 

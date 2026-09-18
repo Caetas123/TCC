@@ -4,7 +4,8 @@ public class GameManager : MonoBehaviour
 {
     void Awake()
     {
-        Application.targetFrameRate = 60;
+        // O FPS é definido pelo FPSManager a partir da taxa do monitor ou da
+        // preferência salva do jogador. Não force 60 ao trocar de cena.
         QualitySettings.vSyncCount = 0;
     }
 }

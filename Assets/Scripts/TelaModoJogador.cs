@@ -29,6 +29,12 @@ public class TelaModoJogador : MonoBehaviour
             botaoVoltar.onClick.AddListener(Voltar);
     }
 
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+            Voltar();
+    }
+
     void SelecionarModo(string modo)
     {
         PlayerPrefs.SetString("ModoJogo", modo);
