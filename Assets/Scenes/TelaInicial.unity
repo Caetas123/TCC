@@ -232,7 +232,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 124.36
-  m_fontStyle: 33
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -740,7 +740,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 124.36
-  m_fontStyle: 33
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -1030,7 +1030,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 124.36
-  m_fontStyle: 34
+  m_fontStyle: 2
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -1192,7 +1192,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 124.36
-  m_fontStyle: 34
+  m_fontStyle: 2
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -1467,7 +1467,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 124.36
-  m_fontStyle: 33
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -1705,7 +1705,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 48.36
-  m_fontStyle: 33
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -1869,7 +1869,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 124.36
-  m_fontStyle: 34
+  m_fontStyle: 2
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -2134,8 +2134,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.92466676, y: 1}
   m_AnchorMax: {x: 0.92466676, y: 1}
-  m_AnchoredPosition: {x: -815.36, y: -770}
-  m_SizeDelta: {x: 200, y: 80}
+  m_AnchoredPosition: {x: -818.02783, y: -770}
+  m_SizeDelta: {x: 230.2356, y: 80}
   m_Pivot: {x: 0.49999994, y: 0.50000024}
 --- !u!114 &813291182
 MonoBehaviour:
@@ -2468,7 +2468,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 48.36
-  m_fontStyle: 33
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -2690,7 +2690,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 124.36
-  m_fontStyle: 34
+  m_fontStyle: 2
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -2887,7 +2887,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 124.36
-  m_fontStyle: 34
+  m_fontStyle: 2
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -3168,7 +3168,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 124.36
-  m_fontStyle: 34
+  m_fontStyle: 2
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -3330,8 +3330,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -36}
-  m_SizeDelta: {x: 200, y: 80}
+  m_AnchoredPosition: {x: -2.6678, y: -36}
+  m_SizeDelta: {x: 230.2356, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1670222809
 MonoBehaviour:
@@ -3522,7 +3522,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 48.36
-  m_fontStyle: 33
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -3670,8 +3670,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -123.12897}
-  m_SizeDelta: {x: 200, y: 80}
+  m_AnchoredPosition: {x: -2.6678, y: -123.12897}
+  m_SizeDelta: {x: 230.2356, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1738541306
 MonoBehaviour:
@@ -3901,7 +3901,7 @@ RectTransform:
   m_GameObject: {fileID: 1781329710}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1705759659}
@@ -4168,7 +4168,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 31.09
   m_fontSizeMax: 124.36
-  m_fontStyle: 33
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535

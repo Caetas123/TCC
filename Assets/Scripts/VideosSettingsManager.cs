@@ -356,17 +356,12 @@ public class VideoSettingsManager : MonoBehaviour
 
         cameraFundoBarrasPretas.enabled = usarBarrasPretas;
 
-        // ScreenSpaceOverlay ignora o viewport da câmera e esticava a interface.
-        // A UI passa a respeitar a mesma área central do jogo.
-        foreach (Canvas canvas in FindObjectsOfType<Canvas>())
-        {
-            if (canvas.renderMode != RenderMode.ScreenSpaceOverlay)
-                continue;
-
-            canvas.renderMode = RenderMode.ScreenSpaceCamera;
-            canvas.worldCamera = cameraPrincipal;
-            canvas.planeDistance = 100f;
-        }
+        // A UI permanece em ScreenSpaceOverlay para ser renderizada diretamente
+        // na resolução da janela. Forçar todos os Canvas para ScreenSpaceCamera
+        // fazia os textos pixel art passarem pelo buffer escalável da câmera,
+        // deixando a TelaInicial borrada durante a execução.
+        // A resolução, o modo de janela e o buffer da câmera continuam sendo
+        // aplicados normalmente acima.
     }
 
     private int EncontrarIndiceResolucao(int largura, int altura)

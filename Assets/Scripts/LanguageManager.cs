@@ -75,8 +75,8 @@ public class LanguageManager : MonoBehaviour
         pt = new Dictionary<string, string>()
         {
             // ── Menu principal ────────────────────────────────────────────
-            { "MENU_GAME_MODE", "INICIAR" },
-            { "MENU_CREDITS",   "CREDITOS" },
+            { "MENU_GAME_MODE", "COMEÇAR" },
+            { "MENU_CREDITS",   "CRÉDITOS" },
             { "MENU_EXIT",      "SAIR" },
             { "CONF_OP",        "CONFIGURAR" },
 
@@ -86,7 +86,7 @@ public class LanguageManager : MonoBehaviour
             { "EXIT_NO",      "NÃO" },
 
             // ── Configuracoes ─────────────────────────────────────────────
-            { "SETTINGS_TITLE",    "CONFIGURACOES" },
+            { "SETTINGS_TITLE",    "CONFIGURAÇÕES" },
             { "SETTINGS_AUDIO",    "ÁUDIO" },
             { "SETTINGS_VIDEO",    "VÍDEO" },
             { "SETTINGS_CONTROLS", "CONTROLE" },
@@ -99,11 +99,11 @@ public class LanguageManager : MonoBehaviour
             { "AUDIO_MUTE",   "Sem Áudio" },
 
             // ── Vídeo ─────────────────────────────────────────────────────
-            { "VIDEO_RESOLUTION", "Resolucao" },
+            { "VIDEO_RESOLUTION", "Resolução" },
             { "VIDEO_MODE",       "Modo de Tela" },
             { "VIDEO_APPLY",      "Aplicar" },
             { "VIDEO_RESTORE",    "Restaurar" },
-            { "HZ",               "Taxa de Atualizacao (Hz):" },
+            { "HZ",               "Taxa de Atualização (Hz):" },
             { "VIDEO_RECOMENDADO",   "(Recomendado)" },
             { "VIDEO_TELA_CHEIA",    "Tela cheia" },
             { "VIDEO_JANELA_SEM_BORDA", "Janela sem borda" },
