@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
 using UnityEngine.UI;
 
 public class ControleManager : MonoBehaviour
@@ -79,57 +81,127 @@ public class ControleManager : MonoBehaviour
 
     private void Update()
     {
-        if (!esperandoTecla || !Input.anyKeyDown)
+        if (!esperandoTecla || !TentarCapturarTecla(out KeyCode tecla))
             return;
 
-        foreach (KeyCode tecla in System.Enum.GetValues(typeof(KeyCode)))
+        if (tecla == KeyCode.Escape)
         {
-            if (!Input.GetKeyDown(tecla))
-                continue;
-
-            if (tecla == KeyCode.Escape)
-            {
-                if (botaoAtual != null)
-                    AtualizarTextoBotao(botaoAtual, teclaAtual);
-
-                CancelarRemapeamento();
-                MostrarAviso(Traduzir("CTRL_CANCELADO", "Cancelado!"));
-                return;
-            }
-
-            if (TeclaProibida(tecla))
-            {
-                MostrarAviso(Traduzir("CTRL_PROIBIDA", "Tecla não permitida!"));
-                return;
-            }
-
-            string teclaSalva = tecla.ToString();
-
-            if (TeclaJaEmUso(teclaSalva, teclaAtual))
-            {
-                CancelarRemapeamento();
-                AtualizarTexto();
-                MostrarAviso(Traduzir("CTRL_EM_USO", "Tecla já está em uso!"));
-                return;
-            }
-
-            PlayerPrefs.SetString(teclaAtual, teclaSalva);
-            PlayerPrefs.Save();
-            AplicarTeclasNosLutadoresEmCena();
-
             if (botaoAtual != null)
+                AtualizarTextoBotao(botaoAtual, teclaAtual);
+
+            CancelarRemapeamento();
+            MostrarAviso(Traduzir("CTRL_CANCELADO", "Cancelado!"));
+            return;
+        }
+
+        if (TeclaProibida(tecla))
+        {
+            MostrarAviso(Traduzir("CTRL_PROIBIDA", "Tecla não permitida!"));
+            return;
+        }
+
+        string teclaSalva = tecla.ToString();
+
+        if (TeclaJaEmUso(teclaSalva, teclaAtual))
+        {
+            CancelarRemapeamento();
+            AtualizarTexto();
+            MostrarAviso(Traduzir("CTRL_EM_USO", "Tecla já está em uso!"));
+            return;
+        }
+
+        PlayerPrefs.SetString(teclaAtual, teclaSalva);
+        PlayerPrefs.Save();
+        AplicarTeclasNosLutadoresEmCena();
+
+        if (botaoAtual != null)
+        {
+            TextMeshProUGUI textoBotao = botaoAtual.GetComponentInChildren<TextMeshProUGUI>();
+            if (textoBotao != null)
+                textoBotao.text = FormatarTecla(teclaSalva);
+        }
+
+        esperandoTecla = false;
+        teclaAtual = string.Empty;
+        botaoAtual = null;
+
+        MostrarAviso(Traduzir("CTRL_SALVA", "Tecla salva!"));
+    }
+
+    private bool TentarCapturarTecla(out KeyCode tecla)
+    {
+        tecla = KeyCode.None;
+
+        // O menu funciona mesmo quando o projeto está configurado para usar
+        // somente o Input System novo. O Input legado continua como fallback
+        // para builds/configurações antigas.
+        if (Keyboard.current != null)
+        {
+            foreach (KeyControl controle in Keyboard.current.allKeys)
             {
-                TextMeshProUGUI textoBotao = botaoAtual.GetComponentInChildren<TextMeshProUGUI>();
-                if (textoBotao != null)
-                    textoBotao.text = tecla.ToString();
+                if (!controle.wasPressedThisFrame)
+                    continue;
+
+                if (TryConverterTecla(controle.keyCode, out tecla))
+                    return true;
             }
 
-            esperandoTecla = false;
-            teclaAtual = string.Empty;
-            botaoAtual = null;
+        }
 
-            MostrarAviso(Traduzir("CTRL_SALVA", "Tecla salva!"));
-            return;
+        #if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.anyKeyDown)
+        {
+            foreach (KeyCode codigo in System.Enum.GetValues(typeof(KeyCode)))
+            {
+                if (Input.GetKeyDown(codigo))
+                {
+                    tecla = codigo;
+                    return true;
+                }
+            }
+        }
+        #endif
+
+        return false;
+    }
+
+    private bool TryConverterTecla(Key tecla, out KeyCode codigo)
+    {
+        switch (tecla)
+        {
+            case Key.Enter: codigo = KeyCode.Return; return true;
+            case Key.PrintScreen: codigo = KeyCode.Print; return true;
+            case Key.ContextMenu: codigo = KeyCode.Menu; return true;
+            case Key.Digit0: codigo = KeyCode.Alpha0; return true;
+            case Key.Digit1: codigo = KeyCode.Alpha1; return true;
+            case Key.Digit2: codigo = KeyCode.Alpha2; return true;
+            case Key.Digit3: codigo = KeyCode.Alpha3; return true;
+            case Key.Digit4: codigo = KeyCode.Alpha4; return true;
+            case Key.Digit5: codigo = KeyCode.Alpha5; return true;
+            case Key.Digit6: codigo = KeyCode.Alpha6; return true;
+            case Key.Digit7: codigo = KeyCode.Alpha7; return true;
+            case Key.Digit8: codigo = KeyCode.Alpha8; return true;
+            case Key.Digit9: codigo = KeyCode.Alpha9; return true;
+            case Key.Numpad0: codigo = KeyCode.Keypad0; return true;
+            case Key.Numpad1: codigo = KeyCode.Keypad1; return true;
+            case Key.Numpad2: codigo = KeyCode.Keypad2; return true;
+            case Key.Numpad3: codigo = KeyCode.Keypad3; return true;
+            case Key.Numpad4: codigo = KeyCode.Keypad4; return true;
+            case Key.Numpad5: codigo = KeyCode.Keypad5; return true;
+            case Key.Numpad6: codigo = KeyCode.Keypad6; return true;
+            case Key.Numpad7: codigo = KeyCode.Keypad7; return true;
+            case Key.Numpad8: codigo = KeyCode.Keypad8; return true;
+            case Key.Numpad9: codigo = KeyCode.Keypad9; return true;
+            case Key.NumpadPeriod: codigo = KeyCode.KeypadPeriod; return true;
+            case Key.NumpadDivide: codigo = KeyCode.KeypadDivide; return true;
+            case Key.NumpadMultiply: codigo = KeyCode.KeypadMultiply; return true;
+            case Key.NumpadMinus: codigo = KeyCode.KeypadMinus; return true;
+            case Key.NumpadPlus: codigo = KeyCode.KeypadPlus; return true;
+            case Key.NumpadEnter: codigo = KeyCode.KeypadEnter; return true;
+            case Key.NumpadEquals: codigo = KeyCode.KeypadEquals; return true;
+            default:
+                return System.Enum.TryParse(tecla.ToString(), true, out codigo)
+                    && codigo != KeyCode.None;
         }
     }
 

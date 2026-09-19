@@ -10,6 +10,17 @@ public class ConfiguracoesManager : MonoBehaviour
 
     private PauseManager pauseManager;
 
+    void Update()
+    {
+        if (painelConfiguracoes == null || !painelConfiguracoes.activeInHierarchy)
+            return;
+
+        // F/K (ou as teclas remapeadas) funcionam como confirmação nos menus,
+        // inclusive para abrir Dropdowns e acionar o botão FECHAR.
+        if (UIInputUtility.WasPlayerConfirmPressed())
+            UIInputUtility.SubmitSelected();
+    }
+
     void Awake()
     {
         pauseManager = FindFirstObjectByType<PauseManager>();
@@ -27,6 +38,16 @@ public class ConfiguracoesManager : MonoBehaviour
 
         if (painelConfiguracoes != null)
             painelConfiguracoes.SetActive(true);
+
+        // O painel da luta inicia desativado e pode ser aberto depois que o
+        // LanguageManager ja foi criado. Atualiza o rotulo PT/EN no proprio
+        // momento da abertura para nunca deixar o botao visualmente vazio.
+        var botoesIdioma = FindObjectsByType<LanguageButton>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var botaoIdioma in botoesIdioma)
+        {
+            if (botaoIdioma != null)
+                botaoIdioma.AtualizarTexto();
+        }
     }
 
     public void AbrirPainelPrincipal()

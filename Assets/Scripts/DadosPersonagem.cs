@@ -100,6 +100,8 @@ public class DadosPersonagem : ScriptableObject
     [Range(0f, 1f)]
     [Tooltip("A que altura do corpo o raio sai, como FRAÇÃO da altura real do personagem na cena (0 = pé, 1 = topo da cabeça) — não é um valor fixo, porque a escala dos personagens muda de cena pra cena")]
     public float fracaoAlturaRaioUltimate = 0.7f;
+    [Tooltip("Ajuste fino da origem do raio em relação ao corpo. X acompanha a direção que o personagem está olhando; Y acompanha o personagem mesmo quando ele está no ar.")]
+    public Vector2 ajusteOrigemRaioUltimate = Vector2.zero;
     [Tooltip("Duração (segundos) do crescimento do raio, saindo da origem até alcançar o alvo — rápido e natural, não instantâneo (tipo o corte em pedaços da rachadura, só que revelado por escala em vez de pedaços fixos)")]
     public float duracaoCrescimentoRaio = 0.08f;
     [Tooltip("Atraso (segundos) entre o raio terminar de crescer e o dano realmente acertar — só pra dar uma sensação extra de impacto, além do próprio crescimento")]

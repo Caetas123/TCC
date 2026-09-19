@@ -1597,8 +1597,14 @@ public class LutadorController2D : MonoBehaviour
     // ancorar tanto a origem em Jamanta quanto a origem "de chegada" no alvo.
     Vector3 OrigemDoRaioUltimate()
     {
-        float altura = AlturaRealDoLutador() * dadosPersonagem.fracaoAlturaRaioUltimate;
-        return transform.position + new Vector3(0f, altura, 0f);
+        float alturaCorpo = AlturaRealDoLutador();
+        float altura = alturaCorpo * dadosPersonagem.fracaoAlturaRaioUltimate;
+        float direcao = transform.localScale.x >= 0f ? 1f : -1f;
+        Vector2 ajuste = dadosPersonagem.ajusteOrigemRaioUltimate;
+        return transform.position + new Vector3(
+            alturaCorpo * ajuste.x * direcao,
+            altura + alturaCorpo * ajuste.y,
+            0f);
     }
 
     public void ReceberDano(int dano)

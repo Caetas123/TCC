@@ -468,20 +468,20 @@ public class TelaSelecaoArena : MonoBehaviour
     {
         if (sorteando) return;
 
-        if (Input.GetKeyDown(KeyCode.Escape)) { Voltar(); return; }
+        if (UIInputUtility.WasCancelPressed()) { Voltar(); return; }
 
-        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+        if (UIInputUtility.WasSubmitPressed() || UIInputUtility.WasPlayerConfirmPressed())
         {
             ConfirmarSelecaoTeclado();
             return;
         }
 
-        bool cima      = Input.GetKeyDown(p1Cima)      || Input.GetKeyDown(p2Cima);
-        bool baixo     = Input.GetKeyDown(p1Baixo)     || Input.GetKeyDown(p2Baixo);
-        bool esquerda  = Input.GetKeyDown(p1Esquerda)  || Input.GetKeyDown(p2Esquerda);
-        bool direita   = Input.GetKeyDown(p1Direita)   || Input.GetKeyDown(p2Direita);
-        bool confirmar = Input.GetKeyDown(p1Confirmar) || Input.GetKeyDown(p2Confirmar);
-        bool voltarTecla = Input.GetKeyDown(p1Voltar)  || Input.GetKeyDown(p2Voltar);
+        bool cima      = UIInputUtility.WasKeyPressed(p1Cima)      || UIInputUtility.WasKeyPressed(p2Cima);
+        bool baixo     = UIInputUtility.WasKeyPressed(p1Baixo)     || UIInputUtility.WasKeyPressed(p2Baixo);
+        bool esquerda  = UIInputUtility.WasKeyPressed(p1Esquerda)  || UIInputUtility.WasKeyPressed(p2Esquerda);
+        bool direita   = UIInputUtility.WasKeyPressed(p1Direita)   || UIInputUtility.WasKeyPressed(p2Direita);
+        bool confirmar = UIInputUtility.WasKeyPressed(p1Confirmar) || UIInputUtility.WasKeyPressed(p2Confirmar);
+        bool voltarTecla = UIInputUtility.WasKeyPressed(p1Voltar)  || UIInputUtility.WasKeyPressed(p2Voltar);
 
         if (voltarTecla) { Voltar(); return; }
 

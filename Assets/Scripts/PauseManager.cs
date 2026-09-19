@@ -35,7 +35,7 @@ public class PauseManager : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (UIInputUtility.WasCancelPressed())
         {
             // Dentro das configurações abertas a partir do pause, o ESC deve
             // voltar ao pause e manter a luta congelada.
@@ -55,6 +55,12 @@ public class PauseManager : MonoBehaviour
                 Continuar();
             else
                 Pausar();
+        }
+
+        if (pausado && (configuracoesManager == null || !configuracoesManager.EstaAberta())
+            && UIInputUtility.WasPlayerConfirmPressed())
+        {
+            UIInputUtility.SubmitSelected();
         }
     }
 

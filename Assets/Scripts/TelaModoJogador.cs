@@ -31,7 +31,13 @@ public class TelaModoJogador : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (UIInputUtility.WasPlayerConfirmPressed())
+        {
+            UIInputUtility.SubmitSelected();
+            return;
+        }
+
+        if (UIInputUtility.WasCancelPressed())
             Voltar();
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class LanguageManager : MonoBehaviour
 {
@@ -31,6 +32,28 @@ public class LanguageManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         SetupDictionaries();
+        CarregarIdioma();
+        SceneManager.sceneLoaded += ReaplicarIdiomaNaCena;
+        OnLanguageChanged?.Invoke();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            SceneManager.sceneLoaded -= ReaplicarIdiomaNaCena;
+            Instance = null;
+        }
+    }
+
+    private void ReaplicarIdiomaNaCena(Scene cena, LoadSceneMode modo)
+    {
+        if (Instance != this)
+            return;
+
+        // Cada cena possui seus proprios textos e alguns prefabs tem valores
+        // serializados diferentes. O idioma salvo e reaplicado depois que a
+        // cena termina de carregar, garantindo consistencia no jogo inteiro.
         CarregarIdioma();
         OnLanguageChanged?.Invoke();
     }
@@ -145,6 +168,46 @@ public class LanguageManager : MonoBehaviour
             { "AVISO_DESCP1",     "Tecla Deselecionar: X" },
             { "AVISO_DESCP2",     "Tecla Deselecionar: M" },
             { "RANDOM_CHARACTER", "ALEATÓRIO" },
+
+            // ── Informações do personagem ───────────────────────────────
+            { "CHAR_INFO",           "INFORMAÇÕES DO PERSONAGEM" },
+            { "CHAR_INFO_CLOSE",     "FECHAR" },
+            { "CHAR_INFO_HINT",      "Passe pelos ataques para ver os frames em ação" },
+            { "CHAR_COMBAT_ANIMATION", "ANIMAÇÃO DE COMBATE" },
+            { "CHAR_SELECT_ACTION",  "Selecione uma ação para ver os frames da animação." },
+            { "CHAR_ATTACK",         "ATAQUE" },
+            { "CHAR_SPECIAL",        "ESPECIAL" },
+            { "CHAR_ULTIMATE",       "ULTIMATE" },
+            { "CHAR_DEFENSE",        "DEFESA" },
+            { "CHAR_STATS",          "ATRIBUTOS" },
+            { "CHAR_DAMAGE",         "Dano" },
+            { "CHAR_RANGE",          "Alcance" },
+            { "CHAR_COST",           "Custo" },
+            { "CHAR_SPEED",          "Velocidade" },
+            { "CHAR_JUMP",           "Força do pulo" },
+            { "CHAR_ENERGY",         "Recarga de energia" },
+            { "CHAR_BLOCK",          "Bloqueio" },
+            { "CHAR_STYLE",          "Estilo" },
+            { "CHAR_MELEE_DESC",     "Golpe direto de curta distância." },
+            { "CHAR_SPECIAL_DESC",   "Habilidade especial com efeito único." },
+            { "CHAR_ULTIMATE_DESC",  "Golpe máximo para virar a luta." },
+            { "CHAR_DEFENSE_DESC",   "Reduz o dano recebido enquanto estiver ativa." },
+            { "CHAR_BURNING_SWORD_DESC", "Espada em chamas: ativa queimação nos golpes." },
+            { "CHAR_CRACK_DESC",     "Controle de área: salto + rachadura no chão." },
+            { "CHAR_LAVA_DESC",      "Espada cravada: lava no ponto de impacto." },
+            { "CHAR_RAY_DESC",       "Raio concentrado com impacto e recuo." },
+            { "CHAR_SPEND",           "Gasto" },
+            { "CHAR_USAGE",           "Uso" },
+            { "CHAR_SPEND_FULL_BAR",  "Barra cheia" },
+            { "CHAR_SPEND_EMPTY_ALL", "Zera tudo" },
+            { "CHAR_SPEND_FIXED",     "Gasto fixo" },
+            { "CHAR_SPEND_GRADUAL",   "Gasto gradual" },
+            { "CHAR_USAGE_FULL_BAR",  "Barra cheia" },
+            { "CHAR_USAGE_FIXED",     "Gasto fixo" },
+            { "CHAR_AREA_CONTROL",   "Controle de área" },
+            { "CHAR_MOBILE",         "Agressivo e móvel" },
+            { "CHAR_BALANCED",        "Equilibrado" },
+            { "CHAR_PRESS_INFO",      "INFO" },
 
             // ── Avisos de selecao ─────────────────────────────────────────
             { "AVISO_SELECIONE_AMBOS", "Selecione um personagem para cada jogador antes de iniciar!" },
@@ -281,6 +344,46 @@ public class LanguageManager : MonoBehaviour
             { "AVISO_DESCP1",     "Deselect Key: X" },
             { "AVISO_DESCP2",     "Deselect Key: M" },
             { "RANDOM_CHARACTER", "RANDOM" },
+
+            // ── Character information ───────────────────────────────────
+            { "CHAR_INFO",           "CHARACTER INFORMATION" },
+            { "CHAR_INFO_CLOSE",     "CLOSE" },
+            { "CHAR_INFO_HINT",      "Move through the attacks to see the frames in action" },
+            { "CHAR_COMBAT_ANIMATION", "COMBAT ANIMATION" },
+            { "CHAR_SELECT_ACTION",  "Select an action to view the animation frames." },
+            { "CHAR_ATTACK",         "ATTACK" },
+            { "CHAR_SPECIAL",        "SPECIAL" },
+            { "CHAR_ULTIMATE",       "ULTIMATE" },
+            { "CHAR_DEFENSE",        "DEFENSE" },
+            { "CHAR_STATS",          "ATTRIBUTES" },
+            { "CHAR_DAMAGE",         "Damage" },
+            { "CHAR_RANGE",          "Range" },
+            { "CHAR_COST",           "Cost" },
+            { "CHAR_SPEED",          "Speed" },
+            { "CHAR_JUMP",           "Jump force" },
+            { "CHAR_ENERGY",         "Energy recharge" },
+            { "CHAR_BLOCK",          "Block" },
+            { "CHAR_STYLE",          "Style" },
+            { "CHAR_MELEE_DESC",     "A direct short-range strike." },
+            { "CHAR_SPECIAL_DESC",   "A special ability with a unique effect." },
+            { "CHAR_ULTIMATE_DESC",  "A finishing move that can turn the fight." },
+            { "CHAR_DEFENSE_DESC",   "Reduces received damage while active." },
+            { "CHAR_BURNING_SWORD_DESC", "Flaming sword: applies burn with attacks." },
+            { "CHAR_CRACK_DESC",     "Area control: jump and crack the ground." },
+            { "CHAR_LAVA_DESC",      "Embedded sword: lava at the impact point." },
+            { "CHAR_RAY_DESC",       "Focused beam with impact and recoil." },
+            { "CHAR_SPEND",           "Spend" },
+            { "CHAR_USAGE",           "Use" },
+            { "CHAR_SPEND_FULL_BAR",  "Full bar" },
+            { "CHAR_SPEND_EMPTY_ALL", "Empties all" },
+            { "CHAR_SPEND_FIXED",     "Fixed cost" },
+            { "CHAR_SPEND_GRADUAL",   "Gradual cost" },
+            { "CHAR_USAGE_FULL_BAR",  "Full bar" },
+            { "CHAR_USAGE_FIXED",     "Fixed cost" },
+            { "CHAR_AREA_CONTROL",   "Area control" },
+            { "CHAR_MOBILE",         "Aggressive and mobile" },
+            { "CHAR_BALANCED",        "Balanced" },
+            { "CHAR_PRESS_INFO",      "INFO" },
 
             // ── Avisos de selecao ─────────────────────────────────────────
             { "AVISO_SELECIONE_AMBOS", "Select a character for each player before starting!" },

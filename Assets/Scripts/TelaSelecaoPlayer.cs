@@ -22,6 +22,11 @@ public class TelaSelecaoPlayer : MonoBehaviour
     public Sprite[] rostosPlayer1;
     public Sprite[] corposPlayer1;
     public string[] nomesPlayer1;
+
+    [Header("Informações dos personagens")]
+    [Tooltip("Dados completos usados pelo modal de informações da seleção.")]
+    public DadosPersonagem[] dadosPersonagens;
+
     public Button[] botoesPlayer1;
     public Image[] rostosSlotsP1;
     public Image[] destaquesP1;
@@ -121,6 +126,8 @@ public class TelaSelecaoPlayer : MonoBehaviour
     private int indiceSelecionadoP2 = -1;
     private int focoP1 = 0;
     private int focoP2 = 0;
+    private bool mouseSobrePersonagemP1;
+    private bool mouseSobrePersonagemP2;
     private int grupoAtual = 1;
     private int focoInferior = 1;
     private bool mouseSobreBotaoInferior = false; // só cosmético — nunca usado pra lógica de teclado
@@ -174,6 +181,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
     private int indiceIAConfigAberta = -1;
     private GameObject focoRetornoIA;
     private EstadoTela estadoAtual = EstadoTela.SelecionandoPersonagens;
+    private PainelInfoPersonagem painelInfoPersonagem;
 
     // Desliga o "Transition" nativo (ColorTint/SpriteSwap) de um Button, sem mexer em
     // mais nada configurado no Inspector (sprites, cores originais, onClick, etc.) —
@@ -230,6 +238,11 @@ public class TelaSelecaoPlayer : MonoBehaviour
         ConfigurarBotoesP2();
         ConfigurarInteratividadePorModo();
         ConfigurarBotoesAuxiliares();
+
+        painelInfoPersonagem = GetComponent<PainelInfoPersonagem>();
+        if (painelInfoPersonagem == null)
+            painelInfoPersonagem = gameObject.AddComponent<PainelInfoPersonagem>();
+        painelInfoPersonagem.Inicializar(this, dadosPersonagens, painelAviso != null ? painelAviso.GetComponent<Image>() : null);
 
         // A Unity tem seu próprio sistema de "Selected/Highlighted" (cor configurada no
         // Inspector de cada Button), que reage sozinho quando o EventSystem marca um
@@ -340,6 +353,79 @@ public class TelaSelecaoPlayer : MonoBehaviour
         LanguageManager.OnLanguageChanged -= AtualizarTextosIdioma;
     }
 
+    public DadosPersonagem ObterDadosPersonagem(int indice)
+    {
+        if (dadosPersonagens == null || indice < 0 || indice >= dadosPersonagens.Length)
+            return null;
+
+        return dadosPersonagens[indice];
+    }
+
+    public int ObterIndiceParaInfo(int lado)
+    {
+        if (lado == 1)
+        {
+            // Enquanto o mouse estiver sobre um slot, o INFO acompanha esse
+            // slot. Isso evita usar o foco antigo de outro ponto da grade.
+            if (mouseSobrePersonagemP1)
+            {
+                if (focoP1 < 0 || EhSlotRandomP1(focoP1))
+                    return -1;
+                return ObterDadosPersonagem(focoP1) != null ? focoP1 : -1;
+            }
+
+            if (indiceSelecionadoP1 >= 0 && !EhSlotRandomP1(indiceSelecionadoP1))
+                return ObterDadosPersonagem(indiceSelecionadoP1) != null ? indiceSelecionadoP1 : -1;
+
+            if (focoP1 >= 0 && !EhSlotRandomP1(focoP1))
+                return ObterDadosPersonagem(focoP1) != null ? focoP1 : -1;
+        }
+        else
+        {
+            if (mouseSobrePersonagemP2)
+            {
+                if (focoP2 < 0 || EhSlotRandomP2(focoP2))
+                    return -1;
+                return ObterDadosPersonagem(focoP2) != null ? focoP2 : -1;
+            }
+
+            if (indiceSelecionadoP2 >= 0 && !EhSlotRandomP2(indiceSelecionadoP2))
+                return ObterDadosPersonagem(indiceSelecionadoP2) != null ? indiceSelecionadoP2 : -1;
+
+            if (focoP2 >= 0 && !EhSlotRandomP2(focoP2))
+                return ObterDadosPersonagem(focoP2) != null ? focoP2 : -1;
+        }
+
+        return -1;
+    }
+
+    public bool TeclaDeAtaqueFoiPressionada()
+    {
+        return UIInputUtility.WasPlayerConfirmPressed();
+    }
+
+    void AbrirInfoDoJogador(int lado)
+    {
+        if (painelInfoPersonagem == null)
+            return;
+
+        painelInfoPersonagem.AbrirParaLado(lado);
+    }
+
+    public void RestaurarFocoAposModal()
+    {
+        mouseSobrePersonagemP1 = false;
+        mouseSobrePersonagemP2 = false;
+
+        if (indiceSelecionadoP1 >= 0 && !EhSlotRandomP1(indiceSelecionadoP1))
+            focoP1 = indiceSelecionadoP1;
+        if (indiceSelecionadoP2 >= 0 && !EhSlotRandomP2(indiceSelecionadoP2))
+            focoP2 = indiceSelecionadoP2;
+
+        AtualizarFocoVisualP1();
+        AtualizarFocoVisualP2();
+    }
+
     // Chave: helper local que nunca falha independente do LanguageManager
     string Traduzir(string chave, string fallbackPT)
     {
@@ -371,6 +457,9 @@ public class TelaSelecaoPlayer : MonoBehaviour
         // A transição para outra cena é global, mas o sorteio não: cada jogador
         // precisa continuar podendo navegar enquanto o outro está na roleta.
         if (estadoAtual == EstadoTela.Transicao)
+            return;
+
+        if (painelInfoPersonagem != null && painelInfoPersonagem.EstaAberto)
             return;
 
         if (PainelConfiguracaoIAAberto())
@@ -739,22 +828,22 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
         // Detecção "por borda" de cima/baixo — NÃO usa UIInputUtility.WasNavigateUpPressed()
         // direto aqui porque ele também checa o eixo "Vertical" de forma contínua
-        // (Input.GetAxisRaw > 0.5), e W/S/setas alimentam esse eixo por padrão. Isso fazia
+        // (eixo contínuo > 0.5), e W/S/setas alimentam esse eixo por padrão. Isso fazia
         // segurar a tecla (mesmo que por uma fração de segundo) manter a condição "true"
         // por vários frames seguidos, processando várias transições de grupo em sequência
         // (ex: 2->1->0 quase no mesmo instante) — dava a impressão de "pular" direto de
         // Iniciar pro Voltar, sem passar visivelmente pelos personagens.
-        float eixoVertical = Input.GetAxisRaw("Vertical");
+        float eixoVertical = UIInputUtility.ReadNavigationAxis().y;
         bool eixoAcimaAgora = eixoVertical > 0.5f;
         bool eixoAbaixoAgora = eixoVertical < -0.5f;
 
-        bool cimaGlobal = Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)
-            || Input.GetKeyDown(teclaCimaP1)
-            || Input.GetKeyDown(teclaCimaP2)
+        bool cimaGlobal = UIInputUtility.WasKeyPressed(KeyCode.W) || UIInputUtility.WasKeyPressed(KeyCode.UpArrow)
+            || UIInputUtility.WasKeyPressed(teclaCimaP1)
+            || UIInputUtility.WasKeyPressed(teclaCimaP2)
             || (eixoAcimaAgora && !eixoVerticalCimaSegurando);
-        bool baixoGlobal = Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow)
-            || Input.GetKeyDown(teclaBaixoP1)
-            || Input.GetKeyDown(teclaBaixoP2)
+        bool baixoGlobal = UIInputUtility.WasKeyPressed(KeyCode.S) || UIInputUtility.WasKeyPressed(KeyCode.DownArrow)
+            || UIInputUtility.WasKeyPressed(teclaBaixoP1)
+            || UIInputUtility.WasKeyPressed(teclaBaixoP2)
             || (eixoAbaixoAgora && !eixoVerticalBaixoSegurando);
 
         eixoVerticalCimaSegurando = eixoAcimaAgora;
@@ -790,7 +879,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
             if (grupoAtual == 2)
             {
                 grupoAtual = 1;
-                ultimoLadoAtivo = Input.GetKeyDown(teclaCimaP2) ? 2 : 1;
+                ultimoLadoAtivo = UIInputUtility.WasKeyPressed(teclaCimaP2) ? 2 : 1;
                 AtualizarFocoGrupo();
                 AtualizarFocoVisualP1();
                 SincronizarHoverTeclado();
@@ -800,7 +889,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
             if (grupoAtual == 1)
             {
                 grupoAtual = 0;
-                ultimoLadoAtivo = Input.GetKeyDown(teclaCimaP2) ? 2 : 1;
+                ultimoLadoAtivo = UIInputUtility.WasKeyPressed(teclaCimaP2) ? 2 : 1;
                 AtualizarFocoGrupoVoltar();
                 SincronizarHoverTeclado();
                 return true;
@@ -815,7 +904,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
             if (grupoAtual == 0)
             {
                 grupoAtual = 1;
-                ultimoLadoAtivo = Input.GetKeyDown(teclaBaixoP2) ? 2 : 1;
+                ultimoLadoAtivo = UIInputUtility.WasKeyPressed(teclaBaixoP2) ? 2 : 1;
                 AtualizarFocoGrupo();
                 AtualizarFocoVisualP1();
                 SincronizarHoverTeclado();
@@ -825,7 +914,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
             if (grupoAtual == 1)
             {
                 grupoAtual = 2;
-                ultimoLadoAtivo = Input.GetKeyDown(teclaBaixoP2) ? 2 : 1;
+                ultimoLadoAtivo = UIInputUtility.WasKeyPressed(teclaBaixoP2) ? 2 : 1;
                 focoInferior = 1;
                 AtualizarFocoGrupo();
                 AtualizarFocoInferior();
@@ -905,8 +994,8 @@ public class TelaSelecaoPlayer : MonoBehaviour
         // Salvar/Fechar estando com foco no dropdown (era isso que fechava o painel sem
         // lógica nenhuma antes).
         bool enterGlobalPressionado = UIInputUtility.WasSubmitPressed();
-        bool teclaJogadorPressionada = (ladoIAConfigAberta == 1 && Input.GetKeyDown(teclaConfirmarP1))
-            || (ladoIAConfigAberta == 2 && Input.GetKeyDown(teclaConfirmarP2));
+        bool teclaJogadorPressionada = (ladoIAConfigAberta == 1 && UIInputUtility.WasKeyPressed(teclaConfirmarP1))
+            || (ladoIAConfigAberta == 2 && UIInputUtility.WasKeyPressed(teclaConfirmarP2));
         bool confirmarPressionado = enterGlobalPressionado || teclaJogadorPressionada;
 
         if (confirmarPressionado)
@@ -951,17 +1040,17 @@ public class TelaSelecaoPlayer : MonoBehaviour
             TMP_Dropdown dropAtivoP1 = focoIAPanel == 0 ? dropdownEstiloIAP1 : (focoIAPanel == 1 ? dropdownDificuldadeIAP1 : null);
             bool listaAbertaP1 = dropAtivoP1 != null && dropAtivoP1.IsExpanded;
 
-            if (listaAbertaP1 && Input.GetKeyDown(teclaCimaP1))
+            if (listaAbertaP1 && UIInputUtility.WasKeyPressed(teclaCimaP1))
                 MudarValorEMostrarLista(dropAtivoP1, -1);
-            else if (listaAbertaP1 && Input.GetKeyDown(teclaBaixoP1))
+            else if (listaAbertaP1 && UIInputUtility.WasKeyPressed(teclaBaixoP1))
                 MudarValorEMostrarLista(dropAtivoP1, 1);
-            else if (Input.GetKeyDown(teclaCimaP1))
+            else if (UIInputUtility.WasKeyPressed(teclaCimaP1))
                 NavegarPainelIA(-1);
-            else if (Input.GetKeyDown(teclaBaixoP1))
+            else if (UIInputUtility.WasKeyPressed(teclaBaixoP1))
                 NavegarPainelIA(1);
-            else if (Input.GetKeyDown(teclaEsquerdaP1))
+            else if (UIInputUtility.WasKeyPressed(teclaEsquerdaP1))
                 AlterarValorDropdownFocado(-1);
-            else if (Input.GetKeyDown(teclaDireitaP1))
+            else if (UIInputUtility.WasKeyPressed(teclaDireitaP1))
                 AlterarValorDropdownFocado(1);
         }
         // Painel do P2: teclas do P2 navegam e confirmam
@@ -970,17 +1059,17 @@ public class TelaSelecaoPlayer : MonoBehaviour
             TMP_Dropdown dropAtivoP2 = focoIAPanel == 0 ? dropdownEstiloIAP2 : (focoIAPanel == 1 ? dropdownDificuldadeIAP2 : null);
             bool listaAbertaP2 = dropAtivoP2 != null && dropAtivoP2.IsExpanded;
 
-            if (listaAbertaP2 && Input.GetKeyDown(teclaCimaP2))
+            if (listaAbertaP2 && UIInputUtility.WasKeyPressed(teclaCimaP2))
                 MudarValorEMostrarLista(dropAtivoP2, -1);
-            else if (listaAbertaP2 && Input.GetKeyDown(teclaBaixoP2))
+            else if (listaAbertaP2 && UIInputUtility.WasKeyPressed(teclaBaixoP2))
                 MudarValorEMostrarLista(dropAtivoP2, 1);
-            else if (Input.GetKeyDown(teclaCimaP2))
+            else if (UIInputUtility.WasKeyPressed(teclaCimaP2))
                 NavegarPainelIA(-1);
-            else if (Input.GetKeyDown(teclaBaixoP2))
+            else if (UIInputUtility.WasKeyPressed(teclaBaixoP2))
                 NavegarPainelIA(1);
-            else if (Input.GetKeyDown(teclaEsquerdaP2))
+            else if (UIInputUtility.WasKeyPressed(teclaEsquerdaP2))
                 AlterarValorDropdownFocado(-1);
-            else if (Input.GetKeyDown(teclaDireitaP2))
+            else if (UIInputUtility.WasKeyPressed(teclaDireitaP2))
                 AlterarValorDropdownFocado(1);
         }
     }
@@ -1108,12 +1197,12 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
     void TratarTecladoInferior()
     {
-        bool esquerdaP1 = Input.GetKeyDown(teclaEsquerdaP1);
-        bool esquerdaP2 = Input.GetKeyDown(teclaEsquerdaP2);
-        bool direitaP1 = Input.GetKeyDown(teclaDireitaP1);
-        bool direitaP2 = Input.GetKeyDown(teclaDireitaP2);
-        bool confirmarP1 = Input.GetKeyDown(teclaConfirmarP1);
-        bool confirmarP2 = Input.GetKeyDown(teclaConfirmarP2);
+        bool esquerdaP1 = UIInputUtility.WasKeyPressed(teclaEsquerdaP1);
+        bool esquerdaP2 = UIInputUtility.WasKeyPressed(teclaEsquerdaP2);
+        bool direitaP1 = UIInputUtility.WasKeyPressed(teclaDireitaP1);
+        bool direitaP2 = UIInputUtility.WasKeyPressed(teclaDireitaP2);
+        bool confirmarP1 = UIInputUtility.WasKeyPressed(teclaConfirmarP1);
+        bool confirmarP2 = UIInputUtility.WasKeyPressed(teclaConfirmarP2);
 
         // Esquerda/Direita no grupo inferior — só Start existe, então apenas muda ultimoLadoAtivo
         if (esquerdaP1 || direitaP1) { ultimoLadoAtivo = 1; return; }
@@ -1159,7 +1248,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
         int total = ContarBotoesValidosP1();
         if (total == 0) return;
 
-        if (Input.GetKeyDown(teclaEsquerdaP1))
+        if (UIInputUtility.WasKeyPressed(teclaEsquerdaP1))
         {
             ultimoLadoAtivo = 1;
             focoP1 = ProximoIndiceValidoP1(focoP1, -1);
@@ -1167,7 +1256,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
             if (indiceSelecionadoP1 < 0) PreviewPersonagemP1(focoP1);
             SincronizarHoverTeclado();
         }
-        else if (Input.GetKeyDown(teclaDireitaP1))
+        else if (UIInputUtility.WasKeyPressed(teclaDireitaP1))
         {
             ultimoLadoAtivo = 1;
             focoP1 = ProximoIndiceValidoP1(focoP1, 1);
@@ -1175,14 +1264,14 @@ public class TelaSelecaoPlayer : MonoBehaviour
             if (indiceSelecionadoP1 < 0) PreviewPersonagemP1(focoP1);
             SincronizarHoverTeclado();
         }
-        else if (Input.GetKeyDown(teclaDefenderP1))
+        else if (UIInputUtility.WasKeyPressed(teclaDefenderP1))
         {
             ultimoLadoAtivo = 1;
             if (indiceSelecionadoP1 >= 0)
                 DeselecionarPersonagemP1();
             SincronizarHoverTeclado();
         }
-        else if (Input.GetKeyDown(teclaConfirmarP1))
+        else if (UIInputUtility.WasKeyPressed(teclaConfirmarP1))
         {
             ultimoLadoAtivo = 1;
 
@@ -1196,6 +1285,8 @@ public class TelaSelecaoPlayer : MonoBehaviour
             {
                 if (UsaIAP1())
                     AbrirConfiguracaoIA(1, focoP1);
+                else
+                    AbrirInfoDoJogador(1);
             }
             else
             {
@@ -1210,7 +1301,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
         int total = ContarBotoesValidosP2();
         if (total == 0) return;
 
-        if (Input.GetKeyDown(teclaEsquerdaP2))
+        if (UIInputUtility.WasKeyPressed(teclaEsquerdaP2))
         {
             ultimoLadoAtivo = 2;
             focoP2 = ProximoIndiceValidoP2(focoP2, -1);
@@ -1218,7 +1309,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
             if (indiceSelecionadoP2 < 0) PreviewPersonagemP2(focoP2);
             SincronizarHoverTeclado();
         }
-        else if (Input.GetKeyDown(teclaDireitaP2))
+        else if (UIInputUtility.WasKeyPressed(teclaDireitaP2))
         {
             ultimoLadoAtivo = 2;
             focoP2 = ProximoIndiceValidoP2(focoP2, 1);
@@ -1226,14 +1317,14 @@ public class TelaSelecaoPlayer : MonoBehaviour
             if (indiceSelecionadoP2 < 0) PreviewPersonagemP2(focoP2);
             SincronizarHoverTeclado();
         }
-        else if (Input.GetKeyDown(teclaDefenderP2))
+        else if (UIInputUtility.WasKeyPressed(teclaDefenderP2))
         {
             ultimoLadoAtivo = 2;
             if (indiceSelecionadoP2 >= 0)
                 DeselecionarPersonagemP2();
             SincronizarHoverTeclado();
         }
-        else if (Input.GetKeyDown(teclaConfirmarP2))
+        else if (UIInputUtility.WasKeyPressed(teclaConfirmarP2))
         {
             ultimoLadoAtivo = 2;
 
@@ -1247,6 +1338,8 @@ public class TelaSelecaoPlayer : MonoBehaviour
             {
                 if (UsaIAP2())
                     AbrirConfiguracaoIA(2, focoP2);
+                else
+                    AbrirInfoDoJogador(2);
             }
             else
             {
@@ -1303,20 +1396,23 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
                 if (indiceSelecionadoP1 == index)
                 {
-                    if (UsaIAP1())
+                    float now = Time.unscaledTime;
+                    bool cliqueDuplo = now - lastClickTimeP1[index] < doubleClickThreshold;
+                    lastClickTimeP1[index] = now;
+
+                    if (cliqueDuplo)
                     {
-                        float now = Time.time;
-                        if (now - lastClickTimeP1[index] < doubleClickThreshold)
+                        if (UsaIAP1())
                             AbrirConfiguracaoIA(1, index);
-                        lastClickTimeP1[index] = now;
+                        else
+                            AbrirInfoDoJogador(1);
                     }
-                    else
-                    {
-                        DeselecionarPersonagemP1();
-                    }
+                    // Mantém a seleção no primeiro clique para que o segundo
+                    // clique possa abrir o modal de informações.
                 }
                 else
                 {
+                    lastClickTimeP1[index] = Time.unscaledTime;
                     SelecionarPersonagemP1(index);
                 }
             });
@@ -1375,20 +1471,23 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
                 if (indiceSelecionadoP2 == index)
                 {
-                    if (UsaIAP2())
+                    float now = Time.unscaledTime;
+                    bool cliqueDuplo = now - lastClickTimeP2[index] < doubleClickThreshold;
+                    lastClickTimeP2[index] = now;
+
+                    if (cliqueDuplo)
                     {
-                        float now = Time.time;
-                        if (now - lastClickTimeP2[index] < doubleClickThreshold)
+                        if (UsaIAP2())
                             AbrirConfiguracaoIA(2, index);
-                        lastClickTimeP2[index] = now;
+                        else
+                            AbrirInfoDoJogador(2);
                     }
-                    else
-                    {
-                        DeselecionarPersonagemP2();
-                    }
+                    // Mantém a seleção no primeiro clique para que o segundo
+                    // clique possa abrir o modal de informações.
                 }
                 else
                 {
+                    lastClickTimeP2[index] = Time.unscaledTime;
                     SelecionarPersonagemP2(index);
                 }
             });
@@ -1405,6 +1504,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
         if (!PermiteSelecaoP1())
             return;
 
+        mouseSobrePersonagemP1 = true;
         ultimoLadoAtivo = 1;
         focoP1 = index;
 
@@ -1435,6 +1535,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
         if (!PermiteSelecaoP1())
             return;
 
+        mouseSobrePersonagemP1 = false;
         SetDestaqueP1(index, index == indiceSelecionadoP1 ? corDestaqueVisivel : corDestaqueInvisivel);
         RestaurarPreviewP1();
     }
@@ -1444,6 +1545,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
         if (!PermiteSelecaoP2())
             return;
 
+        mouseSobrePersonagemP2 = true;
         ultimoLadoAtivo = 2;
         focoP2 = index;
 
@@ -1465,6 +1567,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
         if (!PermiteSelecaoP2())
             return;
 
+        mouseSobrePersonagemP2 = false;
         SetDestaqueP2(index, index == indiceSelecionadoP2 ? corDestaqueVisivel : corDestaqueInvisivel);
         RestaurarPreviewP2();
     }

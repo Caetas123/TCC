@@ -104,7 +104,17 @@ public class MenuInicial : MonoBehaviour
 
     void Update()
     {
-        if (!Input.GetKeyDown(KeyCode.Escape)) return;
+        bool algumPainelAberto = (painelCreditos != null && painelCreditos.activeSelf)
+            || (painelConfiguracoes != null && painelConfiguracoes.activeSelf)
+            || (painelConfirmacao != null && painelConfirmacao.activeSelf);
+
+        if (!algumPainelAberto && UIInputUtility.WasPlayerConfirmPressed())
+        {
+            UIInputUtility.SubmitSelected();
+            return;
+        }
+
+        if (!UIInputUtility.WasCancelPressed()) return;
 
         // Se algum painel está aberto, Esc fecha ele
         if (painelCreditos != null && painelCreditos.activeSelf)      { FecharCreditos();       return; }
