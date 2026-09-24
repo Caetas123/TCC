@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,6 +26,11 @@ public class VideoSettingsManager : MonoBehaviour
     private bool inicializando = false;
     private Camera cameraPrincipal;
     private Camera cameraFundoBarrasPretas;
+    private Coroutine reaplicarApresentacaoCoroutine;
+    private int larguraTelaAnterior;
+    private int alturaTelaAnterior;
+
+    private const float ProporcaoDeJogo = 16f / 9f;
 
     private void Awake()
     {
@@ -49,6 +55,30 @@ public class VideoSettingsManager : MonoBehaviour
     private void OnDestroy()
     {
         LanguageManager.OnLanguageChanged -= AtualizarTextosIdioma;
+
+        if (reaplicarApresentacaoCoroutine != null)
+            StopCoroutine(reaplicarApresentacaoCoroutine);
+    }
+
+    private void Update()
+    {
+        // Screen.SetResolution pode terminar a troca um frame depois do clique.
+        // Reaplicar aqui garante que o viewport use o tamanho realmente aceito
+        // pelo sistema operacional, inclusive em modo sem borda.
+        if (Screen.width == larguraTelaAnterior && Screen.height == alturaTelaAnterior)
+            return;
+
+        larguraTelaAnterior = Screen.width;
+        alturaTelaAnterior = Screen.height;
+
+        if (resolucoesDisponiveis.Count == 0)
+            return;
+
+        Resolution resolucao = resolucoesDisponiveis[Mathf.Clamp(
+            indiceResolucaoSelecionada, 0, resolucoesDisponiveis.Count - 1)];
+        AplicarApresentacaoResolucao(resolucao,
+            ConverterIndiceDropdownParaModoTela(indiceModoTelaSelecionado));
+        AtualizarCanvasScalers();
     }
 
     private string ObterTexto(string chave, string fallback)
@@ -101,6 +131,13 @@ public class VideoSettingsManager : MonoBehaviour
         for (int i = 0; i < resolucoesSistema.Length; i++)
         {
             Resolution r = resolucoesSistema[i];
+            // Alguns drivers expõem modos virtuais/ultrawide que não cabem no
+            // monitor em uso. Oferecer, por exemplo, 3000x3000 num monitor
+            // 1920x1080 causa troca de modo inválida e pode deixar a janela/UI
+            // fora da área visível.
+            if (!ResolucaoCabeNoMonitor(r))
+                continue;
+
             string chave = r.width + "x" + r.height;
             if (resolucoesUnicas.Contains(chave)) continue;
             resolucoesUnicas.Add(chave);
@@ -115,31 +152,17 @@ public class VideoSettingsManager : MonoBehaviour
         });
 
         if (listaTemp.Count == 0)
-            listaTemp.Add(Screen.currentResolution);
-
-        // FILTRO DE RESOLUÇÕES MUITO PARECIDAS
-        List<Resolution> listaFiltrada = new List<Resolution>();
-
-        for (int i = 0; i < listaTemp.Count; i++)
         {
-            Resolution atual = listaTemp[i];
-
-            if (listaFiltrada.Count == 0)
-            {
-                listaFiltrada.Add(atual);
-                continue;
-            }
-
-            Resolution ultima = listaFiltrada[listaFiltrada.Count - 1];
-
-            int diferencaLargura = Mathf.Abs(atual.width - ultima.width);
-            int diferencaAltura  = Mathf.Abs(atual.height - ultima.height);
-
-            bool muitoParecida = diferencaLargura < 120 && diferencaAltura < 80;
-
-            if (!muitoParecida)
-                listaFiltrada.Add(atual);
+            Resolution fallback = Screen.currentResolution;
+            fallback.width = Mathf.Min(fallback.width, larguraNativa);
+            fallback.height = Mathf.Min(fallback.height, alturaNativa);
+            listaTemp.Add(fallback);
         }
+
+        // Não descarte resoluções apenas por serem próximas. Em telas pequenas
+        // esse filtro eliminava opções úteis e fazia o item recomendado ficar
+        // em uma ordem inesperada.
+        List<Resolution> listaFiltrada = listaTemp;
 
         List<string> opcoes = new List<string>();
 
@@ -154,7 +177,29 @@ public class VideoSettingsManager : MonoBehaviour
         }
 
         resolucaoDropdown.AddOptions(opcoes);
+        AjustarTextoDoDropdown(resolucaoDropdown);
         resolucaoDropdown.RefreshShownValue();
+    }
+
+    private void AjustarTextoDoDropdown(TMP_Dropdown dropdown)
+    {
+        if (dropdown == null)
+            return;
+
+        AjustarTexto(dropdown.captionText);
+        AjustarTexto(dropdown.itemText);
+    }
+
+    private void AjustarTexto(TMP_Text texto)
+    {
+        if (texto == null)
+            return;
+
+        texto.enableWordWrapping = false;
+        texto.overflowMode = TextOverflowModes.Ellipsis;
+        texto.enableAutoSizing = true;
+        texto.fontSizeMin = Mathf.Max(10f, texto.fontSize * 0.55f);
+        texto.fontSizeMax = Mathf.Max(texto.fontSizeMin, texto.fontSize);
     }
 
     private void ConfigurarDropdownModoTela()
@@ -173,6 +218,7 @@ public class VideoSettingsManager : MonoBehaviour
             ObterTexto("VIDEO_JANELA", "Janela")
         });
 
+        AjustarTextoDoDropdown(modoTelaDropdown);
         modoTelaDropdown.RefreshShownValue();
     }
 
@@ -271,6 +317,10 @@ public class VideoSettingsManager : MonoBehaviour
             indiceResolucao = 0;
 
         Resolution resolucao = resolucoesDisponiveis[indiceResolucao];
+        // Defesa adicional para preferências antigas ou dados vindos de outro
+        // monitor: nunca aplique um modo maior que a área nativa atual.
+        resolucao.width = Mathf.Min(resolucao.width, larguraNativa);
+        resolucao.height = Mathf.Min(resolucao.height, alturaNativa);
         Screen.SetResolution(resolucao.width, resolucao.height, modo);
 
         PlayerPrefs.SetInt(CHAVE_RESOLUCAO_LARGURA, resolucao.width);
@@ -283,16 +333,43 @@ public class VideoSettingsManager : MonoBehaviour
 
         AplicarApresentacaoResolucao(resolucao, modo);
         AtualizarCanvasScalers();
+
+        if (reaplicarApresentacaoCoroutine != null)
+            StopCoroutine(reaplicarApresentacaoCoroutine);
+        reaplicarApresentacaoCoroutine = StartCoroutine(ReaplicarApresentacaoDepoisDaTroca(resolucao, modo));
+    }
+
+    private bool ResolucaoCabeNoMonitor(Resolution resolucao)
+    {
+        return resolucao.width > 0 && resolucao.height > 0 &&
+            resolucao.width <= Mathf.Max(1, larguraNativa) &&
+            resolucao.height <= Mathf.Max(1, alturaNativa);
+    }
+
+    private IEnumerator ReaplicarApresentacaoDepoisDaTroca(Resolution resolucao, FullScreenMode modo)
+    {
+        yield return null;
+        yield return new WaitForEndOfFrame();
+
+        AplicarApresentacaoResolucao(resolucao, modo);
+        AtualizarCanvasScalers();
+        reaplicarApresentacaoCoroutine = null;
     }
 
     private void AtualizarCanvasScalers()
     {
-        foreach (CanvasScaler scaler in FindObjectsOfType<CanvasScaler>())
+        foreach (CanvasScaler scaler in FindObjectsByType<CanvasScaler>(
+            FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             if (scaler == null) continue;
-            scaler.enabled = false;
-            scaler.enabled = true;
+
+            UIResponsiveLayout responsivo = scaler.GetComponent<UIResponsiveLayout>();
+            if (responsivo == null)
+                responsivo = scaler.gameObject.AddComponent<UIResponsiveLayout>();
+            responsivo.AplicarAgora();
         }
+
+        Canvas.ForceUpdateCanvases();
     }
 
     int ObterLarguraNativa()
@@ -317,23 +394,30 @@ public class VideoSettingsManager : MonoBehaviour
         if (cameraPrincipal == null)
             return;
 
-        bool janelaSemBorda = modo == FullScreenMode.FullScreenWindow;
-        bool resolucaoMenor = resolucao.width < larguraNativa ||
-                              resolucao.height < alturaNativa;
-        bool usarBarrasPretas = janelaSemBorda && resolucaoMenor;
+        // O jogo usa o renderizador padrão para manter compatibilidade com
+        // GPUs antigas. HDR e MSAA não são necessários para a arte 2D.
+        cameraPrincipal.allowHDR = false;
+        cameraPrincipal.allowMSAA = false;
 
-        float viewportWidth = usarBarrasPretas
-            ? Mathf.Min(1f, (float)resolucao.width / Mathf.Max(1, larguraNativa))
-            : 1f;
-        float viewportHeight = usarBarrasPretas
-            ? Mathf.Min(1f, (float)resolucao.height / Mathf.Max(1, alturaNativa))
-            : 1f;
+        float larguraAtual = Mathf.Max(1f, Screen.width > 0 ? Screen.width : resolucao.width);
+        float alturaAtual = Mathf.Max(1f, Screen.height > 0 ? Screen.height : resolucao.height);
+        float proporcaoTela = larguraAtual / alturaAtual;
 
-        // Em Janela sem borda o sistema mantém a tela do monitor na resolução
-        // nativa. Reduzir também o buffer interno entrega o ganho de desempenho
-        // esperado da resolução escolhida, enquanto o viewport + fundo preto
-        // preserva a apresentação sem esticar a imagem.
-        ScalableBufferManager.ResizeBuffers(viewportWidth, viewportHeight);
+        float viewportWidth = 1f;
+        float viewportHeight = 1f;
+
+        // Mantém a área jogável em 16:9. Em ultrawide, as laterais viram
+        // barras pretas; em telas estreitas, as barras ficam em cima/baixo.
+        if (proporcaoTela > ProporcaoDeJogo)
+            viewportWidth = ProporcaoDeJogo / proporcaoTela;
+        else if (proporcaoTela < ProporcaoDeJogo)
+            viewportHeight = proporcaoTela / ProporcaoDeJogo;
+
+        bool usarBarrasPretas = viewportWidth < 0.999f || viewportHeight < 0.999f;
+
+        // Não redimensiona o buffer interno do URP. A GPU usada na build não
+        // suporta alguns formatos de RenderGraph/dynamic resolution; o viewport
+        // centralizado já preserva a proporção sem esse buffer.
 
         cameraPrincipal.rect = new Rect(
             (1f - viewportWidth) * 0.5f,
@@ -355,6 +439,9 @@ public class VideoSettingsManager : MonoBehaviour
         }
 
         cameraFundoBarrasPretas.enabled = usarBarrasPretas;
+
+        larguraTelaAnterior = Screen.width;
+        alturaTelaAnterior = Screen.height;
 
         // A UI permanece em ScreenSpaceOverlay para ser renderizada diretamente
         // na resolução da janela. Forçar todos os Canvas para ScreenSpaceCamera

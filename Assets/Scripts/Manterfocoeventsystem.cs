@@ -6,6 +6,11 @@ using UnityEngine.InputSystem;
 /// <summary>
 /// Garante que o EventSystem nunca perca o foco após navegação por teclado.
 /// NÃO interfere com o hover do mouse — deixa o Sprite Swap do Unity funcionar normalmente.
+///
+/// A navegação direcional fica exclusivamente com o InputSystemUIInputModule.
+/// Este componente só restaura o foco quando algum painel o perde. Antes ele
+/// também chamava FindSelectableOn* manualmente, fazendo a mesma tecla ser
+/// processada duas vezes e pulando um botão.
 /// </summary>
 public class ManterFocoEventSystem : MonoBehaviour
 {
@@ -39,6 +44,12 @@ public class ManterFocoEventSystem : MonoBehaviour
     {
         if (EventSystem.current == null) return;
 
+        // A tela refatorada possui rotas independentes para P1 e P2. A
+        // navegação global deste componente faria W/S e setas atravessarem os
+        // controles do outro jogador.
+        if (FindObjectOfType<SelecaoPlayerNavigation>(true) != null)
+            return;
+
         // Detecta se o usuário está usando o teclado para navegar
         foreach (KeyCode tecla in teclasNavegacao)
         {
@@ -69,21 +80,6 @@ public class ManterFocoEventSystem : MonoBehaviour
             navegandoPorTeclado = false;
         }
 
-        // Alguns menus usam o Input System novo e outros ainda possuem scripts
-        // legados. Quando o evento de navegacao nativo nao chega ao EventSystem,
-        // fazemos a mesma troca de foco diretamente entre os Selectables.
-        if (!mouseMoveu)
-        {
-            if (UIInputUtility.WasKeyPressed(KeyCode.UpArrow) || UIInputUtility.WasKeyPressed(KeyCode.W))
-                MoverFoco(KeyCode.UpArrow);
-            else if (UIInputUtility.WasKeyPressed(KeyCode.DownArrow) || UIInputUtility.WasKeyPressed(KeyCode.S))
-                MoverFoco(KeyCode.DownArrow);
-            else if (UIInputUtility.WasKeyPressed(KeyCode.LeftArrow) || UIInputUtility.WasKeyPressed(KeyCode.A))
-                MoverFoco(KeyCode.LeftArrow);
-            else if (UIInputUtility.WasKeyPressed(KeyCode.RightArrow) || UIInputUtility.WasKeyPressed(KeyCode.D))
-                MoverFoco(KeyCode.RightArrow);
-        }
-
         // Atualiza o último selecionado sempre que houver foco
         var atual = EventSystem.current.currentSelectedGameObject;
         if (atual != null)
@@ -106,42 +102,4 @@ public class ManterFocoEventSystem : MonoBehaviour
         }
     }
 
-    private void MoverFoco(KeyCode tecla)
-    {
-        navegandoPorTeclado = true;
-
-        var objetoAtual = EventSystem.current.currentSelectedGameObject;
-        if (objetoAtual == null)
-            objetoAtual = ultimoSelecionado;
-
-        if (objetoAtual == null)
-            return;
-
-        var atual = objetoAtual.GetComponent<Selectable>();
-        if (atual == null || !atual.interactable || !atual.gameObject.activeInHierarchy)
-            return;
-
-        Selectable proximo = null;
-        switch (tecla)
-        {
-            case KeyCode.UpArrow:
-                proximo = atual.FindSelectableOnUp();
-                break;
-            case KeyCode.DownArrow:
-                proximo = atual.FindSelectableOnDown();
-                break;
-            case KeyCode.LeftArrow:
-                proximo = atual.FindSelectableOnLeft();
-                break;
-            case KeyCode.RightArrow:
-                proximo = atual.FindSelectableOnRight();
-                break;
-        }
-
-        if (proximo != null && proximo.interactable && proximo.gameObject.activeInHierarchy)
-        {
-            EventSystem.current.SetSelectedGameObject(proximo.gameObject);
-            ultimoSelecionado = proximo.gameObject;
-        }
-    }
 }

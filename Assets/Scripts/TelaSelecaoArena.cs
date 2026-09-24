@@ -755,24 +755,41 @@ public class TelaSelecaoArena : MonoBehaviour
 
     public void ArenaAleatoria()
     {
-        if (!sorteando)
-            StartCoroutine(SorteioAnimado());
+        if (sorteando)
+            return;
+
+        // A seleção acontece no instante do clique. A animação abaixo é apenas
+        // visual e não pode deixar a arena sem valor selecionado.
+        arenaSelecionada = Random.Range(1, 3);
+        indiceArena = arenaSelecionada == 1 ? 0 : 2;
+        grupoAtual = 1;
+        LimparAviso();
+        AtualizarDestaquesArena();
+        AtualizarFocoVisualTeclado();
+
+        StartCoroutine(SorteioAnimado(arenaSelecionada));
     }
 
-    IEnumerator SorteioAnimado()
+    IEnumerator SorteioAnimado(int arenaFinal)
     {
         sorteando = true;
-        float tempo = 0.1f;
+        float tempo = 0.15f;
 
         for (int i = 0; i < 10; i++)
         {
-            int arenaTemp = Random.Range(1, 3);
+            // Alterna entre as duas arenas para o sorteio ficar visualmente
+            // claro até chegar ao resultado final.
+            int arenaTemp = i % 2 == 0 ? 1 : 2;
             MostrarDestaqueArena(arenaTemp);
-            yield return new WaitForSeconds(tempo);
+            // A tela pode estar com o tempo do jogo pausado; a animação do
+            // menu precisa continuar e liberar a navegação depois dela.
+            yield return new WaitForSecondsRealtime(tempo);
             tempo += 0.05f;
         }
 
-        arenaSelecionada = Random.Range(1, 3);
+        // Mantém o resultado definido no começo do clique; a animação não
+        // pode trocar a arena depois que ela já foi escolhida.
+        arenaSelecionada = arenaFinal;
         indiceArena = arenaSelecionada == 1 ? 0 : 2;
         grupoAtual = 1;
 

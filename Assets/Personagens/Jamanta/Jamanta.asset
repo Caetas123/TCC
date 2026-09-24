@@ -23,7 +23,8 @@ MonoBehaviour:
   alcanceAtaque: 2.5
   custoAtaque: 6
   alcanceAtaqueFollowThrough: 1.2
-  multiplicadorMovimentoAtaque: 0.1
+  podeSeMoverDuranteAtaque: 1
+  multiplicadorMovimentoAtaque: 0.35
   danoEspecial: 25
   alcanceEspecial: 2.5
   tipoGastoEspecial: 2
@@ -99,14 +100,14 @@ MonoBehaviour:
   framesDeath: []
   fpsDeath: 8
   somAtaqueInicio: {fileID: 8300000, guid: edcd733df3926bf428cd44d081fc1b84, type: 3}
-  somAtaqueImpacto: {fileID: 0}
-  somEspecial: {fileID: 0}
-  somUltimate: {fileID: 0}
+  somAtaqueImpacto: {fileID: 8300000, guid: edcd733df3926bf428cd44d081fc1b84, type: 3}
+  somEspecial: {fileID: 8300000, guid: edcd733df3926bf428cd44d081fc1b84, type: 3}
+  somUltimate: {fileID: 8300000, guid: edcd733df3926bf428cd44d081fc1b84, type: 3}
   somHit: {fileID: 8300000, guid: b8e6e10f548e0d54b9532f73369a07d2, type: 3}
   somMorte: {fileID: 0}
   somPassos: {fileID: 8300000, guid: 2a01b9ec03bfb6d4fb15ef41d6fd0ff5, type: 3}
-  somPulo: {fileID: 0}
-  somPouso: {fileID: 0}
+  somPulo: {fileID: 8300000, guid: 2a01b9ec03bfb6d4fb15ef41d6fd0ff5, type: 3}
+  somPouso: {fileID: 8300000, guid: 2a01b9ec03bfb6d4fb15ef41d6fd0ff5, type: 3}
   volumeEfeitos: 1
   pitchEfeitos: 1
   volumePassos: 0.33

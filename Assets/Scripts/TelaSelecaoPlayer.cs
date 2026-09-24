@@ -103,6 +103,11 @@ public class TelaSelecaoPlayer : MonoBehaviour
     [Header("Random")]
     public Sprite spriteRandom;
 
+    [Header("Layout refatorado")]
+    [Tooltip("Cria a nova seleção em um bloco próprio da hierarquia, mantendo o modal de informações separado.")]
+    public bool usarLayoutRefatorado = true;
+    [SerializeField] private TelaSelecaoPlayerLayout layoutRefatorado;
+
     [Header("Personagem Aleatório")]
     public Button botaoRandomP1;
     public Button botaoRandomP2;
@@ -243,6 +248,16 @@ public class TelaSelecaoPlayer : MonoBehaviour
         if (painelInfoPersonagem == null)
             painelInfoPersonagem = gameObject.AddComponent<PainelInfoPersonagem>();
         painelInfoPersonagem.Inicializar(this, dadosPersonagens, painelAviso != null ? painelAviso.GetComponent<Image>() : null);
+
+        if (usarLayoutRefatorado)
+        {
+            if (layoutRefatorado == null)
+                layoutRefatorado = GetComponent<TelaSelecaoPlayerLayout>();
+            if (layoutRefatorado == null)
+                layoutRefatorado = gameObject.AddComponent<TelaSelecaoPlayerLayout>();
+
+            layoutRefatorado.Inicializar(this);
+        }
 
         // A Unity tem seu próprio sistema de "Selected/Highlighted" (cor configurada no
         // Inspector de cada Button), que reage sozinho quando o EventSystem marca um
@@ -437,6 +452,11 @@ public class TelaSelecaoPlayer : MonoBehaviour
     // Chamado quando idioma muda — re-renderiza o preview ativo
     void AtualizarTextosIdioma()
     {
+        // Atualiza também as opções que já foram reparentadas para os cartões
+        // da tela refatorada, mantendo PT/EN sincronizados com a configuração.
+        PrepararDropdownIAPublicamente(1);
+        PrepararDropdownIAPublicamente(2);
+
         // Re-exibe preview P1 se estiver mostrando algo
         if (nomePlayer1 != null && !string.IsNullOrEmpty(nomePlayer1.text))
         {
@@ -466,6 +486,24 @@ public class TelaSelecaoPlayer : MonoBehaviour
         {
             estadoAtual = EstadoTela.ConfiguracaoIA;
             TratarAtalhosPainelIA();
+            return;
+        }
+
+        bool possuiNavegacaoNova = usarLayoutRefatorado &&
+            GetComponentInChildren<SelecaoPlayerNavigation>(true) != null;
+
+        // A tela nova tem duas rotas independentes. A confirmação dos controles
+        // é tratada pelo navegador próprio para não clicar no outro jogador.
+        if (possuiNavegacaoNova)
+            return;
+
+        // Na tela antiga, Enter continua sendo a confirmação do fluxo original.
+        if (usarLayoutRefatorado && UIInputUtility.WasSubmitPressed())
+        {
+            if (PodeIniciarPublicamente())
+                IniciarJogo();
+            else
+                MostrarAviso(Traduzir("AVISO_SELECIONE_AMBOS", "Selecione um personagem para cada jogador antes de iniciar!"));
             return;
         }
 
@@ -685,6 +723,16 @@ public class TelaSelecaoPlayer : MonoBehaviour
             PintarFocoOuHover(btnFechar, spriteFocoFecharIA, spriteHoverFecharIA, normalFechar);
         else
             SetSpriteBotao(btnFechar, normalFechar);
+
+        // Dropdown em foco de teclado usa a borda amarela, enquanto o hover
+        // do mouse continua usando o SpriteState normal do botão.
+        TMP_Dropdown dropEstilo = ladoIAConfigAberta == 1 ? dropdownEstiloIAP1 : dropdownEstiloIAP2;
+        TMP_Dropdown dropDificuldade = ladoIAConfigAberta == 1 ? dropdownDificuldadeIAP1 : dropdownDificuldadeIAP2;
+        if (layoutRefatorado != null)
+        {
+            layoutRefatorado.DefinirFocoDropdown(dropEstilo, focoIAPanel == 0);
+            layoutRefatorado.DefinirFocoDropdown(dropDificuldade, focoIAPanel == 1);
+        }
     }
 
     void CarregarTeclas()
@@ -815,6 +863,204 @@ public class TelaSelecaoPlayer : MonoBehaviour
     bool UsaIAP2()
     {
         return modoJogo == "PVC" || modoJogo == "CVC";
+    }
+
+    public int ObterIndiceSelecionadoPublicamente(int lado)
+    {
+        return lado == 1 ? indiceSelecionadoP1 : indiceSelecionadoP2;
+    }
+
+    public bool UsaIAPublicamente(int lado)
+    {
+        return lado == 1 ? UsaIAP1() : UsaIAP2();
+    }
+
+    public bool PermiteSelecaoPublicamente(int lado)
+    {
+        return lado == 1 ? PermiteSelecaoP1() : PermiteSelecaoP2();
+    }
+
+    public string ObterNomeSelecionadoPublicamente(int lado)
+    {
+        int indice = ObterIndiceSelecionadoPublicamente(lado);
+        string[] nomes = lado == 1 ? nomesPlayer1 : nomesPlayer2;
+        return indice >= 0 && nomes != null && indice < nomes.Length ? nomes[indice] : "—";
+    }
+
+    public Sprite ObterCorpoSelecionadoPublicamente(int lado)
+    {
+        int indice = ObterIndiceSelecionadoPublicamente(lado);
+        Sprite[] corpos = lado == 1 ? corposPlayer1 : corposPlayer2;
+        if (indice < 0 || corpos == null || indice >= corpos.Length)
+            return null;
+        return corpos[indice];
+    }
+
+    public Sprite ObterRostoPersonagemPublicamente(int lado, int indice)
+    {
+        Sprite[] rostos = lado == 1 ? rostosPlayer1 : rostosPlayer2;
+        return rostos != null && indice >= 0 && indice < rostos.Length ? rostos[indice] : null;
+    }
+
+    public int QuantidadePersonagensPublicamente()
+    {
+        int total = Mathf.Max(corposPlayer1 != null ? corposPlayer1.Length : 0,
+                              corposPlayer2 != null ? corposPlayer2.Length : 0);
+        int validos = 0;
+        for (int i = 0; i < total; i++)
+        {
+            bool validoP1 = corposPlayer1 != null && i < corposPlayer1.Length && corposPlayer1[i] != null &&
+                             nomesPlayer1 != null && i < nomesPlayer1.Length && !string.IsNullOrEmpty(nomesPlayer1[i]);
+            bool validoP2 = corposPlayer2 != null && i < corposPlayer2.Length && corposPlayer2[i] != null &&
+                             nomesPlayer2 != null && i < nomesPlayer2.Length && !string.IsNullOrEmpty(nomesPlayer2[i]);
+            if (validoP1 || validoP2) validos++;
+        }
+        return validos;
+    }
+
+    public bool PersonagemValidoPublicamente(int indice)
+    {
+        bool validoP1 = corposPlayer1 != null && indice >= 0 && indice < corposPlayer1.Length && corposPlayer1[indice] != null &&
+                         nomesPlayer1 != null && indice < nomesPlayer1.Length && !string.IsNullOrEmpty(nomesPlayer1[indice]);
+        bool validoP2 = corposPlayer2 != null && indice >= 0 && indice < corposPlayer2.Length && corposPlayer2[indice] != null &&
+                         nomesPlayer2 != null && indice < nomesPlayer2.Length && !string.IsNullOrEmpty(nomesPlayer2[indice]);
+        return validoP1 || validoP2;
+    }
+
+    public string ObterNomePersonagemPublicamente(int indice)
+    {
+        if (nomesPlayer1 != null && indice >= 0 && indice < nomesPlayer1.Length && !string.IsNullOrEmpty(nomesPlayer1[indice]))
+            return nomesPlayer1[indice];
+        if (nomesPlayer2 != null && indice >= 0 && indice < nomesPlayer2.Length && !string.IsNullOrEmpty(nomesPlayer2[indice]))
+            return nomesPlayer2[indice];
+        return "—";
+    }
+
+    public Sprite ObterCorpoPersonagemPublicamente(int indice)
+    {
+        if (corposPlayer1 != null && indice >= 0 && indice < corposPlayer1.Length && corposPlayer1[indice] != null)
+            return corposPlayer1[indice];
+        if (corposPlayer2 != null && indice >= 0 && indice < corposPlayer2.Length)
+            return corposPlayer2[indice];
+        return null;
+    }
+
+    public void SelecionarPersonagemPublicamente(int lado, int indice)
+    {
+        if (lado == 1) SelecionarPersonagemP1(indice);
+        else SelecionarPersonagemP2(indice);
+    }
+
+    public void AbrirInfoPublicamente(int lado)
+    {
+        AbrirInfoDoJogador(lado);
+    }
+
+    public void AbrirConfiguracaoIAPublicamente(int lado)
+    {
+        int indice = ObterIndiceSelecionadoPublicamente(lado);
+        if (indice >= 0 && UsaIAPublicamente(lado))
+            AbrirConfiguracaoIA(lado, indice);
+    }
+
+    public TMP_Dropdown ObterDropdownEstiloPublicamente(int lado)
+    {
+        return lado == 1 ? dropdownEstiloIAP1 : dropdownEstiloIAP2;
+    }
+
+    public TMP_Dropdown ObterDropdownDificuldadePublicamente(int lado)
+    {
+        return lado == 1 ? dropdownDificuldadeIAP1 : dropdownDificuldadeIAP2;
+    }
+
+    public void PrepararDropdownIAPublicamente(int lado)
+    {
+        TMP_Dropdown estilo = ObterDropdownEstiloPublicamente(lado);
+        TMP_Dropdown dificuldade = ObterDropdownDificuldadePublicamente(lado);
+        if (estilo == null || dificuldade == null)
+            return;
+
+        estilo.ClearOptions();
+        estilo.AddOptions(new List<string>
+        {
+            Traduzir("IA_ESTILO_AGRESSIVO", "Agressivo"),
+            Traduzir("IA_ESTILO_EQUILIBRADO", "Equilibrado"),
+            Traduzir("IA_ESTILO_DEFENSIVO", "Defensivo")
+        });
+        dificuldade.ClearOptions();
+        dificuldade.AddOptions(new List<string>
+        {
+            Traduzir("IA_DIFIC_FACIL", "Fácil"),
+            Traduzir("IA_DIFIC_MEDIO", "Médio"),
+            Traduzir("IA_DIFIC_DIFICIL", "Difícil")
+        });
+
+        int indice = ObterIndiceSelecionadoPublicamente(lado);
+        if (lado == 1 && estilosP1 != null && indice >= 0 && indice < estilosP1.Length)
+        {
+            estilo.SetValueWithoutNotify((int)estilosP1[indice]);
+            dificuldade.SetValueWithoutNotify((int)dificuldadesP1[indice]);
+        }
+        else if (lado == 2 && estilosP2 != null && indice >= 0 && indice < estilosP2.Length)
+        {
+            estilo.SetValueWithoutNotify((int)estilosP2[indice]);
+            dificuldade.SetValueWithoutNotify((int)dificuldadesP2[indice]);
+        }
+
+        estilo.RefreshShownValue();
+        dificuldade.RefreshShownValue();
+    }
+
+    public bool ConfiguracaoIAEstaAbertaPublicamente()
+    {
+        return PainelConfiguracaoIAAberto();
+    }
+
+    public void MoverDropdownAbertoPublicamente(TMP_Dropdown dropdown, int direcao)
+    {
+        MudarValorEMostrarLista(dropdown, direcao);
+    }
+
+    public void SalvarConfiguracaoIAPublicamente(int lado, int estilo, int dificuldade)
+    {
+        int indice = ObterIndiceSelecionadoPublicamente(lado);
+        if (indice < 0)
+            return;
+
+        estilo = Mathf.Clamp(estilo, 0, 2);
+        dificuldade = Mathf.Clamp(dificuldade, 0, 2);
+
+        if (lado == 1 && estilosP1 != null && indice < estilosP1.Length)
+        {
+            estilosP1[indice] = (EstiloIA)estilo;
+            dificuldadesP1[indice] = (DificuldadeIA)dificuldade;
+            PlayerPrefs.SetInt($"IA_P1_Estilo_{indice}", estilo);
+            PlayerPrefs.SetInt($"IA_P1_Dificuldade_{indice}", dificuldade);
+        }
+        else if (lado == 2 && estilosP2 != null && indice < estilosP2.Length)
+        {
+            estilosP2[indice] = (EstiloIA)estilo;
+            dificuldadesP2[indice] = (DificuldadeIA)dificuldade;
+            PlayerPrefs.SetInt($"IA_P2_Estilo_{indice}", estilo);
+            PlayerPrefs.SetInt($"IA_P2_Dificuldade_{indice}", dificuldade);
+        }
+
+        PlayerPrefs.Save();
+    }
+
+    public bool PodeIniciarPublicamente()
+    {
+        return indiceSelecionadoP1 >= 0 && indiceSelecionadoP2 >= 0;
+    }
+
+    public void ConfirmarInicioPublicamente()
+    {
+        IniciarJogo();
+    }
+
+    public void VoltarPublicamente()
+    {
+        Voltar();
     }
 
     bool TratarNavegacaoGrupos()
@@ -1013,6 +1259,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
                         // 2º toque: confirma o valor atual e fecha a lista — vale tanto pro
                         // Enter global quanto pra tecla de ataque do player.
                         dropFocado.Hide();
+                        UIFocusUtility.Select(dropFocado.gameObject);
                     }
                     else if (teclaJogadorPressionada)
                     {
@@ -1096,16 +1343,13 @@ public class TelaSelecaoPlayer : MonoBehaviour
         }
     }
 
-    // Muda o valor do dropdown e reabre a lista suspensa em seguida, pra ela aparecer
-    // com o item certo marcado — se só mudássemos o value com a lista já aberta, o
-    // checkmark do item na lista ficaria desatualizado (a Unity só marca o item ativo
-    // no momento em que a lista é criada, não fica "ouvindo" mudanças de value depois).
+    // O TMP_Dropdown padrão recria a lista com o novo item selecionado. Isso
+    // também faz a rolagem acompanhar a opção ativa sem adaptador adicional.
     void MudarValorEMostrarLista(TMP_Dropdown drop, int direcao)
     {
         if (drop == null) return;
 
         drop.value = Mathf.Clamp(drop.value + direcao, 0, drop.options.Count - 1);
-
         drop.Hide();
         drop.Show();
     }
@@ -1351,8 +1595,17 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
     void ConfigurarBotoesP1()
     {
+        if (botoesPlayer1 == null)
+            return;
+
         for (int i = 0; i < botoesPlayer1.Length; i++)
         {
+            // A tela nova possui seus próprios slots persistidos na Hierarchy.
+            // Alguns slots antigos podem estar vazios na cena; eles não podem
+            // interromper a inicialização da seleção inteira.
+            if (botoesPlayer1[i] == null)
+                continue;
+
             int index = i;
             bool slotRandom = EhSlotRandomP1(index);
             bool personagemValido = index < corposPlayer1.Length && corposPlayer1[index] != null
@@ -1426,8 +1679,14 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
     void ConfigurarBotoesP2()
     {
+        if (botoesPlayer2 == null)
+            return;
+
         for (int i = 0; i < botoesPlayer2.Length; i++)
         {
+            if (botoesPlayer2[i] == null)
+                continue;
+
             int index = i;
             bool slotRandom = EhSlotRandomP2(index);
             bool personagemValido = index < corposPlayer2.Length && corposPlayer2[index] != null
@@ -2295,8 +2554,35 @@ public class TelaSelecaoPlayer : MonoBehaviour
             dropdownDificuldade.value = (int)dificuldadesP2[index];
         }
 
+        ConfigurarDropdownIA(dropdownEstilo, lado, 0);
+        ConfigurarDropdownIA(dropdownDificuldade, lado, 1);
+
         UIFocusUtility.Select(dropdownEstilo.gameObject);
         AtualizarFocoVisualPainelIA();
+    }
+
+    private void ConfigurarDropdownIA(TMP_Dropdown dropdown, int lado, int foco)
+    {
+        if (dropdown == null)
+            return;
+
+        // Os dropdowns antigos vinham serializados como não interativos. Isso
+        // bloqueava o clique e também o Submit pelo teclado/controle.
+        dropdown.interactable = true;
+
+        EventoHoverUI hover = dropdown.GetComponent<EventoHoverUI>();
+        if (hover == null)
+            hover = dropdown.gameObject.AddComponent<EventoHoverUI>();
+
+        hover.aoEntrar = () =>
+        {
+            if (!PainelConfiguracaoIAAberto() || ladoIAConfigAberta != lado)
+                return;
+
+            focoIAPanel = foco;
+            AplicarFocoIAPanel();
+        };
+        hover.aoSair = null;
     }
 
     void SalvarConfiguracaoIA()

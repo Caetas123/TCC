@@ -33,6 +33,16 @@ public class PauseManager : MonoBehaviour
         configuracoesManager = FindFirstObjectByType<ConfiguracoesManager>();
     }
 
+    void OnDestroy()
+    {
+        // Time.timeScale é global e não é reiniciado automaticamente quando a
+        // cena muda. Se algum botão sair da luta enquanto ela estiver pausada
+        // (inclusive depois de aplicar uma resolução), a próxima cena não pode
+        // herdar a física e o cronômetro congelados.
+        if (pausado)
+            Time.timeScale = 1f;
+    }
+
     void Update()
     {
         if (UIInputUtility.WasCancelPressed())

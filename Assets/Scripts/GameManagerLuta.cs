@@ -22,6 +22,14 @@ public class GameManagerLuta : MonoBehaviour
     public Slider barraEnergiaP1;
     public Slider barraEnergiaP2;
 
+    // Faixa temporária que mostra o custo que faltou quando uma habilidade é
+    // recusada por falta de energia. Ela é criada dentro do Fill Area da
+    // própria Slider, então acompanha exatamente o desenho da barra.
+    private Image indicadorEnergiaP1;
+    private Image indicadorEnergiaP2;
+    private Coroutine rotinaIndicadorEnergiaP1;
+    private Coroutine rotinaIndicadorEnergiaP2;
+
     [Header("UI Nomes")]
     public TextMeshProUGUI nomeP1;
     public TextMeshProUGUI nomeP2;
@@ -30,6 +38,8 @@ public class GameManagerLuta : MonoBehaviour
     public TextMeshProUGUI controlesP1;
     public TextMeshProUGUI controlesP2;
     public float tempoExibirControles = 4f;
+    [Tooltip("Mantém as teclas de ataque, especial e ultimate visíveis durante toda a luta.")]
+    public bool manterControlesVisiveis = true;
 
     [Header("UI Round e Tempo")]
     public TextMeshProUGUI textoRound;
@@ -91,6 +101,17 @@ public class GameManagerLuta : MonoBehaviour
 
     private Coroutine rotinaControles;
 
+    void Awake()
+    {
+        // Time.timeScale é global e continua com o mesmo valor ao trocar de
+        // cena. Se a resolução foi alterada a partir do menu de pause, a arena
+        // podia carregar com o tempo em zero: o HUD aparecia, mas a gravidade,
+        // o cronômetro e os controles ficavam congelados. Toda cena de luta
+        // nova deve começar em tempo normal; o PauseManager poderá pausar
+        // novamente depois que a rodada estiver ativa.
+        Time.timeScale = 1f;
+    }
+
     void Start()
     {
         modoJogo = PlayerPrefs.GetString("ModoJogo", "PVP");
@@ -109,6 +130,16 @@ public class GameManagerLuta : MonoBehaviour
 
         int personagemP1 = PlayerPrefs.GetInt("PersonagemP1", 0);
         int personagemP2 = PlayerPrefs.GetInt("PersonagemP2", 0);
+
+        // A cena pode ter vindo de um teste com referências vazias ou trocadas.
+        // A luta sempre deve tratar cada lutador como oponente do outro; isso
+        // evita ataques acertando a própria instância e também libera a IA para
+        // calcular distância/alcance corretamente.
+        if (player1 != null && player2 != null)
+        {
+            player1.oponente = player2;
+            player2.oponente = player1;
+        }
 
         if (player1 != null && personagemP1 >= 0 && personagemP1 < personagensDisponiveis.Length)
         {
@@ -293,6 +324,127 @@ public class GameManagerLuta : MonoBehaviour
         }
     }
 
+    public void MostrarIndicadorEnergiaInsuficiente(LutadorController2D jogador, float custo)
+    {
+        if (jogador == null || jogador.dadosPersonagem == null || custo <= jogador.energiaAtual)
+            return;
+
+        bool eJogador1 = jogador == player1 || jogador.numeroJogador == 1;
+        Slider barra = eJogador1 ? barraEnergiaP1 : barraEnergiaP2;
+        if (barra == null)
+            return;
+
+        float energiaMax = jogador.dadosPersonagem.energiaMax;
+        if (energiaMax <= 0f)
+            return;
+
+        // Sincroniza o preenchimento antes de medir o trecho faltante. Assim,
+        // se a energia regenerou no mesmo frame do comando, o indicador usa a
+        // posição exata da barra no instante em que a habilidade foi tentada.
+        barra.SetValueWithoutNotify(Mathf.Clamp(jogador.energiaAtual, barra.minValue, barra.maxValue));
+
+        Image indicador = eJogador1 ? indicadorEnergiaP1 : indicadorEnergiaP2;
+        if (indicador == null)
+        {
+            indicador = CriarIndicadorEnergia(barra, eJogador1 ? "EnergiaP1Insuficiente" : "EnergiaP2Insuficiente");
+            if (eJogador1) indicadorEnergiaP1 = indicador;
+            else indicadorEnergiaP2 = indicador;
+        }
+
+        if (indicador == null)
+            return;
+
+        float energiaAtualNormalizada = Mathf.Clamp01(jogador.energiaAtual / energiaMax);
+        float custoNormalizado = Mathf.Clamp01(custo / energiaMax);
+        if (custoNormalizado <= energiaAtualNormalizada)
+            return;
+
+        RectTransform faixa = indicador.rectTransform;
+        // A faixa precisa usar a mesma direção da Slider. Isso é importante
+        // para a barra do P2, que é RightToLeft: usar sempre [atual, custo]
+        // coloca o vermelho em uma posição que pode ficar sobre o azul.
+        bool preenchimentoInvertido = barra.direction == Slider.Direction.RightToLeft;
+        float inicio = preenchimentoInvertido
+            ? 1f - custoNormalizado
+            : energiaAtualNormalizada;
+        float fim = preenchimentoInvertido
+            ? 1f - energiaAtualNormalizada
+            : custoNormalizado;
+
+        faixa.anchorMin = new Vector2(inicio, 0f);
+        faixa.anchorMax = new Vector2(fim, 1f);
+        faixa.offsetMin = Vector2.zero;
+        faixa.offsetMax = Vector2.zero;
+
+        indicador.color = Color.red;
+        indicador.enabled = true;
+
+        Coroutine rotinaAnterior = eJogador1 ? rotinaIndicadorEnergiaP1 : rotinaIndicadorEnergiaP2;
+        if (rotinaAnterior != null)
+            StopCoroutine(rotinaAnterior);
+
+        Coroutine rotinaNova = StartCoroutine(PiscarIndicadorEnergia(indicador, eJogador1));
+        if (eJogador1) rotinaIndicadorEnergiaP1 = rotinaNova;
+        else rotinaIndicadorEnergiaP2 = rotinaNova;
+    }
+
+    Image CriarIndicadorEnergia(Slider barra, string nome)
+    {
+        RectTransform area = barra.fillRect != null
+            ? barra.fillRect.parent as RectTransform
+            : barra.transform as RectTransform;
+
+        if (area == null)
+            return null;
+
+        GameObject objeto = new GameObject(nome, typeof(RectTransform), typeof(Image));
+        objeto.transform.SetParent(area, false);
+        objeto.transform.SetAsLastSibling();
+
+        RectTransform faixa = objeto.GetComponent<RectTransform>();
+        faixa.anchorMin = new Vector2(0f, 0f);
+        faixa.anchorMax = new Vector2(0f, 1f);
+        faixa.offsetMin = Vector2.zero;
+        faixa.offsetMax = Vector2.zero;
+
+        Image indicador = objeto.GetComponent<Image>();
+        Image imagemFill = barra.fillRect != null
+            ? barra.fillRect.GetComponent<Image>()
+            : null;
+
+        if (imagemFill != null)
+        {
+            indicador.sprite = imagemFill.sprite;
+            indicador.type = imagemFill.type;
+            indicador.preserveAspect = imagemFill.preserveAspect;
+            indicador.material = imagemFill.material;
+        }
+
+        indicador.raycastTarget = false;
+        indicador.enabled = false;
+        return indicador;
+    }
+
+    IEnumerator PiscarIndicadorEnergia(Image indicador, bool eJogador1)
+    {
+        const float duracao = 1f;
+        float tempo = 0f;
+
+        while (tempo < duracao && indicador != null)
+        {
+            float intensidade = Mathf.Lerp(0.25f, 1f, Mathf.PingPong(tempo * 5f, 1f));
+            indicador.color = new Color(1f, 0f, 0f, intensidade);
+            tempo += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (indicador != null)
+            indicador.enabled = false;
+
+        if (eJogador1) rotinaIndicadorEnergiaP1 = null;
+        else rotinaIndicadorEnergiaP2 = null;
+    }
+
     void AtualizarTextoControles()
     {
         if (controlesP1 != null)
@@ -305,7 +457,7 @@ public class GameManagerLuta : MonoBehaviour
             string esp = FormatarTecla(PlayerPrefs.GetString("P1_Especial", "G"));
             string ult = FormatarTecla(PlayerPrefs.GetString("P1_Ultimate", "H"));
 
-            controlesP1.text = $"P1 {esq}/{dir} P:{pulo} D:{def} A:{atk} E:{esp} U:{ult}";
+            controlesP1.text = $"P1 {esq}/{dir} PULO:{pulo} DEF:{def} ATAQUE:{atk} ESPECIAL:{esp} ULTIMATE:{ult}";
             controlesP1.enableAutoSizing = true;
             if (controlesP1.fontSizeMin <= 0f) controlesP1.fontSizeMin = 8f;
         }
@@ -320,7 +472,7 @@ public class GameManagerLuta : MonoBehaviour
             string esp = FormatarTecla(PlayerPrefs.GetString("P2_Especial", "L"));
             string ult = FormatarTecla(PlayerPrefs.GetString("P2_Ultimate", "M"));
 
-            controlesP2.text = $"P2 {esq}/{dir} P:{pulo} D:{def} A:{atk} E:{esp} U:{ult}";
+            controlesP2.text = $"P2 {esq}/{dir} PULO:{pulo} DEF:{def} ATAQUE:{atk} ESPECIAL:{esp} ULTIMATE:{ult}";
             controlesP2.enableAutoSizing = true;
             if (controlesP2.fontSizeMin <= 0f) controlesP2.fontSizeMin = 8f;
         }
@@ -339,10 +491,13 @@ public class GameManagerLuta : MonoBehaviour
         if (controlesP1 != null) controlesP1.gameObject.SetActive(true);
         if (controlesP2 != null) controlesP2.gameObject.SetActive(true);
 
-        yield return new WaitForSeconds(tempoExibirControles);
+        if (!manterControlesVisiveis)
+        {
+            yield return new WaitForSeconds(tempoExibirControles);
 
-        if (controlesP1 != null) controlesP1.gameObject.SetActive(false);
-        if (controlesP2 != null) controlesP2.gameObject.SetActive(false);
+            if (controlesP1 != null) controlesP1.gameObject.SetActive(false);
+            if (controlesP2 != null) controlesP2.gameObject.SetActive(false);
+        }
     }
 
     void AtualizarTextoRound()

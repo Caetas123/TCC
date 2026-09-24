@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class AudioManager : MonoBehaviour
 {
@@ -63,11 +64,17 @@ public class AudioManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
+            // As cenas de luta também possuem uma cópia do objeto. Reaproveita
+            // os controles daquela cena antes de destruir a cópia, mantendo o
+            // singleton responsável pelo áudio.
+            Instance.AssumirControlesDaCena(this);
             Destroy(gameObject);
             return;
         }
 
         Instance = this;
+        DontDestroyOnLoad(gameObject);
+        SceneManager.sceneLoaded += AoCarregarCena;
     }
 
     private void Start()
@@ -75,6 +82,82 @@ public class AudioManager : MonoBehaviour
         CarregarConfiguracoes();
         RegistrarEventos();
         AplicarAudio();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            SceneManager.sceneLoaded -= AoCarregarCena;
+            Instance = null;
+        }
+    }
+
+    private void AoCarregarCena(Scene cena, LoadSceneMode modo)
+    {
+        // Os painéis de configuração são criados por cena. Sem esta busca o
+        // singleton ficava apontando para sliders destruídos da TelaInicial.
+        VincularControlesEncontrados();
+        CarregarConfiguracoes();
+        AplicarAudio();
+    }
+
+    private void AssumirControlesDaCena(AudioManager outro)
+    {
+        if (outro == null)
+            return;
+
+        DesregistrarEventos();
+        volumeGeral = outro.volumeGeral;
+        volumeMusica = outro.volumeMusica;
+        volumeEfeitos = outro.volumeEfeitos;
+        toggleSom = outro.toggleSom;
+        CarregarConfiguracoes();
+        RegistrarEventos();
+        AplicarAudio();
+    }
+
+    private void VincularControlesEncontrados()
+    {
+        Slider[] sliders = FindObjectsByType<Slider>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        Toggle[] toggles = FindObjectsByType<Toggle>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        Slider geral = EncontrarSlider(sliders, "SliderVolumeGeral");
+        Slider musica = EncontrarSlider(sliders, "SliderVolumeMusica");
+        Slider efeitos = EncontrarSlider(sliders, "SliderVolumeEfeitos");
+        Toggle som = EncontrarToggle(toggles, "Som");
+
+        if (geral == null && musica == null && efeitos == null && som == null)
+            return;
+
+        DesregistrarEventos();
+        if (geral != null) volumeGeral = geral;
+        if (musica != null) volumeMusica = musica;
+        if (efeitos != null) volumeEfeitos = efeitos;
+        if (som != null) toggleSom = som;
+        RegistrarEventos();
+    }
+
+    private static Slider EncontrarSlider(Slider[] sliders, string parteNome)
+    {
+        foreach (Slider slider in sliders)
+        {
+            if (slider != null && slider.name.IndexOf(parteNome, StringComparison.OrdinalIgnoreCase) >= 0)
+                return slider;
+        }
+
+        return null;
+    }
+
+    private static Toggle EncontrarToggle(Toggle[] toggles, string parteNome)
+    {
+        foreach (Toggle toggle in toggles)
+        {
+            if (toggle != null && toggle.name.IndexOf(parteNome, StringComparison.OrdinalIgnoreCase) >= 0)
+                return toggle;
+        }
+
+        return null;
     }
 
     private void CarregarConfiguracoes()
@@ -105,6 +188,18 @@ public class AudioManager : MonoBehaviour
 
         if (toggleSom != null)
             toggleSom.onValueChanged.AddListener(SetSomAtivado);
+    }
+
+    private void DesregistrarEventos()
+    {
+        if (volumeGeral != null)
+            volumeGeral.onValueChanged.RemoveListener(SetVolumeGeral);
+        if (volumeMusica != null)
+            volumeMusica.onValueChanged.RemoveListener(SetVolumeMusica);
+        if (volumeEfeitos != null)
+            volumeEfeitos.onValueChanged.RemoveListener(SetVolumeEfeitos);
+        if (toggleSom != null)
+            toggleSom.onValueChanged.RemoveListener(SetSomAtivado);
     }
 
     public void SetVolumeGeral(float volume)

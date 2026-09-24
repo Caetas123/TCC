@@ -53,7 +53,7 @@ MonoBehaviour:
   forcaRecuoUltimate: 6
   duracaoRecuoUltimate: 0.25
   podeSeMoverDuranteAtaque: 1
-  multiplicadorMovimentoAtaque: 0.2
+  multiplicadorMovimentoAtaque: 0.35
   podeSeMoverDuranteEspecial: 1
   multiplicadorMovimentoEspecial: 0.2
   podeSeMoverDuranteUltimate: 0

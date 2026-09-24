@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using TMPro;
 
 public class LutadorController2D : MonoBehaviour
 {
@@ -67,6 +68,13 @@ public class LutadorController2D : MonoBehaviour
     public AudioSource audioSource;
     [Tooltip("AudioSource dedicado ao som de passos (loop) — separado do audioSource principal para não ter conflito de pitch/volume. Se não atribuído, cria automaticamente")]
     public AudioSource audioSourcePassos;
+
+    [Header("Feedback de combate")]
+    [Tooltip("Mostra dano, bloqueio ou erro diretamente sobre o alvo. Deixe ativo para facilitar a leitura dos golpes.")]
+    public bool mostrarFeedbackCombate = true;
+    public Color corFeedbackAcerto = new Color(1f, 0.9f, 0.25f, 1f);
+    public Color corFeedbackBloqueado = new Color(0.35f, 0.8f, 1f, 1f);
+    public Color corFeedbackErro = new Color(1f, 0.35f, 0.35f, 1f);
 
     // ── Estado de jogo ─────────────────────────────────────────────────────
     private bool estaNoChao;
@@ -289,7 +297,11 @@ public class LutadorController2D : MonoBehaviour
             float dx = transform.position.x - oponente.transform.position.x;
             float distanciaX = Mathf.Abs(dx);
 
-            if (distanciaX < distanciaMinimaEntreLutadores && distanciaX > 0.0001f)
+            // No ar os lutadores podem passar um por cima do outro. O empurrão
+            // horizontal só vale quando os dois estão no chão; antes ele criava
+            // uma parede invisível e prendia o jogador no canto.
+            if (estaNoChao && oponente.estaNoChao &&
+                distanciaX < distanciaMinimaEntreLutadores && distanciaX > 0.0001f)
             {
                 float direcaoAfastamento = Mathf.Sign(dx);
                 float penetracao = distanciaMinimaEntreLutadores - distanciaX;
@@ -576,16 +588,19 @@ public class LutadorController2D : MonoBehaviour
     void RecarregarEnergiaParado()
     {
         if (dadosPersonagem == null) return;
-        // A espada em chamas já possui um dreno próprio. Não permita que a
-        // regeneração fique ativa ao mesmo tempo, pois isso fazia o especial
-        // do Diego aumentar a energia em vez de consumi-la.
-        bool paradoNoChao = Mathf.Abs(movimento) < 0.01f && estaNoChao &&
-                            !defendendo && !espadaEmChamasAtiva;
-        if (paradoNoChao)
-        {
-            energiaAtual += dadosPersonagem.velocidadeRecargaEnergia * Time.deltaTime;
-            energiaAtual = Mathf.Clamp(energiaAtual, 0f, dadosPersonagem.energiaMax);
-        }
+        // A energia não pode exigir que o jogador fique completamente parado:
+        // isso tornava a luta uma disputa de quem bloqueava menos. Movimento
+        // gera menos energia, mas ainda permite chegar ao especial/ultimate.
+        // A espada em chamas continua sendo exceção porque já possui dreno.
+        if (espadaEmChamasAtiva || defendendo || !estaNoChao)
+            return;
+
+        float multiplicador = Mathf.Abs(movimento) > 0.01f ? 0.65f : 1f;
+        if (animacaoUmaVezAtiva && estadoAtual == EstadoAnim.Attack)
+            multiplicador *= 0.75f;
+
+        energiaAtual += dadosPersonagem.velocidadeRecargaEnergia * multiplicador * Time.deltaTime;
+        energiaAtual = Mathf.Clamp(energiaAtual, 0f, dadosPersonagem.energiaMax);
     }
 
     void Pular()
@@ -614,7 +629,11 @@ public class LutadorController2D : MonoBehaviour
         // assim que o ataque acabasse. Tem que soltar o bloqueio antes de atacar.
         if (defendendo) return;
         if (EmAcaoOfensiva()) return;
-        if (!TemEnergiaSuficiente(dadosPersonagem.custoAtaque)) return;
+        if (!TemEnergiaSuficiente(dadosPersonagem.custoAtaque))
+        {
+            MostrarIndicadorEnergiaInsuficiente(dadosPersonagem.custoAtaque);
+            return;
+        }
 
         GastarEnergia(dadosPersonagem.custoAtaque);
         faseAtaqueAtual = FaseAtaque.Windup;
@@ -639,32 +658,94 @@ public class LutadorController2D : MonoBehaviour
 
             case FaseAtaque.Hit:
                 float distHit = Vector2.Distance(transform.position, oponente.transform.position);
-                if (distHit <= dadosPersonagem.alcanceAtaque)
+                if (EstaDentroDoAlcance(dadosPersonagem.alcanceAtaque))
                 {
-                    oponente.ReceberDano(dadosPersonagem.danoAtaque);
+                    int danoEfetivo = oponente.ReceberDano(dadosPersonagem.danoAtaque);
                     AplicarQueimacaoSeEspadaEmChamas();
                     TocarSom(
                         dadosPersonagem.somAtaqueImpacto,
                         dadosPersonagem.volumeAtaqueImpacto
                     );
+                    oponente.MostrarFeedbackCombate(
+                        danoEfetivo > 0 ? danoEfetivo.ToString() : "BLOQUEADO",
+                        danoEfetivo > 0 ? corFeedbackAcerto : corFeedbackBloqueado);
                 }
+                else
+                    MostrarFeedbackCombate("ERRO", corFeedbackErro);
                 danoJaAplicado = true;
                 break;
 
             case FaseAtaque.FollowThrough:
-                float distFollow = Vector2.Distance(transform.position, oponente.transform.position);
-                if (distFollow <= dadosPersonagem.alcanceAtaque)
+                float alcanceFollowThrough = dadosPersonagem.alcanceAtaqueFollowThrough > 0f
+                    ? dadosPersonagem.alcanceAtaqueFollowThrough
+                    : dadosPersonagem.alcanceAtaque;
+                if (EstaDentroDoAlcance(alcanceFollowThrough))
                 {
-                    oponente.ReceberDano(Mathf.RoundToInt(dadosPersonagem.danoAtaque * 0.5f));
+                    int danoEfetivo = oponente.ReceberDano(Mathf.RoundToInt(dadosPersonagem.danoAtaque * 0.5f));
                     AplicarQueimacaoSeEspadaEmChamas();
                     TocarSom(
                         dadosPersonagem.somAtaqueImpacto,
                         dadosPersonagem.volumeAtaqueImpacto
                     );
+                    oponente.MostrarFeedbackCombate(
+                        danoEfetivo > 0 ? danoEfetivo.ToString() : "BLOQUEADO",
+                        danoEfetivo > 0 ? corFeedbackAcerto : corFeedbackBloqueado);
                 }
+                else
+                    MostrarFeedbackCombate("ERRO", corFeedbackErro);
                 danoJaAplicado = true;
                 break;
         }
+    }
+
+    bool EstaDentroDoAlcance(float alcance)
+    {
+        if (oponente == null || oponente == this)
+            return false;
+
+        float distanciaHorizontal = Mathf.Abs(transform.position.x - oponente.transform.position.x);
+        float distanciaVertical = Mathf.Abs(transform.position.y - oponente.transform.position.y);
+        return distanciaHorizontal <= alcance && distanciaVertical <= 2.5f;
+    }
+
+    public void MostrarFeedbackCombate(string texto, Color cor)
+    {
+        if (!mostrarFeedbackCombate || string.IsNullOrEmpty(texto))
+            return;
+
+        GameObject objeto = new GameObject("FeedbackCombate");
+        objeto.transform.position = transform.position + Vector3.up * 1.5f;
+
+        TextMeshPro textoTMP = objeto.AddComponent<TextMeshPro>();
+        textoTMP.text = texto;
+        textoTMP.fontSize = 2.2f;
+        textoTMP.alignment = TextAlignmentOptions.Center;
+        textoTMP.color = cor;
+        textoTMP.fontStyle = FontStyles.Bold;
+        textoTMP.sortingLayerID = spriteRenderer != null ? spriteRenderer.sortingLayerID : 0;
+        textoTMP.sortingOrder = (spriteRenderer != null ? spriteRenderer.sortingOrder : 0) + 50;
+
+        StartCoroutine(AnimarFeedbackCombate(objeto, textoTMP));
+    }
+
+    IEnumerator AnimarFeedbackCombate(GameObject objeto, TextMeshPro textoTMP)
+    {
+        const float duracao = 0.55f;
+        float tempo = 0f;
+        Vector3 origem = objeto.transform.position;
+        Color cor = textoTMP.color;
+
+        while (tempo < duracao && objeto != null)
+        {
+            tempo += Time.deltaTime;
+            float progresso = Mathf.Clamp01(tempo / duracao);
+            objeto.transform.position = origem + Vector3.up * (0.65f * progresso);
+            textoTMP.color = new Color(cor.r, cor.g, cor.b, 1f - progresso);
+            yield return null;
+        }
+
+        if (objeto != null)
+            Destroy(objeto);
     }
 
     // Espada em chamas ativa (ver AlternarEspadaEmChamas) faz o ataque básico
@@ -704,7 +785,11 @@ public class LutadorController2D : MonoBehaviour
         // (troca a pose de Defend por Special) enquanto segura o bloqueio.
         if (defendendo) return;
         if (EmAcaoOfensiva()) return;
-        if (!PodeUsarEspecial()) return;
+        if (!PodeUsarEspecial())
+        {
+            MostrarIndicadorEnergiaInsuficiente(ObterCustoEspecial());
+            return;
+        }
 
         // Personagem com spriteRachadura configurado usa o golpe único (salto alto +
         // rachaduras no chão) em vez do especial padrão de dano à distância.
@@ -740,7 +825,11 @@ public class LutadorController2D : MonoBehaviour
         }
 
         float custoAtivacao = dadosPersonagem.custoAtivarEspecialAlternavel / 100f * dadosPersonagem.energiaMax;
-        if (energiaAtual < custoAtivacao) return; // sem energia nem pra ativar
+        if (energiaAtual < custoAtivacao)
+        {
+            MostrarIndicadorEnergiaInsuficiente(custoAtivacao);
+            return;
+        }
 
         energiaAtual -= custoAtivacao;
         energiaAtual = Mathf.Clamp(energiaAtual, 0f, dadosPersonagem.energiaMax);
@@ -1206,7 +1295,11 @@ public class LutadorController2D : MonoBehaviour
         // ultimate enquanto segura o bloqueio.
         if (defendendo) return;
         if (EmAcaoOfensiva()) return;
-        if (!PodeUsarUltimate()) return;
+        if (!PodeUsarUltimate())
+        {
+            MostrarIndicadorEnergiaInsuficiente(ObterCustoUltimate());
+            return;
+        }
 
         // Personagem com spriteRaioUltimate configurado usa o ultimate único (raio
         // com recuo) em vez do dano instantâneo padrão. Diferente do ultimate
@@ -1607,9 +1700,9 @@ public class LutadorController2D : MonoBehaviour
             0f);
     }
 
-    public void ReceberDano(int dano)
+    public int ReceberDano(int dano)
     {
-        if (morreu) return;
+        if (morreu) return 0;
 
         int danoFinal = dano;
 
@@ -1661,6 +1754,8 @@ public class LutadorController2D : MonoBehaviour
             );
             IniciarAnimacaoUmaVez(EstadoAnim.Hit);
         }
+
+        return danoFinal;
     }
 
     bool EstaExecutandoUltimate()
@@ -1709,6 +1804,24 @@ public class LutadorController2D : MonoBehaviour
         }
     }
 
+    float ObterCustoEspecial()
+    {
+        if (dadosPersonagem == null)
+            return 0f;
+
+        switch (dadosPersonagem.tipoGastoEspecial)
+        {
+            case TipoGastoEspecial.BarraCheia:
+            case TipoGastoEspecial.ZeraTudo:
+                return dadosPersonagem.energiaMax;
+            case TipoGastoEspecial.GastoFixo:
+            case TipoGastoEspecial.GastoGradual:
+                return dadosPersonagem.custoEspecial;
+            default:
+                return 0f;
+        }
+    }
+
     void GastarEnergiaEspecial()
     {
         if (dadosPersonagem == null) return;
@@ -1731,6 +1844,16 @@ public class LutadorController2D : MonoBehaviour
             case TipoUsoUltimate.GastoFixo: return energiaAtual >= dadosPersonagem.custoUltimate;
             default: return false;
         }
+    }
+
+    float ObterCustoUltimate()
+    {
+        if (dadosPersonagem == null)
+            return 0f;
+
+        return dadosPersonagem.tipoUsoUltimate == TipoUsoUltimate.BarraCheia
+            ? dadosPersonagem.energiaMax
+            : dadosPersonagem.custoUltimate;
     }
 
     void GastarEnergiaUltimate()
@@ -1759,6 +1882,12 @@ public class LutadorController2D : MonoBehaviour
     {
         if (dadosPersonagem == null || dadosPersonagem.energiaMax <= 0f) return 0f;
         return energiaAtual / dadosPersonagem.energiaMax;
+    }
+
+    void MostrarIndicadorEnergiaInsuficiente(float custo)
+    {
+        if (!controladoPorIA && gameManager != null)
+            gameManager.MostrarIndicadorEnergiaInsuficiente(this, custo);
     }
 
     public bool EstaMorto() => morreu;

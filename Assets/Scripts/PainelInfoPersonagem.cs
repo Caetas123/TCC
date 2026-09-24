@@ -36,6 +36,9 @@ public class PainelInfoPersonagem : MonoBehaviour
     private TextMeshProUGUI legendaPreview;
     private TextMeshProUGUI descricao;
     private TextMeshProUGUI atributos;
+    private RectTransform graficoAtributos;
+    private TextMeshProUGUI[] rotulosGraficoAtributos;
+    private RawImage[,] segmentosGraficoAtributos;
     private Button botaoFechar;
     private Button[] botoesAcoes;
     private Button[] botoesInfo;
@@ -97,6 +100,10 @@ public class PainelInfoPersonagem : MonoBehaviour
     [SerializeField] private int tamanhoFonteBotoes = 30;
     [SerializeField] private int tamanhoFonteDescricao = 52;
     [SerializeField] private int tamanhoFonteAtributos = 38;
+    [SerializeField] private float tamanhoFonteGraficoAtributos = 24f;
+    [SerializeField] private int quantidadeSegmentosGrafico = 10;
+    [SerializeField] private Vector2 tamanhoSegmentoGrafico = new Vector2(17f, 14f);
+    [SerializeField] private float espacamentoSegmentoGrafico = 3f;
     [SerializeField] private float multiplicadorVelocidadePreview = 1f;
     [SerializeField] private float fpsMinimoPreview = 0.01f;
     [SerializeField] private Color corBotaoInfoNormal = new Color(0.04f, 0.12f, 0.24f, 0.96f);
@@ -181,6 +188,7 @@ public class PainelInfoPersonagem : MonoBehaviour
         else
             ConfigurarInterfaceExistente();
 
+        GarantirGraficoAtributos();
         CapturarPosicaoPersonagemDaHierarquia();
 
         CriarBotoesDeInfo();
@@ -311,6 +319,8 @@ public class PainelInfoPersonagem : MonoBehaviour
         if (!inicializado)
             return;
 
+        AtualizarRotulosGraficoAtributos();
+
         string[] nomesAcoes =
         {
             Traduzir("CHAR_ATTACK", "ATAQUE"),
@@ -328,9 +338,12 @@ public class PainelInfoPersonagem : MonoBehaviour
 
         for (int i = 0; i < botoesInfo.Length; i++)
         {
+            if (botoesInfo[i] == null)
+                continue;
+
             TextMeshProUGUI texto = botoesInfo[i].GetComponentInChildren<TextMeshProUGUI>(true);
             if (texto != null)
-                texto.text = Traduzir("CHAR_PRESS_INFO", "INFO");
+                texto.text = "I";
         }
 
         TextMeshProUGUI textoFechar = botaoFechar != null
@@ -356,7 +369,7 @@ public class PainelInfoPersonagem : MonoBehaviour
             if (descricao != null)
                 descricao.text = Traduzir("CHAR_SELECT_ACTION", "Selecione uma ação para ver os frames da animação.");
             if (atributos != null)
-                atributos.text = Traduzir("CHAR_STATS", "ATRIBUTOS");
+                atributos.text = string.Empty;
         }
     }
 
@@ -476,7 +489,11 @@ public class PainelInfoPersonagem : MonoBehaviour
 
     bool LocalizarInterfaceExistente()
     {
-        Transform overlayTransform = transform.Find("ModalInfoPersonagem");
+        // O modal editável pertence à composição nova da seleção. O script
+        // PainelInfoPersonagem continua no Canvas por compatibilidade, então
+        // não pode procurar apenas um filho direto do Canvas — isso fazia ele
+        // criar/usar uma segunda cópia runtime.
+        Transform overlayTransform = EncontrarModalDaHierarquia();
         if (overlayTransform == null)
             return false;
 
@@ -529,6 +546,31 @@ public class PainelInfoPersonagem : MonoBehaviour
             botoesAcoes[i] = acoes[i].GetComponent<Button>();
 
         return titulo != null && subtitulo != null && descricao != null && atributos != null;
+    }
+
+    Transform EncontrarModalDaHierarquia()
+    {
+        Transform direto = transform.Find("ModalInfoPersonagem");
+        if (direto != null)
+            return direto;
+
+        // Compatibilidade para uma cena em que o modal tenha sido colocado
+        // dentro da composição refatorada.
+        Transform layout = transform.Find("SelecaoPlayerRefatorada");
+        if (layout != null)
+        {
+            Transform modal = layout.Find("ModalInfoPersonagem");
+            if (modal != null)
+                return modal;
+        }
+
+        foreach (Transform filho in GetComponentsInChildren<Transform>(true))
+        {
+            if (filho != null && filho.name == "ModalInfoPersonagem")
+                return filho;
+        }
+
+        return null;
     }
 
     void ConfigurarInterfaceExistente()
@@ -595,6 +637,142 @@ public class PainelInfoPersonagem : MonoBehaviour
         AplicarVisualBotao(botaoFechar, corBotaoAcaoNormal);
     }
 
+    void GarantirGraficoAtributos()
+    {
+        if (atributos == null)
+            return;
+
+        // O texto antigo continua na Hierarchy para não quebrar referências,
+        // mas deixa de renderizar. O gráfico ocupa exatamente a mesma área.
+        atributos.enabled = false;
+        atributos.text = string.Empty;
+
+        Transform existente = atributos.transform.Find("GraficoAtributosPersonagem");
+        if (existente != null)
+        {
+            graficoAtributos = existente.GetComponent<RectTransform>();
+            rotulosGraficoAtributos = new TextMeshProUGUI[4];
+            segmentosGraficoAtributos = new RawImage[4, quantidadeSegmentosGrafico];
+            for (int linha = 0; linha < 4; linha++)
+            {
+                rotulosGraficoAtributos[linha] = existente.Find("RotuloGraficoAtributo" + linha)
+                    ?.GetComponent<TextMeshProUGUI>();
+                for (int segmento = 0; segmento < quantidadeSegmentosGrafico; segmento++)
+                {
+                    segmentosGraficoAtributos[linha, segmento] = existente.Find(
+                        "BarraGraficoAtributo" + linha + "_" + segmento)?.GetComponent<RawImage>();
+                }
+            }
+            AtualizarRotulosGraficoAtributos();
+            return;
+        }
+
+        GameObject grafico = CriarObjetoUI("GraficoAtributosPersonagem", atributos.transform);
+        graficoAtributos = grafico.GetComponent<RectTransform>();
+        DefinirEsticado(graficoAtributos);
+
+        int segmentos = Mathf.Max(1, quantidadeSegmentosGrafico);
+        rotulosGraficoAtributos = new TextMeshProUGUI[4];
+        segmentosGraficoAtributos = new RawImage[4, segmentos];
+
+        float largura = Mathf.Max(300f, atributos.rectTransform.sizeDelta.x);
+        float altura = Mathf.Max(150f, atributos.rectTransform.sizeDelta.y);
+        float larguraRotulo = Mathf.Min(132f, largura * 0.38f);
+        float larguraBarra = segmentos * tamanhoSegmentoGrafico.x +
+            Mathf.Max(0, segmentos - 1) * espacamentoSegmentoGrafico;
+        float esquerda = -largura * 0.5f + 4f;
+        float centroRotulo = esquerda + larguraRotulo * 0.5f;
+        float centroBarra = esquerda + larguraRotulo + 12f + larguraBarra * 0.5f;
+        float espacamentoLinha = Mathf.Min(36f, (altura - 16f) / 4f);
+        float primeiraLinha = (3f * espacamentoLinha) * 0.5f;
+
+        for (int linha = 0; linha < 4; linha++)
+        {
+            float y = primeiraLinha - linha * espacamentoLinha;
+            rotulosGraficoAtributos[linha] = CriarTexto(
+                "RotuloGraficoAtributo" + linha,
+                grafico.transform,
+                tamanhoFonteGraficoAtributos,
+                Color.white,
+                TextAlignmentOptions.MidlineLeft);
+            rotulosGraficoAtributos[linha].fontStyle = FontStyles.Bold;
+            rotulosGraficoAtributos[linha].overflowMode = TextOverflowModes.Ellipsis;
+            DefinirPosicao(rotulosGraficoAtributos[linha].rectTransform,
+                new Vector2(centroRotulo, y), new Vector2(larguraRotulo, espacamentoLinha));
+
+            for (int segmento = 0; segmento < segmentos; segmento++)
+            {
+                GameObject objetoSegmento = CriarObjetoUI(
+                    "BarraGraficoAtributo" + linha + "_" + segmento,
+                    grafico.transform);
+                RawImage imagemSegmento = objetoSegmento.AddComponent<RawImage>();
+                imagemSegmento.texture = Texture2D.whiteTexture;
+                imagemSegmento.raycastTarget = false;
+                float x = centroBarra - larguraBarra * 0.5f +
+                    tamanhoSegmentoGrafico.x * 0.5f +
+                    segmento * (tamanhoSegmentoGrafico.x + espacamentoSegmentoGrafico);
+                DefinirPosicao(imagemSegmento.rectTransform, new Vector2(x, y), tamanhoSegmentoGrafico);
+                segmentosGraficoAtributos[linha, segmento] = imagemSegmento;
+            }
+        }
+
+        AtualizarRotulosGraficoAtributos();
+    }
+
+    void AtualizarRotulosGraficoAtributos()
+    {
+        if (rotulosGraficoAtributos == null || rotulosGraficoAtributos.Length < 4)
+            return;
+
+        string[] chaves =
+        {
+            "CHAR_STAT_FORCE",
+            "CHAR_SPEED",
+            "CHAR_RANGE",
+            "CHAR_STAT_ENERGY"
+        };
+        string[] padroes = { "Força", "Velocidade", "Alcance", "Energia" };
+        for (int i = 0; i < rotulosGraficoAtributos.Length; i++)
+        {
+            if (rotulosGraficoAtributos[i] != null)
+                rotulosGraficoAtributos[i].text = Traduzir(chaves[i], padroes[i]).ToUpperInvariant();
+        }
+    }
+
+    void AtualizarGraficoAtributos()
+    {
+        if (dadosAtuais == null || segmentosGraficoAtributos == null)
+            return;
+
+        float[] valores =
+        {
+            Mathf.Clamp01(dadosAtuais.danoAtaque / 20f),
+            Mathf.Clamp01(dadosAtuais.velocidade / 12f),
+            Mathf.Clamp01(dadosAtuais.alcanceAtaque / 4f),
+            Mathf.Clamp01(dadosAtuais.velocidadeRecargaEnergia / 15f)
+        };
+        Color[] cores =
+        {
+            new Color(0.93f, 0.10f, 0.13f, 1f),
+            new Color(0.93f, 0.10f, 0.13f, 1f),
+            new Color(0.05f, 0.78f, 0.32f, 1f),
+            new Color(1f, 0.78f, 0.03f, 1f)
+        };
+        Color corVazia = new Color(0.12f, 0.18f, 0.26f, 1f);
+        int segmentos = segmentosGraficoAtributos.GetLength(1);
+
+        for (int linha = 0; linha < 4; linha++)
+        {
+            int preenchidos = Mathf.Clamp(Mathf.RoundToInt(valores[linha] * segmentos), 0, segmentos);
+            for (int segmento = 0; segmento < segmentos; segmento++)
+            {
+                RawImage imagem = segmentosGraficoAtributos[linha, segmento];
+                if (imagem != null)
+                    imagem.color = segmento < preenchidos ? cores[linha] : corVazia;
+            }
+        }
+    }
+
     void ConfigurarBotaoFechar()
     {
         if (botaoFechar == null)
@@ -633,21 +811,52 @@ public class PainelInfoPersonagem : MonoBehaviour
     {
         botoesInfo = new Button[2];
         botoesInfoUsamPosicaoAutomatica = new bool[2];
-        Transform botaoP1Existente = transform.Find("BotaoInfoP1");
-        Transform botaoP2Existente = transform.Find("BotaoInfoP2");
-        botoesInfoUsamPosicaoAutomatica[0] = botaoP1Existente == null;
-        botoesInfoUsamPosicaoAutomatica[1] = botaoP2Existente == null;
+        Transform botaoP1Existente = EncontrarBotaoInfo("BotaoInfoP1", "InfoIP1");
+        Transform botaoP2Existente = EncontrarBotaoInfo("BotaoInfoP2", "InfoIP2");
+        // A tela nova já possui os botões I editáveis. Não criar BotaoInfoP1
+        // ou BotaoInfoP2 antigos como fallback.
+        botoesInfoUsamPosicaoAutomatica[0] = false;
+        botoesInfoUsamPosicaoAutomatica[1] = false;
         botoesInfo[0] = botaoP1Existente != null
             ? botaoP1Existente.GetComponent<Button>()
-            : CriarBotao("BotaoInfoP1", canvasRect, Traduzir("CHAR_PRESS_INFO", "INFO"), tamanhoBotaoInfo);
+            : null;
         botoesInfo[1] = botaoP2Existente != null
             ? botaoP2Existente.GetComponent<Button>()
-            : CriarBotao("BotaoInfoP2", canvasRect, Traduzir("CHAR_PRESS_INFO", "INFO"), tamanhoBotaoInfo);
-        botoesInfo[0].onClick.AddListener(() => AbrirParaLado(1));
-        botoesInfo[1].onClick.AddListener(() => AbrirParaLado(2));
+            : null;
+        if (botoesInfo[0] != null)
+            botoesInfo[0].onClick.AddListener(() => AbrirParaLado(1));
+        if (botoesInfo[1] != null)
+            botoesInfo[1].onClick.AddListener(() => AbrirParaLado(2));
 
-        AplicarVisualBotao(botoesInfo[0], corBotaoInfoNormal);
-        AplicarVisualBotao(botoesInfo[1], corBotaoInfoNormal);
+        // Os botões InfoI da tela refatorada possuem foco próprio: preservam
+        // sua cor, mostram borda no hover/foco e usam amarelo ao confirmar.
+        // Não instalar neles o visual antigo, que pintava todo o botão no hover.
+        if (botoesInfo[0] != null && !botoesInfo[0].gameObject.name.StartsWith("InfoI"))
+            AplicarVisualBotao(botoesInfo[0], corBotaoInfoNormal);
+        if (botoesInfo[1] != null && !botoesInfo[1].gameObject.name.StartsWith("InfoI"))
+            AplicarVisualBotao(botoesInfo[1], corBotaoInfoNormal);
+    }
+
+    Transform EncontrarBotaoInfo(string nomeOriginal, string nomeLayout)
+    {
+        // Primeiro procura dentro da tela refatorada. Os objetos diretos no
+        // Canvas são restos da versão antiga e não podem receber o hover.
+        foreach (Button botao in GetComponentsInChildren<Button>(true))
+        {
+            if (botao != null && botao.gameObject.name == nomeLayout)
+                return botao.transform;
+        }
+
+        // Se a tela nova existe, não reutilize os botões antigos do Canvas.
+        // Isso evita duplicação e mantém o botão I editável no card correto.
+        if (transform.Find("SelecaoPlayerRefatorada") != null)
+            return null;
+
+        Transform direto = transform.Find(nomeOriginal);
+        if (direto != null)
+            return direto;
+
+        return null;
     }
 
     void AtualizarPosicaoDosBotoesInfo()
@@ -1259,12 +1468,7 @@ public class PainelInfoPersonagem : MonoBehaviour
         }
 
         descricao.text = nomeAcao + "\n\n" + textoAcao + "\n\n" + detalhesAcao;
-        atributos.text =
-            Traduzir("CHAR_STATS", "ATRIBUTOS") + "\n" +
-            Traduzir("CHAR_STYLE", "Estilo") + ": " + ObterEstilo() + "\n" +
-            Traduzir("CHAR_SPEED", "Velocidade") + ": " + Numero(dadosAtuais.velocidade) + "     " +
-            Traduzir("CHAR_JUMP", "Força do pulo") + ": " + Numero(dadosAtuais.forcaPulo) + "\n" +
-            Traduzir("CHAR_ENERGY", "Recarga de energia") + ": " + Numero(dadosAtuais.velocidadeRecargaEnergia);
+        AtualizarGraficoAtributos();
     }
 
     string ObterEstilo()
