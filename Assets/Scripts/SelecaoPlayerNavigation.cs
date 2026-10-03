@@ -690,8 +690,11 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
         }
 
         if (layout != null)
+        {
             layout.DefinirFocoNavegacao(lado, categoria,
                 slotsPersonagens.Length > 0 ? indicesPersonagens[indiceSlot] : -1);
+            layout.DefinirFocoVoltar(categoriaP1 == CategoriaVoltar || categoriaP2 == CategoriaVoltar);
+        }
 
         // Não sincronizar com EventSystem aqui: ele é global e faria o slot
         // movimentado por um jogador parecer ser o foco do outro. A confirmação

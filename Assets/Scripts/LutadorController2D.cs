@@ -44,7 +44,6 @@ public class LutadorController2D : MonoBehaviour
     [Header("Teclas atuais")]
     [SerializeField] private KeyCode teclaEsquerda;
     [SerializeField] private KeyCode teclaDireita;
-    [SerializeField] private KeyCode teclaPular;
     [SerializeField] private KeyCode teclaAtaque;
     [SerializeField] private KeyCode teclaEspecial;
     [SerializeField] private KeyCode teclaUltimate;
@@ -53,7 +52,6 @@ public class LutadorController2D : MonoBehaviour
     [Header("Controle de videogame")]
     [Tooltip("Deixe vazio para evitar conflito com o teclado.")]
     [SerializeField] private string eixoHorizontalControle = "";
-    [SerializeField] private KeyCode botaoPularControle = KeyCode.None;
     [SerializeField] private KeyCode botaoAtaqueControle = KeyCode.None;
     [SerializeField] private KeyCode botaoEspecialControle = KeyCode.None;
     [SerializeField] private KeyCode botaoUltimateControle = KeyCode.None;
@@ -85,7 +83,6 @@ public class LutadorController2D : MonoBehaviour
     // ── Inputs IA ─────────────────────────────────────────────────────────
     private float movimentoIA;
     private bool defesaIA;
-    private bool puloIASolicitado;
     private bool ataqueIASolicitado;
     private bool especialIASolicitado;
     private bool ultimateIASolicitado;
@@ -378,7 +375,6 @@ public class LutadorController2D : MonoBehaviour
 
         movimentoIA = 0f;
         defesaIA = false;
-        puloIASolicitado = false;
         ataqueIASolicitado = false;
         especialIASolicitado = false;
         ultimateIASolicitado = false;
@@ -428,7 +424,6 @@ public class LutadorController2D : MonoBehaviour
         {
             teclaEsquerda = StringParaKeyCodeSeguro("P1_Esquerda", KeyCode.A);
             teclaDireita = StringParaKeyCodeSeguro("P1_Direita", KeyCode.D);
-            teclaPular = StringParaKeyCodeSeguro("P1_Pular", KeyCode.W);
             teclaAtaque = StringParaKeyCodeSeguro("P1_Ataque", KeyCode.F);
             teclaEspecial = StringParaKeyCodeSeguro("P1_Especial", KeyCode.G);
             teclaUltimate = StringParaKeyCodeSeguro("P1_Ultimate", KeyCode.H);
@@ -438,7 +433,6 @@ public class LutadorController2D : MonoBehaviour
         {
             teclaEsquerda = StringParaKeyCodeSeguro("P2_Esquerda", KeyCode.LeftArrow);
             teclaDireita = StringParaKeyCodeSeguro("P2_Direita", KeyCode.RightArrow);
-            teclaPular = StringParaKeyCodeSeguro("P2_Pular", KeyCode.UpArrow);
             teclaAtaque = StringParaKeyCodeSeguro("P2_Ataque", KeyCode.K);
             teclaEspecial = StringParaKeyCodeSeguro("P2_Especial", KeyCode.L);
             teclaUltimate = StringParaKeyCodeSeguro("P2_Ultimate", KeyCode.M);
@@ -448,7 +442,6 @@ public class LutadorController2D : MonoBehaviour
 
     void ConfigurarControlePadraoSeNecessario()
     {
-        if (botaoPularControle == KeyCode.None) botaoPularControle = numeroJogador == 1 ? KeyCode.Joystick1Button0 : KeyCode.Joystick2Button0;
         if (botaoDefenderControle == KeyCode.None) botaoDefenderControle = numeroJogador == 1 ? KeyCode.Joystick1Button1 : KeyCode.Joystick2Button1;
         if (botaoAtaqueControle == KeyCode.None) botaoAtaqueControle = numeroJogador == 1 ? KeyCode.Joystick1Button2 : KeyCode.Joystick2Button2;
         if (botaoEspecialControle == KeyCode.None) botaoEspecialControle = numeroJogador == 1 ? KeyCode.Joystick1Button3 : KeyCode.Joystick2Button3;
@@ -503,10 +496,6 @@ public class LutadorController2D : MonoBehaviour
             movimento = Mathf.Abs(movControle) > 0.01f ? movControle : movTeclado;
         }
 
-        bool pressionouPulo = Input.GetKeyDown(teclaPular) ||
-                              (botaoPularControle != KeyCode.None && Input.GetKeyDown(botaoPularControle));
-        if (pressionouPulo && estaNoChao) Pular();
-
         bool defTeclado = Input.GetKey(teclaDefender);
         bool defControle = botaoDefenderControle != KeyCode.None && Input.GetKey(botaoDefenderControle);
         defendendo = defTeclado || defControle;
@@ -552,12 +541,10 @@ public class LutadorController2D : MonoBehaviour
         movimento = bloqueadoIA ? 0f : Mathf.Clamp(movimentoIA, -1f, 1f);
         defendendo = defesaIA;
 
-        if (puloIASolicitado && estaNoChao) Pular();
         if (ataqueIASolicitado) AtaqueNormal();
         if (especialIASolicitado) AtaqueEspecial();
         if (ultimateIASolicitado) AtaqueUltimate();
 
-        puloIASolicitado = false;
         ataqueIASolicitado = false;
         especialIASolicitado = false;
         ultimateIASolicitado = false;
@@ -588,35 +575,16 @@ public class LutadorController2D : MonoBehaviour
     void RecarregarEnergiaParado()
     {
         if (dadosPersonagem == null) return;
-        // A energia não pode exigir que o jogador fique completamente parado:
-        // isso tornava a luta uma disputa de quem bloqueava menos. Movimento
-        // gera menos energia, mas ainda permite chegar ao especial/ultimate.
+        // Parado recarrega na velocidade total. Andando continua recarregando,
+        // mas pela metade, para não obrigar o jogador a ficar imóvel.
         // A espada em chamas continua sendo exceção porque já possui dreno.
         if (espadaEmChamasAtiva || defendendo || !estaNoChao)
             return;
 
-        float multiplicador = Mathf.Abs(movimento) > 0.01f ? 0.65f : 1f;
-        if (animacaoUmaVezAtiva && estadoAtual == EstadoAnim.Attack)
-            multiplicador *= 0.75f;
+        float multiplicador = Mathf.Abs(movimento) > 0.01f ? 0.5f : 1f;
 
         energiaAtual += dadosPersonagem.velocidadeRecargaEnergia * multiplicador * Time.deltaTime;
         energiaAtual = Mathf.Clamp(energiaAtual, 0f, dadosPersonagem.energiaMax);
-    }
-
-    void Pular()
-    {
-        if (rb == null || dadosPersonagem == null) return;
-        // A flag de chão pode continuar verdadeira até o próximo passo de física.
-        // Atualizá-la aqui evita que o primeiro frame do salto seja tratado como
-        // Idle e também impede uma nova solicitação de pulo nesse intervalo.
-        estaNoChao = false;
-        rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
-        rb.AddForce(Vector2.up * dadosPersonagem.forcaPulo, ForceMode2D.Impulse);
-        TocarSom(
-            dadosPersonagem.somPulo,
-            dadosPersonagem.volumePulo
-        );
-        IniciarAnimacaoUmaVez(EstadoAnim.Jump);
     }
 
     void AtaqueNormal()
@@ -629,13 +597,6 @@ public class LutadorController2D : MonoBehaviour
         // assim que o ataque acabasse. Tem que soltar o bloqueio antes de atacar.
         if (defendendo) return;
         if (EmAcaoOfensiva()) return;
-        if (!TemEnergiaSuficiente(dadosPersonagem.custoAtaque))
-        {
-            MostrarIndicadorEnergiaInsuficiente(dadosPersonagem.custoAtaque);
-            return;
-        }
-
-        GastarEnergia(dadosPersonagem.custoAtaque);
         faseAtaqueAtual = FaseAtaque.Windup;
         danoJaAplicado = false;
         TocarSom(
@@ -991,12 +952,12 @@ public class LutadorController2D : MonoBehaviour
         energiaAtual = Mathf.Clamp(energiaAtual - quantidade, 0f, dadosPersonagem.energiaMax);
     }
 
-    // ── Golpe único: salto normal + rachaduras no chão (ex: Jamanta) ────────
+    // ── Golpe único: frames de Jump + rachaduras no chão (ex: Jamanta) ─────
     // 1) Windup (2 frames do Special) parado no chão
-    // 2) Salto — MESMA força/altura do pulo normal (não mexe nisso)
-    // 3) No ápice, acelera a queda ("cai muito rápido")
-    // 4) Ao tocar o chão: Special de volta (frame 2 -> 1), landing
-    // 5) 0.5s depois do fim da animação: 1ª rachadura aparece E o movimento libera
+    // 2) Exibe os frames de Jump como parte visual do golpe, sem pular
+    // 3) Cria as rachaduras na posição atual do lutador
+    // 4) Volta aos frames finais do Special
+    // 5) 0.5s depois do fim da animação: o movimento é liberado
     // 6) Rachaduras seguintes a cada 0.5s (até completar quantidadeRachaduras),
     //    cada uma crescendo a partir do pé dele, com partículas e hitbox de dano
     IEnumerator EspecialSaltoRachadura()
@@ -1022,42 +983,21 @@ public class LutadorController2D : MonoBehaviour
         }
         yield return new WaitForSeconds(tempoPorFrameSpecial);
 
-        // ── 2) Salto — mais alto que o pulo normal, usando o multiplicador ──
-        estaNoChao = false;
-        if (rb != null)
+        // ── 2) Frames de Jump apenas como pose visual, sem física vertical ──
+        Sprite[] framesJumpEspecial = ObterFramesDoEstado(EstadoAnim.Jump);
+        float fpsJumpEspecial = dadosPersonagem.fpsJump > 0f ? dadosPersonagem.fpsJump : 8f;
+        float tempoPorFrameJump = 1f / fpsJumpEspecial;
+        int quantidadeFramesJump = framesJumpEspecial != null
+            ? Mathf.Min(framesJumpEspecial.Length, 2)
+            : 0;
+
+        for (int i = 0; i < quantidadeFramesJump; i++)
         {
-            float forcaSaltoEspecial = dadosPersonagem.forcaPulo * Mathf.Max(1f, dadosPersonagem.multiplicadorAlturaSaltoRachadura);
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
-            rb.AddForce(Vector2.up * forcaSaltoEspecial, ForceMode2D.Impulse);
-        }
-
-        estadoAtual = EstadoAnim.Jump;
-        AtualizarFrameJump();
-
-        // Espera 2 passos físicos antes de checar o ápice — dá tempo do personagem
-        // descolar de verdade do chão antes de confiar em qualquer flag de colisão
-        yield return new WaitForFixedUpdate();
-        yield return new WaitForFixedUpdate();
-
-        // Espera alcançar o ápice do salto (velocidade Y deixa de ser positiva) —
-        // só pela física, sem depender de estaNoChao aqui (é exatamente isso que
-        // cortava o pulo curto antes)
-        yield return new WaitUntil(() => rb == null || rb.linearVelocity.y <= 0f);
-
-        // ── 3) Queda rápida ──
-        const float velocidadeQuedaRapida = -22f;
-        while (rb != null && !estaNoChao)
-        {
-            Vector2 v = rb.linearVelocity;
-            if (v.y > velocidadeQuedaRapida)
-                v.y = velocidadeQuedaRapida;
-            rb.linearVelocity = v;
-            AtualizarFrameJump();
-            yield return null;
+            AplicarSpriteTemporario(framesJumpEspecial, i);
+            yield return new WaitForSeconds(tempoPorFrameJump);
         }
 
         Vector3 posicaoImpacto = transform.position;
-        if (rb != null) rb.linearVelocity = Vector2.zero;
 
         // ── 4) Rachadura inicial + animação de pouso, em SIMULTÂNEO ──
         // A 1ª rachadura dispara no exato instante em que ele toca o chão, sem
@@ -1886,7 +1826,7 @@ public class LutadorController2D : MonoBehaviour
 
     void MostrarIndicadorEnergiaInsuficiente(float custo)
     {
-        if (!controladoPorIA && gameManager != null)
+        if (gameManager != null)
             gameManager.MostrarIndicadorEnergiaInsuficiente(this, custo);
     }
 
@@ -1920,7 +1860,9 @@ public class LutadorController2D : MonoBehaviour
     // ── IA ────────────────────────────────────────────────────────────────
     public void IA_DefinirMovimento(float valor) { if (!controladoPorIA) return; movimentoIA = Mathf.Clamp(valor, -1f, 1f); }
     public void IA_DefinirDefesa(bool valor) { if (!controladoPorIA) return; defesaIA = valor; }
-    public void IA_SolicitarPulo() { if (!controladoPorIA) return; puloIASolicitado = true; }
+    // O pulo normal foi removido. Mantém a API para não quebrar referências
+    // antigas da IA, mas qualquer solicitação é deliberadamente ignorada.
+    public void IA_SolicitarPulo() { }
     public void IA_SolicitarAtaque() { if (!controladoPorIA) return; ataqueIASolicitado = true; }
     public void IA_SolicitarEspecial() { if (!controladoPorIA) return; especialIASolicitado = true; }
     public void IA_SolicitarUltimate() { if (!controladoPorIA) return; ultimateIASolicitado = true; }
@@ -1928,7 +1870,7 @@ public class LutadorController2D : MonoBehaviour
     {
         if (!controladoPorIA) return;
         movimentoIA = 0f; defesaIA = false;
-        puloIASolicitado = false; ataqueIASolicitado = false;
+        ataqueIASolicitado = false;
         especialIASolicitado = false; ultimateIASolicitado = false;
     }
 
@@ -1974,8 +1916,6 @@ public class LutadorController2D : MonoBehaviour
                 estadoAtual = EstadoAnim.Death;
             else if (defendendo)
                 estadoAtual = EstadoAnim.Defend;
-            else if (!estaNoChao)
-                estadoAtual = EstadoAnim.Jump;
             else if (Mathf.Abs(movimento) > 0.01f)
                 estadoAtual = EstadoAnim.Move;
             else
@@ -2002,8 +1942,6 @@ public class LutadorController2D : MonoBehaviour
                 novoEstado = EstadoAnim.Death;
             else if (defendendo)
                 novoEstado = EstadoAnim.Defend;
-            else if (!estaNoChao)
-                novoEstado = EstadoAnim.Jump;
             else if (Mathf.Abs(movimento) > 0.01f)
                 novoEstado = EstadoAnim.Move;
             else
@@ -2016,14 +1954,6 @@ public class LutadorController2D : MonoBehaviour
                 cronometroFrame = 0f;
                 AplicarFrameAtual();
             }
-        }
-
-        // ── Pulo: 2 poses fixas (subindo / caindo) controladas pela física, ──
-        // ── não por um timer de fps como as outras animações ────────────────
-        if (estadoAtual == EstadoAnim.Jump)
-        {
-            AtualizarFrameJump();
-            return;
         }
 
         // ── Ultimate único: segura a pose de disparo enquanto o raio estiver na
@@ -2136,38 +2066,22 @@ public class LutadorController2D : MonoBehaviour
         }
     }
 
-    // Pulo: frame 0 = subindo (velocidade Y positiva), frame 1 = caindo (Y negativa ou
-    // zero no ápice). Funciona pra qualquer personagem, desde que framesJump tenha 2
-    // sprites — se tiver só 1, fica só nele; se tiver mais de 2, os extras não são usados.
-    void AtualizarFrameJump()
-    {
-        Sprite[] frames = ObterFramesDoEstado(EstadoAnim.Jump);
-        if (frames == null || frames.Length == 0 || spriteRenderer == null) return;
-
-        int novoFrame;
-        if (frames.Length == 1)
-        {
-            novoFrame = 0;
-        }
-        else
-        {
-            bool subindo = rb != null && rb.linearVelocity.y > 0.01f;
-            novoFrame = subindo ? 0 : 1;
-            novoFrame = Mathf.Min(novoFrame, frames.Length - 1);
-        }
-
-        if (novoFrame != frameAtual)
-        {
-            frameAtual = novoFrame;
-            AplicarFrameAtual();
-        }
-    }
-
     void AplicarFrameAtual()
     {
         Sprite[] frames = ObterFramesDoEstado(estadoAtual);
         if (frames == null || frames.Length == 0) return;
         int idx = Mathf.Clamp(frameAtual, 0, frames.Length - 1);
+        if (frames[idx] != null)
+            spriteRenderer.sprite = frames[idx];
+    }
+
+    // Usa uma pose de outro conjunto de frames sem trocar o estado de combate.
+    // O especial do Jamanta precisa mostrar os frames de Jump, mas não deve ser
+    // tratado pela IA ou pela física como um lutador realmente no ar.
+    void AplicarSpriteTemporario(Sprite[] frames, int indice)
+    {
+        if (spriteRenderer == null || frames == null || frames.Length == 0) return;
+        int idx = Mathf.Clamp(indice, 0, frames.Length - 1);
         if (frames[idx] != null)
             spriteRenderer.sprite = frames[idx];
     }
@@ -2298,15 +2212,6 @@ public class LutadorController2D : MonoBehaviour
         if (collision.gameObject.layer != LayerMask.NameToLayer("Chao")) return;
         estaNoChao = true;
 
-        // Ao pousar, se estava em Jump, finaliza a animação de uma vez
-        if (animacaoUmaVezAtiva && estadoAtual == EstadoAnim.Jump)
-        {
-            animacaoUmaVezAtiva = false;
-            estadoAtual = estadoAnterior;
-            frameAtual = 0;
-            cronometroFrame = 0f;
-            AplicarFrameAtual();
-        }
     }
 
     private void OnCollisionStay2D(Collision2D collision)

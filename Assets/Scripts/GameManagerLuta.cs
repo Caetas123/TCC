@@ -22,6 +22,12 @@ public class GameManagerLuta : MonoBehaviour
     public Slider barraEnergiaP1;
     public Slider barraEnergiaP2;
 
+    [Header("Retratos na HUD")]
+    [Tooltip("Rosto exibido no círculo da moldura da barra do Player 1")]
+    public Image rostoP1;
+    [Tooltip("Rosto exibido no círculo da moldura da barra do Player 2")]
+    public Image rostoP2;
+
     // Faixa temporária que mostra o custo que faltou quando uma habilidade é
     // recusada por falta de energia. Ela é criada dentro do Fill Area da
     // própria Slider, então acompanha exatamente o desenho da barra.
@@ -65,6 +71,8 @@ public class GameManagerLuta : MonoBehaviour
     public TextMeshProUGUI textoVencedor;
     [Tooltip("Imagem que recebe o rosto do personagem vencedor")]
     public Image imagemRostoVencedor;
+    [Tooltip("Sprite do balão usado ao lado do personagem vencedor")]
+    public Sprite spriteBalaoVencedor;
     public Button botaoReiniciar;
     public Button botaoVoltar;
 
@@ -100,6 +108,8 @@ public class GameManagerLuta : MonoBehaviour
     private Vector3 posInicialP2;
 
     private Coroutine rotinaControles;
+    private Image imagemBalaoVencedor;
+    private TextMeshProUGUI textoBalaoVencedor;
 
     void Awake()
     {
@@ -152,6 +162,8 @@ public class GameManagerLuta : MonoBehaviour
             player2.dadosPersonagem = personagensDisponiveis[personagemP2];
             player2.AplicarDadosPersonagem();
         }
+
+        AtualizarRetratosHUD();
 
         // BUG 23 — usa SpawnPoint fixo se configurado, senão usa posição atual
         posInicialP1 = spawnP1 != null ? spawnP1.position : (player1 != null ? player1.transform.position : Vector3.zero);
@@ -324,6 +336,28 @@ public class GameManagerLuta : MonoBehaviour
         }
     }
 
+    private void AtualizarRetratosHUD()
+    {
+        ConfigurarRetratoHUD(rostoP1, player1);
+        ConfigurarRetratoHUD(rostoP2, player2);
+    }
+
+    private void ConfigurarRetratoHUD(Image imagem, LutadorController2D jogador)
+    {
+        if (imagem == null)
+            return;
+
+        Sprite rosto = jogador != null && jogador.dadosPersonagem != null
+            ? jogador.dadosPersonagem.spriteRosto
+            : null;
+
+        imagem.sprite = rosto;
+        imagem.enabled = rosto != null;
+        imagem.preserveAspect = true;
+        imagem.raycastTarget = false;
+        imagem.color = Color.white;
+    }
+
     public void MostrarIndicadorEnergiaInsuficiente(LutadorController2D jogador, float custo)
     {
         if (jogador == null || jogador.dadosPersonagem == null || custo <= jogador.energiaAtual)
@@ -360,9 +394,15 @@ public class GameManagerLuta : MonoBehaviour
             return;
 
         RectTransform faixa = indicador.rectTransform;
-        // A faixa precisa usar a mesma direção da Slider. Isso é importante
-        // para a barra do P2, que é RightToLeft: usar sempre [atual, custo]
-        // coloca o vermelho em uma posição que pode ficar sobre o azul.
+        RectTransform areaIndicador = barra.fillRect != null
+            ? barra.fillRect.parent as RectTransform
+            : barra.transform as RectTransform;
+        if (areaIndicador == null)
+            return;
+
+        // A barra azul continua sendo o primeiro layer e o indicador fica como
+        // segundo layer dentro do Fill Area. A imagem não recebe raycast, então
+        // o Slider continua atualizando a energia normalmente por baixo dela.
         bool preenchimentoInvertido = barra.direction == Slider.Direction.RightToLeft;
         float inicio = preenchimentoInvertido
             ? 1f - custoNormalizado
@@ -371,6 +411,8 @@ public class GameManagerLuta : MonoBehaviour
             ? 1f - energiaAtualNormalizada
             : custoNormalizado;
 
+        faixa.SetParent(areaIndicador, false);
+        faixa.SetAsLastSibling();
         faixa.anchorMin = new Vector2(inicio, 0f);
         faixa.anchorMax = new Vector2(fim, 1f);
         faixa.offsetMin = Vector2.zero;
@@ -427,12 +469,15 @@ public class GameManagerLuta : MonoBehaviour
 
     IEnumerator PiscarIndicadorEnergia(Image indicador, bool eJogador1)
     {
-        const float duracao = 1f;
+        const float duracao = 0.32f;
         float tempo = 0f;
 
         while (tempo < duracao && indicador != null)
         {
-            float intensidade = Mathf.Lerp(0.25f, 1f, Mathf.PingPong(tempo * 5f, 1f));
+            float progresso = Mathf.Clamp01(tempo / duracao);
+            float intensidade = progresso < 0.5f
+                ? Mathf.Lerp(0.2f, 1f, progresso * 2f)
+                : Mathf.Lerp(1f, 0f, (progresso - 0.5f) * 2f);
             indicador.color = new Color(1f, 0f, 0f, intensidade);
             tempo += Time.unscaledDeltaTime;
             yield return null;
@@ -451,13 +496,12 @@ public class GameManagerLuta : MonoBehaviour
         {
             string esq = FormatarTecla(PlayerPrefs.GetString("P1_Esquerda", "A"));
             string dir = FormatarTecla(PlayerPrefs.GetString("P1_Direita", "D"));
-            string pulo = FormatarTecla(PlayerPrefs.GetString("P1_Pular", "W"));
             string def = FormatarTecla(PlayerPrefs.GetString("P1_Defender", "S"));
             string atk = FormatarTecla(PlayerPrefs.GetString("P1_Ataque", "F"));
             string esp = FormatarTecla(PlayerPrefs.GetString("P1_Especial", "G"));
             string ult = FormatarTecla(PlayerPrefs.GetString("P1_Ultimate", "H"));
 
-            controlesP1.text = $"P1 {esq}/{dir} PULO:{pulo} DEF:{def} ATAQUE:{atk} ESPECIAL:{esp} ULTIMATE:{ult}";
+            controlesP1.text = $"P1 {esq}/{dir} DEF:{def} ATAQUE:{atk} ESPECIAL:{esp} ULTIMATE:{ult}";
             controlesP1.enableAutoSizing = true;
             if (controlesP1.fontSizeMin <= 0f) controlesP1.fontSizeMin = 8f;
         }
@@ -466,13 +510,12 @@ public class GameManagerLuta : MonoBehaviour
         {
             string esq = FormatarTecla(PlayerPrefs.GetString("P2_Esquerda", "LeftArrow"));
             string dir = FormatarTecla(PlayerPrefs.GetString("P2_Direita", "RightArrow"));
-            string pulo = FormatarTecla(PlayerPrefs.GetString("P2_Pular", "UpArrow"));
             string def = FormatarTecla(PlayerPrefs.GetString("P2_Defender", "DownArrow"));
             string atk = FormatarTecla(PlayerPrefs.GetString("P2_Ataque", "K"));
             string esp = FormatarTecla(PlayerPrefs.GetString("P2_Especial", "L"));
             string ult = FormatarTecla(PlayerPrefs.GetString("P2_Ultimate", "M"));
 
-            controlesP2.text = $"P2 {esq}/{dir} PULO:{pulo} DEF:{def} ATAQUE:{atk} ESPECIAL:{esp} ULTIMATE:{ult}";
+            controlesP2.text = $"P2 {esq}/{dir} DEF:{def} ATAQUE:{atk} ESPECIAL:{esp} ULTIMATE:{ult}";
             controlesP2.enableAutoSizing = true;
             if (controlesP2.fontSizeMin <= 0f) controlesP2.fontSizeMin = 8f;
         }
@@ -694,6 +737,8 @@ public class GameManagerLuta : MonoBehaviour
         if (painelFim != null)
             painelFim.SetActive(true);
 
+        DesativarFundoPainelVencedor();
+
         var lm = LanguageManager.Instance;
 
         // Texto 1 — palavra "VITÓRIA" / "VICTORY" (ou "EMPATE" / "DRAW")
@@ -726,16 +771,26 @@ public class GameManagerLuta : MonoBehaviour
             }
         }
 
-        // Rosto do vencedor
+        // Corpo completo do vencedor
         if (imagemRostoVencedor != null)
         {
-            Sprite rosto = vencedor != null && vencedor.dadosPersonagem != null
-                ? vencedor.dadosPersonagem.spriteRosto
+            Sprite corpo = vencedor != null && vencedor.dadosPersonagem != null
+                ? vencedor.dadosPersonagem.spriteCorpo
                 : null;
 
-            if (rosto != null)
+            if (corpo == null && vencedor != null && vencedor.dadosPersonagem != null &&
+                vencedor.dadosPersonagem.framesIdle != null && vencedor.dadosPersonagem.framesIdle.Length > 0)
+                corpo = vencedor.dadosPersonagem.framesIdle[0];
+
+            if (corpo != null)
             {
-                imagemRostoVencedor.sprite = rosto;
+                Vector2 tamanhoCorpo = ObterTamanhoCorpoNoPainel(vencedor, corpo);
+                imagemRostoVencedor.sprite = corpo;
+                // A proporção vem do mesmo sprite e da mesma escala usada no
+                // lutador da arena. O tamanho antigo 360x420 esticava o PNG.
+                imagemRostoVencedor.preserveAspect = false;
+                imagemRostoVencedor.rectTransform.anchoredPosition = new Vector2(-100f, 10f);
+                imagemRostoVencedor.rectTransform.sizeDelta = tamanhoCorpo;
                 imagemRostoVencedor.gameObject.SetActive(true);
 
                 // Blindagem: essa imagem é só visual, nunca deveria interceptar
@@ -755,12 +810,135 @@ public class GameManagerLuta : MonoBehaviour
             }
         }
 
+        ConfigurarBalaoVencedor(vencedor);
+
         // Seleciona de verdade o primeiro botão real do painel pro teclado/controle
         // funcionar assim que a tela aparece — sem isso, nada está selecionado no
         // EventSystem até o mouse clicar em algo, e as setas não têm de onde partir.
         Button primeiroBotao = botaoReiniciar != null ? botaoReiniciar : botaoVoltar;
         if (primeiroBotao != null)
             StartCoroutine(SelecionarBotaoNoProximoFrame(primeiroBotao.gameObject));
+    }
+
+    private Vector2 ObterTamanhoCorpoNoPainel(LutadorController2D vencedor, Sprite corpo)
+    {
+        if (vencedor == null || corpo == null || corpo.pixelsPerUnit <= 0f)
+            return new Vector2(184f, 335f);
+
+        Canvas canvas = painelFim != null ? painelFim.GetComponentInParent<Canvas>() : null;
+        CanvasScaler escalaCanvas = canvas != null ? canvas.GetComponent<CanvasScaler>() : null;
+        Camera cameraLuta = canvas != null && canvas.worldCamera != null
+            ? canvas.worldCamera
+            : Camera.main;
+
+        if (cameraLuta == null || !cameraLuta.orthographic)
+            return new Vector2(
+                corpo.rect.width / corpo.pixelsPerUnit * 90f * Mathf.Abs(vencedor.transform.lossyScale.x),
+                corpo.rect.height / corpo.pixelsPerUnit * 90f * Mathf.Abs(vencedor.transform.lossyScale.y));
+
+        float alturaReferencia = escalaCanvas != null
+            ? escalaCanvas.referenceResolution.y
+            : 1080f;
+        float pixelsPorUnidadeDeMundo = alturaReferencia / (cameraLuta.orthographicSize * 2f);
+        Vector3 escala = vencedor.transform.lossyScale;
+
+        return new Vector2(
+            corpo.rect.width / corpo.pixelsPerUnit * Mathf.Abs(escala.x) * pixelsPorUnidadeDeMundo,
+            corpo.rect.height / corpo.pixelsPerUnit * Mathf.Abs(escala.y) * pixelsPorUnidadeDeMundo);
+    }
+
+    private void DesativarFundoPainelVencedor()
+    {
+        if (painelFim == null)
+            return;
+
+        Transform jogador = painelFim.transform.Find("jogador");
+        Image fundo = jogador != null ? jogador.GetComponent<Image>() : null;
+        if (fundo != null)
+            fundo.enabled = false;
+    }
+
+    private void ConfigurarBalaoVencedor(LutadorController2D vencedor)
+    {
+        if (painelFim == null || spriteBalaoVencedor == null)
+            return;
+
+        Transform existente = painelFim.transform.Find("BalaoVencedor");
+        if (existente == null)
+        {
+            GameObject objeto = new GameObject("BalaoVencedor", typeof(RectTransform), typeof(Image));
+            objeto.transform.SetParent(painelFim.transform, false);
+            existente = objeto.transform;
+        }
+
+        imagemBalaoVencedor = existente.GetComponent<Image>();
+        if (imagemBalaoVencedor == null)
+            imagemBalaoVencedor = existente.gameObject.AddComponent<Image>();
+
+        RectTransform rect = existente as RectTransform;
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = new Vector2(215f, 155f);
+        rect.sizeDelta = new Vector2(350f, 180f);
+
+        imagemBalaoVencedor.sprite = spriteBalaoVencedor;
+        imagemBalaoVencedor.type = Image.Type.Simple;
+        imagemBalaoVencedor.preserveAspect = false;
+        imagemBalaoVencedor.color = Color.white;
+        imagemBalaoVencedor.raycastTarget = false;
+
+        Transform textoExistente = existente.Find("Texto");
+        if (textoExistente == null)
+        {
+            GameObject textoObjeto = new GameObject("Texto", typeof(RectTransform), typeof(TextMeshProUGUI));
+            textoObjeto.transform.SetParent(existente, false);
+            textoExistente = textoObjeto.transform;
+        }
+
+        textoBalaoVencedor = textoExistente.GetComponent<TextMeshProUGUI>();
+        if (textoBalaoVencedor == null)
+            textoBalaoVencedor = textoExistente.gameObject.AddComponent<TextMeshProUGUI>();
+
+        RectTransform rectTexto = textoExistente as RectTransform;
+        rectTexto.anchorMin = new Vector2(0.13f, 0.18f);
+        rectTexto.anchorMax = new Vector2(0.92f, 0.84f);
+        rectTexto.offsetMin = Vector2.zero;
+        rectTexto.offsetMax = Vector2.zero;
+
+        if (textoNomeVencedor != null)
+            textoBalaoVencedor.font = textoNomeVencedor.font;
+        textoBalaoVencedor.fontSize = 24f;
+        textoBalaoVencedor.alignment = TextAlignmentOptions.Center;
+        textoBalaoVencedor.enableWordWrapping = true;
+        textoBalaoVencedor.overflowMode = TextOverflowModes.Overflow;
+        textoBalaoVencedor.color = new Color(0.08f, 0.08f, 0.12f, 1f);
+        textoBalaoVencedor.raycastTarget = false;
+        textoBalaoVencedor.text = ObterFraseVencedor(vencedor);
+        existente.SetAsLastSibling();
+    }
+
+    private string ObterFraseVencedor(LutadorController2D vencedor)
+    {
+        bool portugues = LanguageManager.Instance == null ||
+            LanguageManager.Instance.CurrentLanguage == LanguageManager.Language.Portuguese;
+        string nome = vencedor != null && vencedor.dadosPersonagem != null
+            ? vencedor.dadosPersonagem.nomePersonagem
+            : string.Empty;
+
+        if (nome.IndexOf("Jamanta", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            return portugues
+                ? "Errar também faz parte de aprender."
+                : "Making mistakes is part of learning.";
+
+        if (nome.IndexOf("Diego", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            return portugues
+                ? "Compartilhar conhecimento faz todos crescerem."
+                : "Sharing knowledge helps everyone grow.";
+
+        return portugues
+            ? "Aprender abre novas possibilidades."
+            : "Learning opens new possibilities.";
     }
 
     IEnumerator SelecionarBotaoNoProximoFrame(GameObject botao)

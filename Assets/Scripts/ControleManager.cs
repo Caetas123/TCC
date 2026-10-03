@@ -11,7 +11,6 @@ public class ControleManager : MonoBehaviour
     [Header("Botões P1")]
     [SerializeField] private Button p1Esquerda;
     [SerializeField] private Button p1Direita;
-    [SerializeField] private Button p1Pular;
     [SerializeField] private Button p1Defender;
     [SerializeField] private Button p1Ataque;
     [SerializeField] private Button p1Especial;
@@ -20,7 +19,6 @@ public class ControleManager : MonoBehaviour
     [Header("Botões P2")]
     [SerializeField] private Button p2Esquerda;
     [SerializeField] private Button p2Direita;
-    [SerializeField] private Button p2Pular;
     [SerializeField] private Button p2Defender;
     [SerializeField] private Button p2Ataque;
     [SerializeField] private Button p2Especial;
@@ -33,15 +31,14 @@ public class ControleManager : MonoBehaviour
 
     private static readonly string[] TodasChaves =
     {
-        "P1_Esquerda", "P1_Direita", "P1_Pular", "P1_Defender", "P1_Ataque", "P1_Especial", "P1_Ultimate",
-        "P2_Esquerda", "P2_Direita", "P2_Pular", "P2_Defender", "P2_Ataque", "P2_Especial", "P2_Ultimate"
+        "P1_Esquerda", "P1_Direita", "P1_Defender", "P1_Ataque", "P1_Especial", "P1_Ultimate",
+        "P2_Esquerda", "P2_Direita", "P2_Defender", "P2_Ataque", "P2_Especial", "P2_Ultimate"
     };
 
     private static readonly Dictionary<string, string> Padroes = new Dictionary<string, string>
     {
         { "P1_Esquerda", "A" },
         { "P1_Direita", "D" },
-        { "P1_Pular", "W" },
         { "P1_Defender", "S" },
         { "P1_Ataque", "F" },
         { "P1_Especial", "G" },
@@ -49,7 +46,6 @@ public class ControleManager : MonoBehaviour
 
         { "P2_Esquerda", "LeftArrow" },
         { "P2_Direita", "RightArrow" },
-        { "P2_Pular", "UpArrow" },
         { "P2_Defender", "DownArrow" },
         { "P2_Ataque", "K" },
         { "P2_Especial", "L" },
@@ -242,7 +238,6 @@ public class ControleManager : MonoBehaviour
     {
         RegistrarBotao(p1Esquerda, "P1_Esquerda");
         RegistrarBotao(p1Direita, "P1_Direita");
-        RegistrarBotao(p1Pular, "P1_Pular");
         RegistrarBotao(p1Defender, "P1_Defender");
         RegistrarBotao(p1Ataque, "P1_Ataque");
         RegistrarBotao(p1Especial, "P1_Especial");
@@ -250,7 +245,6 @@ public class ControleManager : MonoBehaviour
 
         RegistrarBotao(p2Esquerda, "P2_Esquerda");
         RegistrarBotao(p2Direita, "P2_Direita");
-        RegistrarBotao(p2Pular, "P2_Pular");
         RegistrarBotao(p2Defender, "P2_Defender");
         RegistrarBotao(p2Ataque, "P2_Ataque");
         RegistrarBotao(p2Especial, "P2_Especial");
@@ -315,7 +309,6 @@ public class ControleManager : MonoBehaviour
     {
         AtualizarTextoBotao(p1Esquerda, "P1_Esquerda");
         AtualizarTextoBotao(p1Direita, "P1_Direita");
-        AtualizarTextoBotao(p1Pular, "P1_Pular");
         AtualizarTextoBotao(p1Defender, "P1_Defender");
         AtualizarTextoBotao(p1Ataque, "P1_Ataque");
         AtualizarTextoBotao(p1Especial, "P1_Especial");
@@ -323,7 +316,6 @@ public class ControleManager : MonoBehaviour
 
         AtualizarTextoBotao(p2Esquerda, "P2_Esquerda");
         AtualizarTextoBotao(p2Direita, "P2_Direita");
-        AtualizarTextoBotao(p2Pular, "P2_Pular");
         AtualizarTextoBotao(p2Defender, "P2_Defender");
         AtualizarTextoBotao(p2Ataque, "P2_Ataque");
         AtualizarTextoBotao(p2Especial, "P2_Especial");
@@ -348,7 +340,6 @@ public class ControleManager : MonoBehaviour
     {
         if (botao == p1Esquerda) return "P1_Esquerda";
         if (botao == p1Direita) return "P1_Direita";
-        if (botao == p1Pular) return "P1_Pular";
         if (botao == p1Defender) return "P1_Defender";
         if (botao == p1Ataque) return "P1_Ataque";
         if (botao == p1Especial) return "P1_Especial";
@@ -356,7 +347,6 @@ public class ControleManager : MonoBehaviour
 
         if (botao == p2Esquerda) return "P2_Esquerda";
         if (botao == p2Direita) return "P2_Direita";
-        if (botao == p2Pular) return "P2_Pular";
         if (botao == p2Defender) return "P2_Defender";
         if (botao == p2Ataque) return "P2_Ataque";
         if (botao == p2Especial) return "P2_Especial";

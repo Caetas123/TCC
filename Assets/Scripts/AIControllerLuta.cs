@@ -86,7 +86,6 @@ public class AIControllerLuta : MonoBehaviour
     private float chanceEspecialBase;
     private float chanceUltimateBase;
     private float chanceDefesaBase;
-    private float chancePuloBase;
     private float chanceFintaBase;
     private float chanceComboBase;        // encadear ataque + especial
     private float chanceRecuoBase;
@@ -94,7 +93,6 @@ public class AIControllerLuta : MonoBehaviour
     private float cooldownAtaque;
     private float cooldownEspecial;
     private float cooldownUltimate;
-    private float cooldownPulo;
     private float cooldownFinta;
 
     // ── Parâmetros de dificuldade ─────────────────────────────────────────
@@ -120,7 +118,6 @@ public class AIControllerLuta : MonoBehaviour
     private float cronometroAtaqueCooldown;
     private float cronometroEspecialCooldown;
     private float cronometroUltimateCooldown;
-    private float cronometroPuloCooldown;
     private float cronometroFintaCooldown;
     private float cronometroEstado;       // quanto tempo fica nesse estado
     private float cronometroCombo;        // janela para segundo hit do combo
@@ -226,7 +223,6 @@ public class AIControllerLuta : MonoBehaviour
         cronometroAtaqueCooldown   -= Time.deltaTime;
         cronometroEspecialCooldown -= Time.deltaTime;
         cronometroUltimateCooldown -= Time.deltaTime;
-        cronometroPuloCooldown     -= Time.deltaTime;
         cronometroFintaCooldown    -= Time.deltaTime;
         cronometroEstado           -= Time.deltaTime;
         cronometroCombo            -= Time.deltaTime;
@@ -612,14 +608,6 @@ public class AIControllerLuta : MonoBehaviour
             case EstadoComportamento.Pressionar:
                 if (TentarAtacarSeNoAlcance(distancia)) return true;
 
-                if (usaFinta && lutador.EstaNoChao() && cronometroPuloCooldown <= 0f
-                    && Random.value < chancePuloBase)
-                {
-                    lutador.IA_SolicitarPulo();
-                    cronometroPuloCooldown = cooldownPulo;
-                    return true;
-                }
-
                 if (usaFinta && cronometroFintaCooldown <= 0f && Random.value < chanceFintaBase)
                 {
                     IniciarFinta(dir, recuo);
@@ -681,12 +669,6 @@ public class AIControllerLuta : MonoBehaviour
 
             case EstadoComportamento.Finalizar:
                 if (TentarAtacarSeNoAlcance(distancia)) return true;
-                if (lutador.EstaNoChao() && cronometroPuloCooldown <= 0f && Random.value < 0.12f)
-                {
-                    lutador.IA_SolicitarPulo();
-                    cronometroPuloCooldown = cooldownPulo;
-                    return true;
-                }
                 return false;
 
             case EstadoComportamento.Recuperar:
@@ -1014,14 +996,12 @@ public class AIControllerLuta : MonoBehaviour
                 chanceEspecialBase   = 0.45f;
                 chanceUltimateBase   = 0.85f;
                 chanceDefesaBase     = 0.18f;
-                chancePuloBase       = 0.10f;
                 chanceFintaBase      = 0.10f;
                 chanceComboBase      = 0.60f;
                 chanceRecuoBase      = 0.12f;
                 cooldownAtaque       = 0.38f;
                 cooldownEspecial     = 1.1f;
                 cooldownUltimate     = 1.8f;
-                cooldownPulo         = 1.2f;
                 cooldownFinta        = 0.8f;
                 break;
 
@@ -1033,14 +1013,12 @@ public class AIControllerLuta : MonoBehaviour
                 chanceEspecialBase   = 0.28f;
                 chanceUltimateBase   = 0.80f;
                 chanceDefesaBase     = 0.65f;
-                chancePuloBase       = 0.04f;
                 chanceFintaBase      = 0.25f;
                 chanceComboBase      = 0.25f;
                 chanceRecuoBase      = 0.55f;
                 cooldownAtaque       = 0.62f;
                 cooldownEspecial     = 1.5f;
                 cooldownUltimate     = 2.0f;
-                cooldownPulo         = 2.0f;
                 cooldownFinta        = 1.2f;
                 break;
 
@@ -1052,14 +1030,12 @@ public class AIControllerLuta : MonoBehaviour
                 chanceEspecialBase   = 0.35f;
                 chanceUltimateBase   = 0.82f;
                 chanceDefesaBase     = 0.38f;
-                chancePuloBase       = 0.07f;
                 chanceFintaBase      = 0.15f;
                 chanceComboBase      = 0.42f;
                 chanceRecuoBase      = 0.28f;
                 cooldownAtaque       = 0.48f;
                 cooldownEspecial     = 1.3f;
                 cooldownUltimate     = 1.9f;
-                cooldownPulo         = 1.6f;
                 cooldownFinta        = 1.0f;
                 break;
         }

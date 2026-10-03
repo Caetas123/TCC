@@ -29,8 +29,6 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
     [SerializeField] private float espacamentoRoster = 18f;
     [SerializeField] private int quantidadeSlotsRoster = 4;
     [SerializeField] private float alturaRodape = 105f;
-    [Tooltip("Elevação da moldura vertical quando o lado não usa BOT.")]
-    [SerializeField] private float elevacaoFundoAlternativo = 70f;
 
     [Header("Fundos pixel-art — arraste no Inspector")]
     [Tooltip("Arte do cartão vermelho, sem personagem nem texto.")]
@@ -56,6 +54,8 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
     [SerializeField] private Sprite spriteBordaP1;
     [Tooltip("Borda azul usada pelo foco/seleção do jogador 2.")]
     [SerializeField] private Sprite spriteBordaP2;
+    [Tooltip("Borda azul e vermelha usada quando os dois jogadores estão no mesmo personagem.")]
+    [SerializeField] private Sprite spriteBordaDupla;
     [Tooltip("Moldura reutilizável de cada slot bloqueado.")]
     [SerializeField] private Sprite fundoSlotBloqueado;
     [Tooltip("Ícone separado que aparece dentro dos slots bloqueados.")]
@@ -99,26 +99,34 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
     private Button botaoInfoOriginalP2;
     private BotaoInfoFocoVisual visualInfoP1;
     private BotaoInfoFocoVisual visualInfoP2;
+    private ButtonVisualPersonalizado visualVoltar;
     private Image fundoAlternativoP1;
     private Image fundoAlternativoP2;
 
-    private struct ComposicaoCartaoOriginal
+    [System.Serializable]
+    private struct ComposicaoCartao
     {
-        public bool capturada;
+        public bool configurada;
         public Vector2 posicaoRetrato;
         public Vector2 tamanhoRetrato;
         public Vector2 posicaoNome;
         public Vector2 tamanhoNome;
-        public TextAlignmentOptions alinhamentoNome;
         public Vector2 posicaoRotulo;
         public Vector2 tamanhoRotulo;
-        public TextAlignmentOptions alinhamentoRotulo;
         public Vector2 posicaoInfo;
         public Vector2 tamanhoInfo;
+        public Vector2 posicaoClique;
+        public Vector2 tamanhoClique;
     }
 
-    private ComposicaoCartaoOriginal composicaoOriginalP1;
-    private ComposicaoCartaoOriginal composicaoOriginalP2;
+    [Header("Composições salvas na cena")]
+    [SerializeField] private ComposicaoCartao composicaoBotP1;
+    [SerializeField] private ComposicaoCartao composicaoBotP2;
+    [SerializeField] private ComposicaoCartao composicaoSimplesP1;
+    [SerializeField] private ComposicaoCartao composicaoSimplesP2;
+    [SerializeField] private bool exibirBotsNoEditor;
+    private bool? modoBotP1Aplicado;
+    private bool? modoBotP2Aplicado;
     private int ladoAtivo = 1;
     private bool inicializado;
     private readonly List<Button> botoesRoster = new List<Button>();
@@ -220,6 +228,8 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
 
     public void Inicializar(TelaSelecaoPlayer origem)
     {
+        modoBotP1Aplicado = null;
+        modoBotP2Aplicado = null;
         if (inicializado && tela == origem)
         {
             // Com o Domain Reload desligado, o Unity pode reutilizar esta
@@ -246,7 +256,6 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
         tela.PrepararDropdownIAPublicamente(1);
         tela.PrepararDropdownIAPublicamente(2);
         PrepararAparenciaDosDropdowns();
-        CapturarComposicaoOriginalDosCartoes();
         AplicarFundosDosCartoesPorModo();
         AplicarTextosRodape(rodapeUsandoControle);
         AtualizarVisual();
@@ -1022,117 +1031,81 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
         AplicarFundoCartao(painelP2, 2);
     }
 
+    private bool ExibirBot(int lado)
+    {
+        return Application.isPlaying ? tela.UsaIAPublicamente(lado) : exibirBotsNoEditor;
+    }
+
     private void AplicarFundoCartao(RectTransform painel, int lado)
     {
-        if (painel == null)
+        if (painel == null || tela == null)
             return;
 
+        bool bot = ExibirBot(lado);
+        bool? aplicado = lado == 1 ? modoBotP1Aplicado : modoBotP2Aplicado;
+        if (aplicado == bot)
+            return;
+
+        // A cena guarda os dois layouts. Só escolhemos a composição ao mudar
+        // de modo; nenhuma posição é recalculada ou sobrescrita por frame.
         Image fundo = painel.GetComponent<Image>();
-        if (fundo == null)
-            return;
-
-        Sprite spriteNormal = lado == 1 ? fundoCartaoP1 : fundoCartaoP2;
-        Sprite spriteAlternativo = lado == 1
-            ? fundoCartaoP1Alternativo
-            : fundoCartaoP2Alternativo;
-        bool usarAlternativo = tela != null
-            && !tela.UsaIAPublicamente(lado)
-            && spriteAlternativo != null;
-
-        if (!usarAlternativo)
+        Image simples = painel.Find("FundoAlternativoP" + lado)?.GetComponent<Image>();
+        if (fundo != null)
         {
-            fundo.enabled = true;
-            fundo.sprite = spriteNormal;
-            fundo.color = spriteNormal != null ? Color.white : Color.clear;
-            fundo.preserveAspect = false;
-            DefinirFundoAlternativoVisivel(painel, lado, false);
-            return;
+            fundo.enabled = bot || simples == null;
+            fundo.sprite = lado == 1 ? fundoCartaoP1 : fundoCartaoP2;
+            fundo.color = Color.white;
         }
+        if (simples != null)
+            simples.enabled = !bot;
 
-        // A arte alternativa é vertical. Ela não pode ocupar o RectTransform
-        // largo do cartão antigo, senão perde a proporção e a placa de nome
-        // deixa de coincidir com o desenho do PNG.
-        fundo.sprite = spriteNormal;
-        fundo.color = new Color(1f, 1f, 1f, 0f);
-        fundo.preserveAspect = false;
+        ComposicaoCartao composicao = lado == 1
+            ? (bot ? composicaoBotP1 : composicaoSimplesP1)
+            : (bot ? composicaoBotP2 : composicaoSimplesP2);
+        AplicarComposicaoSalva(painel, lado, composicao);
+        AplicarVisibilidadeOpcoesBot(painel, lado, bot);
 
-        Image imagemAlternativa = ObterOuCriarFundoAlternativo(painel, lado);
-        imagemAlternativa.sprite = spriteAlternativo;
-        imagemAlternativa.type = Image.Type.Simple;
-        imagemAlternativa.preserveAspect = true;
-        imagemAlternativa.color = Color.white;
-        imagemAlternativa.raycastTarget = false;
-        imagemAlternativa.enabled = true;
-
-        RectTransform rect = imagemAlternativa.rectTransform;
-        rect.anchorMin = new Vector2(0.5f, 0.5f);
-        rect.anchorMax = new Vector2(0.5f, 0.5f);
-        rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.localScale = Vector3.one;
-        // Os painéis não têm a mesma altura no canvas: o P2 está abaixo do P1.
-        // Usa a diferença real entre eles, em vez de um valor fixo, para que
-        // as bordas superiores e inferiores continuem alinhadas se o layout
-        // for ajustado novamente no Inspector.
-        float compensacaoP2 = 0f;
-        if (lado == 2 && painelP1 != null && painelP2 != null)
-            compensacaoP2 = painelP1.anchoredPosition.y - painelP2.anchoredPosition.y;
-
-        float elevacao = elevacaoFundoAlternativo + compensacaoP2;
-        rect.anchoredPosition = new Vector2(0f, elevacao);
-
-        // Mantém o tamanho original do arquivo sempre que houver espaço. Em
-        // layouts menores, reduz somente o necessário para caber no cartão,
-        // preservando a relação vertical 365 x 684.
-        Vector2 tamanho = spriteAlternativo.rect.size;
-        float alturaDisponivel = Mathf.Max(1f, painel.rect.height);
-        float larguraDisponivel = Mathf.Max(1f, painel.rect.width);
-        float escala = Mathf.Min(1f, alturaDisponivel / tamanho.y,
-            larguraDisponivel / tamanho.x);
-        rect.sizeDelta = tamanho * escala;
-
-        // Os dois modais devem ter exatamente a mesma escala visual. O P2
-        // usa o tamanho já calculado do P1 para evitar qualquer diferença de
-        // importação ou arredondamento entre os PNGs.
-        if (lado == 2 && fundoAlternativoP1 != null && fundoAlternativoP1.enabled)
-            rect.sizeDelta = fundoAlternativoP1.rectTransform.sizeDelta;
-
-        rect.SetAsFirstSibling();
-
-        if (lado == 1)
-            fundoAlternativoP1 = imagemAlternativa;
-        else
-            fundoAlternativoP2 = imagemAlternativa;
+        if (lado == 1) modoBotP1Aplicado = bot;
+        else modoBotP2Aplicado = bot;
     }
 
-    private Image ObterOuCriarFundoAlternativo(RectTransform painel, int lado)
+    private void AplicarComposicaoSalva(RectTransform painel, int lado, ComposicaoCartao composicao)
     {
-        string nome = "FundoAlternativoP" + lado;
-        Transform existente = painel.Find(nome);
-        Image imagem = existente != null ? existente.GetComponent<Image>() : null;
-        if (imagem != null)
-            return imagem;
+        if (!composicao.configurada)
+            return;
 
-        GameObject objeto = new GameObject(nome, typeof(RectTransform), typeof(Image));
-        objeto.transform.SetParent(painel, false);
-        imagem = objeto.GetComponent<Image>();
-        imagem.raycastTarget = false;
-        return imagem;
+        AplicarRectSalvo(painel, "RetratoP" + lado, composicao.posicaoRetrato, composicao.tamanhoRetrato);
+        AplicarRectSalvo(painel, "NomeP" + lado, composicao.posicaoNome, composicao.tamanhoNome);
+        AplicarRectSalvo(painel, "RotuloP" + lado, composicao.posicaoRotulo, composicao.tamanhoRotulo);
+        AplicarRectSalvo(painel, "InfoIP" + lado, composicao.posicaoInfo, composicao.tamanhoInfo);
+        AplicarRectSalvo(painel, "SelecionarLadoP" + lado, composicao.posicaoClique, composicao.tamanhoClique);
     }
 
-    private void DefinirFundoAlternativoVisivel(RectTransform painel, int lado, bool visivel)
+    private void AplicarRectSalvo(Transform painel, string nome, Vector2 posicao, Vector2 tamanho)
     {
-        Image imagem = lado == 1 ? fundoAlternativoP1 : fundoAlternativoP2;
-        if (imagem == null && painel != null)
-            imagem = painel.Find("FundoAlternativoP" + lado)?.GetComponent<Image>();
-
-        if (lado == 1)
-            fundoAlternativoP1 = imagem;
-        else
-            fundoAlternativoP2 = imagem;
-
-        if (imagem != null)
-            imagem.enabled = visivel;
+        RectTransform rect = painel.Find(nome) as RectTransform;
+        if (rect != null)
+            Posicionar(rect, posicao, tamanho);
     }
+
+#if UNITY_EDITOR
+    [ContextMenu("Prévia/Cartões simples")]
+    private void MostrarPreviaSimples() { MostrarPrevia(false); }
+
+    [ContextMenu("Prévia/Cartões BOT")]
+    private void MostrarPreviaBot() { MostrarPrevia(true); }
+
+    private void MostrarPrevia(bool bot)
+    {
+        if (Application.isPlaying)
+            return;
+        exibirBotsNoEditor = bot;
+        Inicializar(GetComponent<TelaSelecaoPlayer>());
+        AtualizarVisual();
+        EditorUtility.SetDirty(this);
+        EditorSceneManager.MarkSceneDirty(gameObject.scene);
+    }
+#endif
 
     private void AtualizarTextosIdioma()
     {
@@ -1203,6 +1176,8 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
             spriteBordaP1 = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/bordas_QVer.png");
         if (spriteBordaP2 == null)
             spriteBordaP2 = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/bordas_QAz.png");
+        if (spriteBordaDupla == null)
+            spriteBordaDupla = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/bordas_QDupla.png");
 #endif
     }
 
@@ -1245,6 +1220,11 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
 
         ConfigurarBorda(bordaP1, spriteBordaP1);
         ConfigurarBorda(bordaP2, spriteBordaP2);
+        // A arte azul é a referência visual dos slots. O PNG vermelho antigo
+        // tinha um deslocamento próprio, deixando os dois focos desalinhados.
+        // Mantém a borda vermelha alinhada com a área realmente desenhada pela azul,
+        // compensando também as margens transparentes diferentes de cada PNG.
+        AjustarBordaParaReferencia(bordaP1, bordaP2);
         transformBordaP1.SetAsLastSibling();
         transformBordaP2.SetAsLastSibling();
 
@@ -1281,6 +1261,66 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
         destino.localScale = origem.localScale;
     }
 
+    private void AjustarBordaParaReferencia(Image borda, Image referencia)
+    {
+        if (borda == null || referencia == null || borda.sprite == null || referencia.sprite == null)
+            return;
+
+        RectTransform rectBorda = borda.rectTransform;
+        RectTransform rectReferencia = referencia.rectTransform;
+        CopiarRectTransform(rectReferencia, rectBorda);
+
+        Rect areaReferencia = ObterAreaVisivelBorda(referencia.sprite);
+        Rect areaBorda = ObterAreaVisivelBorda(borda.sprite);
+        if (areaReferencia.width <= 0f || areaReferencia.height <= 0f ||
+            areaBorda.width <= 0f || areaBorda.height <= 0f)
+            return;
+
+        Vector2 tamanhoReferencia = rectReferencia.sizeDelta;
+        Vector2 tamanhoAjustado = new Vector2(
+            tamanhoReferencia.x * areaReferencia.width / areaBorda.width,
+            tamanhoReferencia.y * areaReferencia.height / areaBorda.height);
+
+        Vector2 centroVisivelReferencia = new Vector2(
+            areaReferencia.x + areaReferencia.width * 0.5f,
+            areaReferencia.y + areaReferencia.height * 0.5f);
+        Vector2 centroVisivelBorda = new Vector2(
+            areaBorda.x + areaBorda.width * 0.5f,
+            areaBorda.y + areaBorda.height * 0.5f);
+
+        Vector2 deslocamento = new Vector2(
+            tamanhoReferencia.x * (centroVisivelReferencia.x - 0.5f) -
+                tamanhoAjustado.x * (centroVisivelBorda.x - 0.5f),
+            tamanhoReferencia.y * (centroVisivelReferencia.y - 0.5f) -
+                tamanhoAjustado.y * (centroVisivelBorda.y - 0.5f));
+
+        rectBorda.sizeDelta = tamanhoAjustado;
+        // A área desenhada das artes vermelha/dupla ainda fica visualmente um
+        // pouco à direita mesmo depois da compensação da transparência. O
+        // ajuste final usa a moldura azul como centro visual dos slots.
+        rectBorda.anchoredPosition = rectReferencia.anchoredPosition +
+            deslocamento + new Vector2(-8f, 0f);
+    }
+
+    private Rect ObterAreaVisivelBorda(Sprite sprite)
+    {
+        if (sprite == null)
+            return new Rect(0f, 0f, 0f, 0f);
+
+        // Áreas visíveis medidas nos três PNGs. A origem vertical é convertida
+        // para baixo-esquerda, como a RectTransform da UI do Unity.
+        if (sprite == spriteBordaP2)
+            return new Rect(3f / 187f, 4f / 194f, 183f / 187f, 186f / 194f);
+
+        if (sprite == spriteBordaP1)
+            return new Rect(5f / 200f, 4f / 196f, 189f / 200f, 189f / 196f);
+
+        if (sprite == spriteBordaDupla)
+            return new Rect(34f / 1269f, 40f / 1239f, 1195f / 1269f, 1161f / 1239f);
+
+        return new Rect(0f, 0f, 1f, 1f);
+    }
+
     private void AtualizarBordasRoster()
     {
         for (int i = 0; i < indicesBordasRoster.Count; i++)
@@ -1294,9 +1334,30 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
             bool p2 = categoriaFocoP2 == 4 &&
                 (tela.ObterIndiceSelecionadoPublicamente(2) == indice || indiceFocoP2 == indice);
 
-            AplicarVisibilidadeBorda(bordasRosterP1[i], p1);
-            AplicarVisibilidadeBorda(bordasRosterP2[i], p2);
+            bool mesmaPersonagem = p1 && p2 && spriteBordaDupla != null;
+            if (mesmaPersonagem)
+            {
+                AplicarSpriteBorda(bordasRosterP2[i], spriteBordaP2);
+                AplicarSpriteBorda(bordasRosterP1[i], spriteBordaDupla);
+                AjustarBordaParaReferencia(bordasRosterP1[i], bordasRosterP2[i]);
+                AplicarVisibilidadeBorda(bordasRosterP1[i], true);
+                AplicarVisibilidadeBorda(bordasRosterP2[i], false);
+            }
+            else
+            {
+                AplicarSpriteBorda(bordasRosterP2[i], spriteBordaP2);
+                AplicarSpriteBorda(bordasRosterP1[i], spriteBordaP1);
+                AjustarBordaParaReferencia(bordasRosterP1[i], bordasRosterP2[i]);
+                AplicarVisibilidadeBorda(bordasRosterP1[i], p1);
+                AplicarVisibilidadeBorda(bordasRosterP2[i], p2);
+            }
         }
+    }
+
+    private void AplicarSpriteBorda(Image borda, Sprite sprite)
+    {
+        if (borda != null && sprite != null)
+            borda.sprite = sprite;
     }
 
     private void AplicarVisibilidadeBorda(Image borda, bool visivel)
@@ -1361,142 +1422,6 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
         AtualizarVisual();
     }
 
-    private void CapturarComposicaoOriginalDosCartoes()
-    {
-        if (!composicaoOriginalP1.capturada)
-            composicaoOriginalP1 = CapturarComposicaoOriginal(1, imagemP1, nomeP1);
-        if (!composicaoOriginalP2.capturada)
-            composicaoOriginalP2 = CapturarComposicaoOriginal(2, imagemP2, nomeP2);
-
-        // A cena já foi salva depois dos ajustes do modo sem BOT. Portanto,
-        // não usamos esses valores salvos como referência do modo BOT: a
-        // composição abaixo é a posição original dos cartões largos.
-        AplicarPosicoesOriginaisDoModoBot(1, ref composicaoOriginalP1);
-        AplicarPosicoesOriginaisDoModoBot(2, ref composicaoOriginalP2);
-    }
-
-    private void AplicarPosicoesOriginaisDoModoBot(int lado,
-        ref ComposicaoCartaoOriginal original)
-    {
-        if (!original.capturada)
-            return;
-
-        if (lado == 1)
-        {
-            original.posicaoRetrato = new Vector2(-170f, 35f);
-            original.posicaoNome = new Vector2(-170f, -198.55188f);
-            original.tamanhoNome = new Vector2(330f, 60.688f);
-            original.posicaoRotulo = new Vector2(-302f, 265f);
-            original.tamanhoRotulo = new Vector2(120f, 48f);
-            original.posicaoInfo = new Vector2(299.55f, 288f);
-            original.tamanhoInfo = new Vector2(70.893f, 79.018f);
-        }
-        else
-        {
-            original.posicaoRetrato = new Vector2(170f, 35f);
-            original.posicaoNome = new Vector2(167.49994f, -175.79207f);
-            original.tamanhoNome = new Vector2(325f, 63.584f);
-            original.posicaoRotulo = new Vector2(298.34f, 283f);
-            original.tamanhoRotulo = new Vector2(120f, 48f);
-            original.posicaoInfo = new Vector2(-309.42f, 314.85f);
-            original.tamanhoInfo = new Vector2(71.161f, 70.304f);
-        }
-    }
-
-    private ComposicaoCartaoOriginal CapturarComposicaoOriginal(int lado,
-        Image imagem, TextMeshProUGUI nome)
-    {
-        ComposicaoCartaoOriginal original = new ComposicaoCartaoOriginal();
-        RectTransform painel = lado == 1 ? painelP1 : painelP2;
-        if (painel == null)
-            return original;
-
-        if (imagem != null)
-        {
-            original.posicaoRetrato = imagem.rectTransform.anchoredPosition;
-            original.tamanhoRetrato = imagem.rectTransform.sizeDelta;
-        }
-
-        if (nome != null)
-        {
-            original.posicaoNome = nome.rectTransform.anchoredPosition;
-            original.tamanhoNome = nome.rectTransform.sizeDelta;
-            original.alinhamentoNome = nome.alignment;
-        }
-
-        TextMeshProUGUI rotulo = painel.Find("RotuloP" + lado)?.GetComponent<TextMeshProUGUI>();
-        if (rotulo != null)
-        {
-            original.posicaoRotulo = rotulo.rectTransform.anchoredPosition;
-            original.tamanhoRotulo = rotulo.rectTransform.sizeDelta;
-            original.alinhamentoRotulo = rotulo.alignment;
-        }
-
-        Button botaoInfo = lado == 1 ? botaoInfoOriginalP1 : botaoInfoOriginalP2;
-        if (botaoInfo == null)
-            botaoInfo = painel.Find("InfoIP" + lado)?.GetComponent<Button>();
-        if (botaoInfo != null)
-        {
-            RectTransform rectInfo = botaoInfo.GetComponent<RectTransform>();
-            original.posicaoInfo = rectInfo.anchoredPosition;
-            original.tamanhoInfo = rectInfo.sizeDelta;
-        }
-
-        original.capturada = true;
-        return original;
-    }
-
-    private void RestaurarComposicaoOriginal(int lado, Image imagem,
-        TextMeshProUGUI nome)
-    {
-        ComposicaoCartaoOriginal original = lado == 1
-            ? composicaoOriginalP1
-            : composicaoOriginalP2;
-        if (!original.capturada)
-            return;
-
-        // Reaplica a referência fixa do layout BOT também quando o Unity
-        // manteve a instância viva entre execuções (Domain Reload desligado).
-        AplicarPosicoesOriginaisDoModoBot(lado, ref original);
-        if (lado == 1)
-            composicaoOriginalP1 = original;
-        else
-            composicaoOriginalP2 = original;
-
-        if (imagem != null)
-        {
-            imagem.rectTransform.anchoredPosition = original.posicaoRetrato;
-            imagem.rectTransform.sizeDelta = original.tamanhoRetrato;
-        }
-
-        if (nome != null)
-        {
-            nome.rectTransform.anchoredPosition = original.posicaoNome;
-            nome.rectTransform.sizeDelta = original.tamanhoNome;
-            nome.alignment = original.alinhamentoNome;
-        }
-
-        RectTransform painel = lado == 1 ? painelP1 : painelP2;
-        TextMeshProUGUI rotulo = painel != null
-            ? painel.Find("RotuloP" + lado)?.GetComponent<TextMeshProUGUI>()
-            : null;
-        if (rotulo != null)
-        {
-            rotulo.rectTransform.anchoredPosition = original.posicaoRotulo;
-            rotulo.rectTransform.sizeDelta = original.tamanhoRotulo;
-            rotulo.alignment = original.alinhamentoRotulo;
-        }
-
-        Button botaoInfo = lado == 1 ? botaoInfoOriginalP1 : botaoInfoOriginalP2;
-        if (botaoInfo == null && painel != null)
-            botaoInfo = painel.Find("InfoIP" + lado)?.GetComponent<Button>();
-        if (botaoInfo != null)
-        {
-            RectTransform rectInfo = botaoInfo.GetComponent<RectTransform>();
-            rectInfo.anchoredPosition = original.posicaoInfo;
-            rectInfo.sizeDelta = original.tamanhoInfo;
-        }
-    }
 
     private void AtualizarCard(int lado, Image imagem, TextMeshProUGUI nome,
         TMP_Dropdown estilo, TMP_Dropdown dificuldade)
@@ -1518,13 +1443,7 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
                 ? tela.ObterNomePersonagemPublicamente(indicePreview)
                 : tela.ObterNomeSelecionadoPublicamente(lado);
 
-        bool usaIA = tela.UsaIAPublicamente(lado);
-        if (!usaIA)
-            AjustarComposicaoDoCartaoAlternativo(lado, imagem, nome);
-        else
-            RestaurarComposicaoOriginal(lado, imagem, nome);
-
-        AplicarVisibilidadeOpcoesBot(lado == 1 ? painelP1 : painelP2, lado, usaIA);
+        bool usaIA = ExibirBot(lado);
         if (estilo != null)
         {
             estilo.interactable = usaIA;
@@ -1537,94 +1456,6 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
         }
     }
 
-    private void AjustarComposicaoDoCartaoAlternativo(int lado, Image imagem,
-        TextMeshProUGUI nome)
-    {
-        RectTransform painel = lado == 1 ? painelP1 : painelP2;
-        if (painel == null)
-            return;
-
-        Image fundoAlternativo = lado == 1 ? fundoAlternativoP1 : fundoAlternativoP2;
-        if (fundoAlternativo == null)
-            fundoAlternativo = painel.Find("FundoAlternativoP" + lado)?.GetComponent<Image>();
-        if (fundoAlternativo == null || !fundoAlternativo.enabled)
-            return;
-
-        // O retrato acompanha o centro da nova moldura vertical, em vez de
-        // permanecer deslocado para a coluna dos controles de BOT.
-        if (imagem != null)
-        {
-            Vector2 posicaoRetrato = imagem.rectTransform.anchoredPosition;
-            posicaoRetrato.x = 0f;
-            posicaoRetrato.y = fundoAlternativo.rectTransform.anchoredPosition.y - 10f;
-            imagem.rectTransform.anchoredPosition = posicaoRetrato;
-        }
-
-        if (nome == null)
-        {
-            AjustarRotuloDoJogadorParaFundoAlternativo(lado, painel, fundoAlternativo);
-            AjustarBotaoInfoParaFundoAlternativo(lado, painel, fundoAlternativo);
-            return;
-        }
-
-        RectTransform rectNome = nome.rectTransform;
-        rectNome.anchoredPosition = new Vector2(
-            0f,
-            fundoAlternativo.rectTransform.anchoredPosition.y
-                - fundoAlternativo.rectTransform.rect.height * 0.38f);
-        rectNome.sizeDelta = new Vector2(
-            Mathf.Min(330f, fundoAlternativo.rectTransform.rect.width * 0.86f),
-            rectNome.sizeDelta.y);
-        nome.alignment = TextAlignmentOptions.Center;
-
-        AjustarRotuloDoJogadorParaFundoAlternativo(lado, painel, fundoAlternativo);
-        AjustarBotaoInfoParaFundoAlternativo(lado, painel, fundoAlternativo);
-    }
-
-    private void AjustarRotuloDoJogadorParaFundoAlternativo(int lado,
-        RectTransform painel, Image fundoAlternativo)
-    {
-        if (painel == null)
-            return;
-
-        TextMeshProUGUI rotulo = painel.Find("RotuloP" + lado)?.GetComponent<TextMeshProUGUI>();
-        if (rotulo == null)
-            return;
-
-        RectTransform rectRotulo = rotulo.rectTransform;
-        rectRotulo.anchoredPosition = fundoAlternativo.rectTransform.anchoredPosition
-            + new Vector2(
-                fundoAlternativo.rectTransform.rect.width * 0.33f,
-                fundoAlternativo.rectTransform.rect.height * 0.43f);
-        rectRotulo.sizeDelta = new Vector2(120f, 56f);
-        rotulo.alignment = TextAlignmentOptions.Center;
-    }
-
-    private void AjustarBotaoInfoParaFundoAlternativo(int lado,
-        RectTransform painel, Image fundoAlternativo)
-    {
-        Button botao = lado == 1 ? botaoInfoOriginalP1 : botaoInfoOriginalP2;
-        if (botao == null && painel != null)
-            botao = painel.Find("InfoIP" + lado)?.GetComponent<Button>();
-        if (botao == null)
-            return;
-
-        RectTransform rectBotao = botao.GetComponent<RectTransform>();
-        if (rectBotao == null)
-            return;
-
-        // O botão fica no canto superior esquerdo da moldura vertical. A placa
-        // superior do PNG fica reservada ao rótulo P1/P2.
-        rectBotao.anchoredPosition = fundoAlternativo.rectTransform.anchoredPosition
-            + new Vector2(
-                -fundoAlternativo.rectTransform.rect.width * 0.34f,
-                fundoAlternativo.rectTransform.rect.height * 0.43f);
-
-        float tamanho = Mathf.Min(rectBotao.sizeDelta.x, rectBotao.sizeDelta.y);
-        if (tamanho <= 0f)
-            tamanho = 76f;
-        rectBotao.sizeDelta = new Vector2(tamanho, tamanho);
-    }
 
     private void AplicarVisibilidadeOpcoesBot(RectTransform painel, int lado, bool visivel)
     {
@@ -1678,7 +1509,7 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
 
     private void Update()
     {
-        if (!inicializado)
+        if (!inicializado || !Application.isPlaying)
             return;
 
         AtualizarVisual();
@@ -2091,15 +1922,36 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
             imagem.color = Color.white;
         }
 
-        SpriteState estado = botao.spriteState;
-        Sprite foco = spriteVoltarSelecionado != null ? spriteVoltarSelecionado : tela.spriteFocoVoltar;
-        estado.highlightedSprite = foco;
-        estado.pressedSprite = foco;
-        estado.selectedSprite = foco;
-        botao.spriteState = estado;
-        botao.transition = Selectable.Transition.SpriteSwap;
+        Sprite normal = spriteVoltarNormalizado != null
+            ? spriteVoltarNormalizado
+            : imagem != null ? imagem.sprite : null;
+        Sprite foco = spriteVoltarSelecionado != null
+            ? spriteVoltarSelecionado
+            : tela.spriteFocoVoltar;
+
+        visualVoltar = botao.GetComponent<ButtonVisualPersonalizado>();
+        if (visualVoltar == null)
+            visualVoltar = botao.gameObject.AddComponent<ButtonVisualPersonalizado>();
+
+        // O componente usa eventos de foco/hover/clique. Assim o estado
+        // selecionado não fica gravado no botão quando o foco muda.
+        visualVoltar.ConfigurarSprites(normal, foco, foco);
+        visualVoltar.DefinirFocoExterno(false);
         // Não reposicionar aqui: esta é a etapa de rebind dos eventos. A posição
         // editada manualmente no Scene/Inspector deve permanecer intacta.
+    }
+
+    public void DefinirFocoVoltar(bool focado)
+    {
+        if (visualVoltar == null && layoutRoot != null)
+        {
+            Button botao = layoutRoot.Find("BotaoVoltarSelecao")?.GetComponent<Button>();
+            if (botao != null)
+                ConfigurarVisualVoltar(botao);
+        }
+
+        if (visualVoltar != null)
+            visualVoltar.DefinirFocoExterno(focado);
     }
 
     private Button CriarAreaClique(string nome, Transform pai)

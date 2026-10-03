@@ -75,7 +75,7 @@ MonoBehaviour:
   framesIdle:
   - {fileID: -3943748194325502948, guid: a2c48164b293adb408c484f447c41c92, type: 3}
   - {fileID: 4430578856213414250, guid: 6b9a39fbeb2c4eb4dbc1309f471f0155, type: 3}
-  fpsIdle: 2.5
+  fpsIdle: 1.666667
   framesIdleFogo:
   - {fileID: -3943748194325502948, guid: 4ffc43acf16cb08469563a8e4bc80420, type: 3}
   - {fileID: 4430578856213414250, guid: ba68dd00d76c9f146bf87685a59b1bd4, type: 3}

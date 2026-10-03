@@ -724,14 +724,24 @@ public class PainelInfoPersonagem : MonoBehaviour
         if (rotulosGraficoAtributos == null || rotulosGraficoAtributos.Length < 4)
             return;
 
+        // O gráfico representa a ação que está sendo visualizada. Antes ele
+        // usava sempre o dano/alcance do ataque básico, mesmo quando o botão
+        // Especial ou Ultimate estava selecionado.
+        bool defesaSelecionada = acaoAtual == AcaoInfo.Defesa;
         string[] chaves =
         {
-            "CHAR_STAT_FORCE",
+            defesaSelecionada ? "CHAR_BLOCK" : "CHAR_DAMAGE",
             "CHAR_SPEED",
             "CHAR_RANGE",
-            "CHAR_STAT_ENERGY"
+            "CHAR_COST"
         };
-        string[] padroes = { "Força", "Velocidade", "Alcance", "Energia" };
+        string[] padroes =
+        {
+            defesaSelecionada ? "Bloqueio" : "Dano",
+            "Velocidade",
+            "Alcance",
+            "Custo"
+        };
         for (int i = 0; i < rotulosGraficoAtributos.Length; i++)
         {
             if (rotulosGraficoAtributos[i] != null)
@@ -744,12 +754,29 @@ public class PainelInfoPersonagem : MonoBehaviour
         if (dadosAtuais == null || segmentosGraficoAtributos == null)
             return;
 
+        float valorPrincipal = ObterDanoGrafico();
+        float maiorDano = Mathf.Max(1f, Mathf.Max(
+            dadosAtuais.danoAtaque,
+            Mathf.Max(dadosAtuais.danoEspecial, dadosAtuais.danoUltimate)));
+        float maiorValorPrincipal = acaoAtual == AcaoInfo.Defesa ? 1f : maiorDano;
+        float velocidadeAcao = ObterVelocidadeGrafico();
+        float maiorVelocidade = Mathf.Max(1f, Mathf.Max(
+            dadosAtuais.fpsAttack,
+            Mathf.Max(dadosAtuais.fpsSpecial,
+                Mathf.Max(dadosAtuais.fpsUltimate, dadosAtuais.fpsDefend))));
+        float alcanceAcao = ObterAlcanceGrafico();
+        float maiorAlcance = Mathf.Max(1f, Mathf.Max(
+            dadosAtuais.alcanceAtaque,
+            Mathf.Max(dadosAtuais.alcanceEspecial, dadosAtuais.alcanceUltimate)));
+        float custoAcao = ObterCustoGrafico();
+        float energiaMaxima = Mathf.Max(1f, dadosAtuais.energiaMax);
+
         float[] valores =
         {
-            Mathf.Clamp01(dadosAtuais.danoAtaque / 20f),
-            Mathf.Clamp01(dadosAtuais.velocidade / 12f),
-            Mathf.Clamp01(dadosAtuais.alcanceAtaque / 4f),
-            Mathf.Clamp01(dadosAtuais.velocidadeRecargaEnergia / 15f)
+            Mathf.Clamp01(valorPrincipal / maiorValorPrincipal),
+            Mathf.Clamp01(velocidadeAcao / maiorVelocidade),
+            Mathf.Clamp01(alcanceAcao / maiorAlcance),
+            Mathf.Clamp01(custoAcao / energiaMaxima)
         };
         Color[] cores =
         {
@@ -770,6 +797,91 @@ public class PainelInfoPersonagem : MonoBehaviour
                 if (imagem != null)
                     imagem.color = segmento < preenchidos ? cores[linha] : corVazia;
             }
+        }
+
+        AtualizarRotulosGraficoAtributos();
+    }
+
+    float ObterDanoGrafico()
+    {
+        switch (acaoAtual)
+        {
+            case AcaoInfo.Especial:
+                // Cada rachadura usa o multiplicador configurado para ela;
+                // assim o gráfico não subestima o especial da Jamanta.
+                return dadosAtuais.danoEspecial *
+                    (dadosAtuais.spriteRachadura != null
+                        ? Mathf.Max(1f, dadosAtuais.multiplicadorDanoRachadura)
+                        : 1f);
+            case AcaoInfo.Ultimate:
+                return dadosAtuais.danoUltimate;
+            case AcaoInfo.Defesa:
+                // Defesa não causa dano: o primeiro indicador passa a mostrar
+                // a porcentagem de bloqueio configurada para ela.
+                return dadosAtuais.porcentagemBloqueioDefesa;
+            default:
+                return dadosAtuais.danoAtaque;
+        }
+    }
+
+    float ObterVelocidadeGrafico()
+    {
+        switch (acaoAtual)
+        {
+            case AcaoInfo.Especial:
+                return dadosAtuais.especialAlternavelComQueimadura
+                    ? dadosAtuais.fpsIdle
+                    : dadosAtuais.fpsSpecial;
+            case AcaoInfo.Ultimate:
+                return dadosAtuais.fpsUltimate;
+            case AcaoInfo.Defesa:
+                return dadosAtuais.fpsDefend;
+            default:
+                return dadosAtuais.fpsAttack;
+        }
+    }
+
+    float ObterAlcanceGrafico()
+    {
+        switch (acaoAtual)
+        {
+            case AcaoInfo.Especial:
+                return dadosAtuais.alcanceEspecial;
+            case AcaoInfo.Ultimate:
+                return dadosAtuais.alcanceUltimate;
+            case AcaoInfo.Defesa:
+                return 0f;
+            default:
+                return dadosAtuais.alcanceAtaque;
+        }
+    }
+
+    float ObterCustoGrafico()
+    {
+        switch (acaoAtual)
+        {
+            case AcaoInfo.Especial:
+                if (dadosAtuais.especialAlternavelComQueimadura)
+                    return dadosAtuais.energiaMax *
+                        Mathf.Max(0f, dadosAtuais.custoAtivarEspecialAlternavel) / 100f;
+
+                switch (dadosAtuais.tipoGastoEspecial)
+                {
+                    case TipoGastoEspecial.BarraCheia:
+                    case TipoGastoEspecial.ZeraTudo:
+                        return dadosAtuais.energiaMax;
+                    default:
+                        return dadosAtuais.custoEspecial;
+                }
+            case AcaoInfo.Ultimate:
+                return dadosAtuais.tipoUsoUltimate == TipoUsoUltimate.BarraCheia
+                    ? dadosAtuais.energiaMax
+                    : dadosAtuais.custoUltimate;
+            case AcaoInfo.Defesa:
+                return dadosAtuais.custoDefesa;
+            default:
+                // Ataques básicos não consomem energia.
+                return 0f;
         }
     }
 
@@ -1417,7 +1529,6 @@ public class PainelInfoPersonagem : MonoBehaviour
     {
         string nomeAcao;
         string textoAcao;
-        string detalhesAcao;
 
         switch (acaoAtual)
         {
@@ -1428,11 +1539,6 @@ public class PainelInfoPersonagem : MonoBehaviour
                     : dadosAtuais.spriteRachadura != null
                         ? Traduzir("CHAR_CRACK_DESC", "Controle de área: salto + rachadura no chão.")
                         : Traduzir("CHAR_SPECIAL_DESC", "Habilidade especial com efeito único.");
-                detalhesAcao =
-                    Traduzir("CHAR_DAMAGE", "Dano") + ": " + dadosAtuais.danoEspecial + "     " +
-                    Traduzir("CHAR_RANGE", "Alcance") + ": " + Numero(dadosAtuais.alcanceEspecial) + "\n" +
-                    Traduzir("CHAR_COST", "Custo") + ": " + Numero(dadosAtuais.custoEspecial) + "     " +
-                    Traduzir("CHAR_SPEND", "Gasto") + ": " + TraduzirGastoEspecial(dadosAtuais.tipoGastoEspecial);
                 break;
 
             case AcaoInfo.Ultimate:
@@ -1442,32 +1548,20 @@ public class PainelInfoPersonagem : MonoBehaviour
                     : dadosAtuais.spriteRaioUltimate != null
                         ? Traduzir("CHAR_RAY_DESC", "Raio concentrado com impacto e recuo.")
                         : Traduzir("CHAR_ULTIMATE_DESC", "Golpe máximo para virar a luta.");
-                detalhesAcao =
-                    Traduzir("CHAR_DAMAGE", "Dano") + ": " + dadosAtuais.danoUltimate + "     " +
-                    Traduzir("CHAR_RANGE", "Alcance") + ": " + Numero(dadosAtuais.alcanceUltimate) + "\n" +
-                    Traduzir("CHAR_COST", "Custo") + ": " + Numero(dadosAtuais.custoUltimate) + "     " +
-                    Traduzir("CHAR_USAGE", "Uso") + ": " + TraduzirUsoUltimate(dadosAtuais.tipoUsoUltimate);
                 break;
 
             case AcaoInfo.Defesa:
                 nomeAcao = Traduzir("CHAR_DEFENSE", "DEFESA");
                 textoAcao = Traduzir("CHAR_DEFENSE_DESC", "Reduz o dano recebido enquanto estiver ativa.");
-                detalhesAcao =
-                    Traduzir("CHAR_BLOCK", "Bloqueio") + ": " + Mathf.RoundToInt(dadosAtuais.porcentagemBloqueioDefesa * 100f) + "%     " +
-                    Traduzir("CHAR_COST", "Custo") + ": " + Numero(dadosAtuais.custoDefesa);
                 break;
 
             default:
                 nomeAcao = Traduzir("CHAR_ATTACK", "ATAQUE");
                 textoAcao = Traduzir("CHAR_MELEE_DESC", "Golpe direto de curta distância.");
-                detalhesAcao =
-                    Traduzir("CHAR_DAMAGE", "Dano") + ": " + dadosAtuais.danoAtaque + "     " +
-                    Traduzir("CHAR_RANGE", "Alcance") + ": " + Numero(dadosAtuais.alcanceAtaque) + "\n" +
-                    Traduzir("CHAR_COST", "Custo") + ": " + Numero(dadosAtuais.custoAtaque);
                 break;
         }
 
-        descricao.text = nomeAcao + "\n\n" + textoAcao + "\n\n" + detalhesAcao;
+        descricao.text = nomeAcao + "\n\n" + textoAcao;
         AtualizarGraficoAtributos();
     }
 

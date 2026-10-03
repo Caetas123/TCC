@@ -34,6 +34,7 @@ using UnityEngine.UI;
 public class ButtonVisualPersonalizado :
     MonoBehaviour,
     IPointerEnterHandler,
+    IPointerExitHandler,
     IPointerClickHandler,
     ISelectHandler,
     IDeselectHandler,
@@ -58,6 +59,9 @@ public class ButtonVisualPersonalizado :
     private Image imagem;
     private Button botao;
     private Coroutine flashEmAndamento;
+    private bool focoExterno;
+    private bool apontado;
+    private bool selecionadoPeloEventSystem;
 
 
     // =========================================================
@@ -82,6 +86,38 @@ public class ButtonVisualPersonalizado :
         AtualizarVisual();
     }
 
+    /// <summary>
+    /// Configura o componente quando ele é anexado por uma tela que monta a
+    /// interface a partir dos objetos já salvos na cena.
+    /// </summary>
+    public void ConfigurarSprites(Sprite normal, Sprite destacado, Sprite clicado)
+    {
+        if (imagem == null)
+            imagem = GetComponent<Image>();
+        if (botao == null)
+            botao = GetComponent<Button>();
+
+        if (imagem == null || botao == null)
+            return;
+
+        normalSprite = normal != null ? normal : imagem.sprite;
+        highlightedSprite = destacado != null ? destacado : normalSprite;
+        selectedSprite = clicado != null ? clicado : highlightedSprite;
+        botao.targetGraphic = imagem;
+        botao.transition = Selectable.Transition.None;
+        AtualizarVisual();
+    }
+
+    /// <summary>
+    /// Permite que uma navegação própria, que não usa a seleção global do
+    /// EventSystem, informe o foco visual sem deixar o sprite preso.
+    /// </summary>
+    public void DefinirFocoExterno(bool focado)
+    {
+        focoExterno = focado;
+        AtualizarVisual();
+    }
+
 
     private void OnDisable()
     {
@@ -102,10 +138,28 @@ public class ButtonVisualPersonalizado :
         if (!PodeInteragir())
             return;
 
+        apontado = true;
+
         // O mouse só pede a seleção REAL — quem pinta é o OnSelect/OnDeselect,
         // igual ao teclado e ao controle. Nada de variável própria pro mouse.
         if (EventSystem.current != null)
             EventSystem.current.SetSelectedGameObject(gameObject);
+
+        AtualizarVisual();
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        apontado = false;
+
+        // O foco visual do mouse termina ao sair do botão. Sem limpar a
+        // seleção global, o SpriteSwap ficaria parecendo "preso" no estado
+        // selecionado até outro controle receber foco.
+        if (EventSystem.current != null &&
+            EventSystem.current.currentSelectedGameObject == gameObject)
+            EventSystem.current.SetSelectedGameObject(null);
+
+        AtualizarVisual();
     }
 
 
@@ -125,6 +179,8 @@ public class ButtonVisualPersonalizado :
 
     public void OnSelect(BaseEventData eventData)
     {
+        selecionadoPeloEventSystem = true;
+
         // A Unity garante que isto só dispara DEPOIS do OnDeselect do botão
         // anterior — nunca dois botões em Highlight ao mesmo tempo.
         // Se tiver um flash de Selected rolando, ele continua — só não
@@ -136,6 +192,8 @@ public class ButtonVisualPersonalizado :
 
     public void OnDeselect(BaseEventData eventData)
     {
+        selecionadoPeloEventSystem = false;
+
         // Some o Highlight. Se tiver um flash de Selected rolando, deixa ele
         // terminar sozinho — ele mesmo repinta pro estado certo no final.
         if (flashEmAndamento == null)
@@ -225,8 +283,7 @@ public class ButtonVisualPersonalizado :
         if (flashEmAndamento != null)
             return;
 
-        bool destacado = EventSystem.current != null
-            && EventSystem.current.currentSelectedGameObject == gameObject;
+        bool destacado = focoExterno || apontado || selecionadoPeloEventSystem;
 
         imagem.sprite = destacado
             ? (highlightedSprite != null ? highlightedSprite : normalSprite)

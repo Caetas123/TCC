@@ -129,13 +129,13 @@ TextureImporter:
       name: fundoP2_alternativo_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 365
-        height: 684
+        x: 17
+        y: 25
+        width: 356
+        height: 605
       alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 15, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
@@ -151,7 +151,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: a3f547b101d6cd74dbd5e8502d8814c8
     internalID: 0
     vertices: []
     indices: 
