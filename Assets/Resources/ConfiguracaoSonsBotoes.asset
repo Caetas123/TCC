@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df803446a01e4f899622b4d81528c102, type: 3}
+  m_Name: ConfiguracaoSonsBotoes
+  m_EditorClassIdentifier:
+  somSelecionar: {fileID: 8300000, guid: eea37d505896e374ebbcf307d385010b, type: 3}
+  somClicar: {fileID: 8300000, guid: 2659818b6c87ce545b78d5128a1faf98, type: 3}
+  volumeSelecionar: 0.6
+  volumeClicar: 0.8

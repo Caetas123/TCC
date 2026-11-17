@@ -840,11 +840,6 @@ public class TelaSelecaoArena : MonoBehaviour
         else SetDestaqueArena2(corDestaqueInvisivel);
     }
 
-    void RestaurarAleatorio()
-    {
-        SetDestaqueAleatorio(corDestaqueInvisivel);
-    }
-
     void ResetarDestaquesArena()
     {
         SetDestaqueArena1(corDestaqueInvisivel);
@@ -1071,31 +1066,6 @@ public class TelaSelecaoArena : MonoBehaviour
         }
 
         return false;
-    }
-
-    void RestaurarCorBotao(Button botao, int grupo, int indice)
-    {
-        if (botao == null) return;
-
-        if (EstaSelecionado(grupo, indice))
-        {
-            DefinirCorBotao(botao, corSelecionado);
-            return;
-        }
-
-        if (grupo == 1)
-        {
-            if (indice == 0) DefinirCorBotao(botao, corOriginalRound1);
-            if (indice == 1) DefinirCorBotao(botao, corOriginalRound3);
-            if (indice == 2) DefinirCorBotao(botao, corOriginalRound5);
-        }
-        else if (grupo == 2)
-        {
-            if (indice == 0) DefinirCorBotao(botao, corOriginalTempo30);
-            if (indice == 1) DefinirCorBotao(botao, corOriginalTempo60);
-            if (indice == 2) DefinirCorBotao(botao, corOriginalTempo90);
-            if (indice == 3) DefinirCorBotao(botao, corOriginalTempoInfinito);
-        }
     }
 
     public void TentarIniciarLuta()

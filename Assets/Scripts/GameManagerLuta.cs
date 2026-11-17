@@ -108,6 +108,10 @@ public class GameManagerLuta : MonoBehaviour
     private Vector3 posInicialP2;
 
     private Coroutine rotinaControles;
+    [SerializeField, Min(0.5f)]
+    [Tooltip("Intervalo entre os retratos dos dois personagens quando a partida termina empatada.")]
+    private float intervaloRetratosEmpate = 1.25f;
+    private Coroutine rotinaRetratosEmpate;
     private Image imagemBalaoVencedor;
     private TextMeshProUGUI textoBalaoVencedor;
 
@@ -269,6 +273,11 @@ public class GameManagerLuta : MonoBehaviour
 
             player2.ResetarParaNovoRound();
         }
+
+        // Objetos arremessáveis são consumidos por round, nas duas arenas.
+        // O reinício completo já recria a cena; aqui garantimos o reset na
+        // transição normal entre rounds.
+        ObjetoInterativoLuta.ResetarObjetosDaRodada();
 
         tempoAtual = tempoSelecionado;
         roundEmAndamento = true;
@@ -617,10 +626,10 @@ public class GameManagerLuta : MonoBehaviour
     {
         switch (tecla)
         {
-            case "LeftArrow": return "←";
-            case "RightArrow": return "→";
-            case "UpArrow": return "↑";
-            case "DownArrow": return "↓";
+            case "LeftArrow": return "<";
+            case "RightArrow": return ">";
+            case "UpArrow": return "^";
+            case "DownArrow": return "v";
             case "Semicolon": return ";";
             default: return tecla;
         }
@@ -722,6 +731,12 @@ public class GameManagerLuta : MonoBehaviour
 
     void MostrarPainelFim(LutadorController2D vencedor)
     {
+        if (rotinaRetratosEmpate != null)
+        {
+            StopCoroutine(rotinaRetratosEmpate);
+            rotinaRetratosEmpate = null;
+        }
+
         // Esconde os personagens para não aparecerem atrás do painel
         if (player1 != null)
         {
@@ -737,12 +752,13 @@ public class GameManagerLuta : MonoBehaviour
         if (painelFim != null)
             painelFim.SetActive(true);
 
-        DesativarFundoPainelVencedor();
+        ConfigurarMolduraPainelVencedor();
 
         var lm = LanguageManager.Instance;
 
         // Texto 1 — palavra "VITÓRIA" / "VICTORY" (ou "EMPATE" / "DRAW")
         bool ehEmpate = vencedor == null;
+        DefinirImagemEmpate(painelFim, ehEmpate);
         string tituloPainel = ehEmpate
             ? (lm != null ? lm.GetText("FIM_EMPATE") : "Empate!")
             : (lm != null ? lm.GetText("FIM_VITORIA") : "VITÓRIA");
@@ -757,8 +773,7 @@ public class GameManagerLuta : MonoBehaviour
         {
             if (ehEmpate)
             {
-                textoNomeVencedor.text = "";
-                textoNomeVencedor.gameObject.SetActive(false);
+                AtualizarNomePersonagemEmpate(player1);
             }
             else
             {
@@ -771,46 +786,14 @@ public class GameManagerLuta : MonoBehaviour
             }
         }
 
-        // Corpo completo do vencedor
-        if (imagemRostoVencedor != null)
-        {
-            Sprite corpo = vencedor != null && vencedor.dadosPersonagem != null
-                ? vencedor.dadosPersonagem.spriteCorpo
-                : null;
+        // No empate, começa mostrando o P1. A rotina alterna para o P2 logo em
+        // seguida, sem deixar o painel parado por muito tempo.
+        DefinirRetratoFim(ehEmpate ? player1 : vencedor);
 
-            if (corpo == null && vencedor != null && vencedor.dadosPersonagem != null &&
-                vencedor.dadosPersonagem.framesIdle != null && vencedor.dadosPersonagem.framesIdle.Length > 0)
-                corpo = vencedor.dadosPersonagem.framesIdle[0];
+        ConfigurarBalaoVencedor(ehEmpate ? player1 : vencedor, ehEmpate);
 
-            if (corpo != null)
-            {
-                Vector2 tamanhoCorpo = ObterTamanhoCorpoNoPainel(vencedor, corpo);
-                imagemRostoVencedor.sprite = corpo;
-                // A proporção vem do mesmo sprite e da mesma escala usada no
-                // lutador da arena. O tamanho antigo 360x420 esticava o PNG.
-                imagemRostoVencedor.preserveAspect = false;
-                imagemRostoVencedor.rectTransform.anchoredPosition = new Vector2(-100f, 10f);
-                imagemRostoVencedor.rectTransform.sizeDelta = tamanhoCorpo;
-                imagemRostoVencedor.gameObject.SetActive(true);
-
-                // Blindagem: essa imagem é só visual, nunca deveria interceptar
-                // clique/navegação. Se em algum momento um componente Selectable
-                // (Button, Toggle etc.) tiver sido adicionado nela sem querer no
-                // Inspector, desliga aqui — é exatamente esse tipo de coisa que
-                // rouba a seleção do teclado sem o mouse nunca ter tocado em nada.
-                Selectable selecionavelNaImagem = imagemRostoVencedor.GetComponent<Selectable>();
-                if (selecionavelNaImagem != null)
-                    selecionavelNaImagem.interactable = false;
-
-                imagemRostoVencedor.raycastTarget = false;
-            }
-            else
-            {
-                imagemRostoVencedor.gameObject.SetActive(false);
-            }
-        }
-
-        ConfigurarBalaoVencedor(vencedor);
+        if (ehEmpate && player1 != null && player2 != null)
+            rotinaRetratosEmpate = StartCoroutine(AlternarRetratosEmpate());
 
         // Seleciona de verdade o primeiro botão real do painel pro teclado/controle
         // funcionar assim que a tela aparece — sem isso, nada está selecionado no
@@ -847,18 +830,35 @@ public class GameManagerLuta : MonoBehaviour
             corpo.rect.height / corpo.pixelsPerUnit * Mathf.Abs(escala.y) * pixelsPorUnidadeDeMundo);
     }
 
-    private void DesativarFundoPainelVencedor()
+    private void ConfigurarMolduraPainelVencedor()
     {
         if (painelFim == null)
             return;
 
         Transform jogador = painelFim.transform.Find("jogador");
-        Image fundo = jogador != null ? jogador.GetComponent<Image>() : null;
-        if (fundo != null)
-            fundo.enabled = false;
+        if (jogador == null)
+            return;
+
+        // O Image no próprio objeto "jogador" é o fundo legado. A moldura nova
+        // fica como filha desse container e deve continuar visível.
+        Image fundoLegado = jogador.GetComponent<Image>();
+        if (fundoLegado != null)
+            fundoLegado.enabled = false;
+
+        Image[] imagensDaMoldura = jogador.GetComponentsInChildren<Image>(true);
+        for (int i = 0; i < imagensDaMoldura.Length; i++)
+        {
+            Image imagem = imagensDaMoldura[i];
+            if (imagem == null || imagem == fundoLegado || imagem == imagemRostoVencedor)
+                continue;
+
+            imagem.enabled = true;
+            imagem.raycastTarget = false;
+            imagem.transform.SetAsFirstSibling();
+        }
     }
 
-    private void ConfigurarBalaoVencedor(LutadorController2D vencedor)
+    private void ConfigurarBalaoVencedor(LutadorController2D personagem, bool empate)
     {
         if (painelFim == null || spriteBalaoVencedor == null)
             return;
@@ -879,7 +879,9 @@ public class GameManagerLuta : MonoBehaviour
         rect.anchorMin = new Vector2(0.5f, 0.5f);
         rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.pivot = new Vector2(0.5f, 0.5f);
-        rect.anchoredPosition = new Vector2(215f, 155f);
+        // Mantém o balão ao lado do personagem, sem cobrir o rosto nem o
+        // centro da moldura. A posição é compartilhada pelas duas cenas.
+        rect.anchoredPosition = new Vector2(250f, 155f);
         rect.sizeDelta = new Vector2(350f, 180f);
 
         imagemBalaoVencedor.sprite = spriteBalaoVencedor;
@@ -914,8 +916,93 @@ public class GameManagerLuta : MonoBehaviour
         textoBalaoVencedor.overflowMode = TextOverflowModes.Overflow;
         textoBalaoVencedor.color = new Color(0.08f, 0.08f, 0.12f, 1f);
         textoBalaoVencedor.raycastTarget = false;
-        textoBalaoVencedor.text = ObterFraseVencedor(vencedor);
+        textoBalaoVencedor.text = empate
+            ? ObterFraseEmpate(personagem)
+            : ObterFraseVencedor(personagem);
         existente.SetAsLastSibling();
+    }
+
+    private void DefinirImagemEmpate(GameObject painel, bool empate)
+    {
+        if (painel == null)
+            return;
+
+        LocalizedImage[] imagens = painel.GetComponentsInChildren<LocalizedImage>(true);
+        for (int i = 0; i < imagens.Length; i++)
+            imagens[i].DefinirEmpate(empate);
+    }
+
+    private void DefinirRetratoFim(LutadorController2D personagem)
+    {
+        if (imagemRostoVencedor == null)
+            return;
+
+        Sprite corpo = personagem != null && personagem.dadosPersonagem != null
+            ? personagem.dadosPersonagem.spriteCorpo
+            : null;
+
+        if (corpo == null && personagem != null && personagem.dadosPersonagem != null &&
+            personagem.dadosPersonagem.framesIdle != null && personagem.dadosPersonagem.framesIdle.Length > 0)
+            corpo = personagem.dadosPersonagem.framesIdle[0];
+
+        if (corpo == null)
+        {
+            imagemRostoVencedor.gameObject.SetActive(false);
+            return;
+        }
+
+        imagemRostoVencedor.sprite = corpo;
+        imagemRostoVencedor.preserveAspect = false;
+        imagemRostoVencedor.rectTransform.anchoredPosition = new Vector2(0f, 10f);
+        imagemRostoVencedor.rectTransform.sizeDelta = ObterTamanhoCorpoNoPainel(personagem, corpo);
+        imagemRostoVencedor.gameObject.SetActive(true);
+        imagemRostoVencedor.transform.SetAsLastSibling();
+
+        Selectable selecionavelNaImagem = imagemRostoVencedor.GetComponent<Selectable>();
+        if (selecionavelNaImagem != null)
+            selecionavelNaImagem.interactable = false;
+
+        imagemRostoVencedor.raycastTarget = false;
+    }
+
+    private void AtualizarNomePersonagemEmpate(LutadorController2D personagem)
+    {
+        if (textoNomeVencedor == null)
+            return;
+
+        if (personagem == null)
+        {
+            textoNomeVencedor.text = "";
+            textoNomeVencedor.gameObject.SetActive(false);
+            return;
+        }
+
+        string lado = personagem == player1 ? "P1" : "P2";
+        string nome = personagem.dadosPersonagem != null
+            ? personagem.dadosPersonagem.nomePersonagem
+            : lado;
+        textoNomeVencedor.text = nome + " - " + lado;
+        textoNomeVencedor.gameObject.SetActive(true);
+    }
+
+    private IEnumerator AlternarRetratosEmpate()
+    {
+        bool mostrarP1 = true;
+        float intervalo = Mathf.Max(0.5f, intervaloRetratosEmpate);
+
+        while (lutaTerminou && painelFim != null && painelFim.activeInHierarchy)
+        {
+            yield return new WaitForSecondsRealtime(intervalo);
+            mostrarP1 = !mostrarP1;
+
+            LutadorController2D personagem = mostrarP1 ? player1 : player2;
+            DefinirRetratoFim(personagem);
+            AtualizarNomePersonagemEmpate(personagem);
+            if (textoBalaoVencedor != null)
+                textoBalaoVencedor.text = ObterFraseEmpate(personagem);
+        }
+
+        rotinaRetratosEmpate = null;
     }
 
     private string ObterFraseVencedor(LutadorController2D vencedor)
@@ -939,6 +1026,34 @@ public class GameManagerLuta : MonoBehaviour
         return portugues
             ? "Aprender abre novas possibilidades."
             : "Learning opens new possibilities.";
+    }
+
+    private string ObterFraseEmpate(LutadorController2D personagem)
+    {
+        bool portugues = LanguageManager.Instance == null ||
+            LanguageManager.Instance.CurrentLanguage == LanguageManager.Language.Portuguese;
+        string nome = personagem != null && personagem.dadosPersonagem != null
+            ? personagem.dadosPersonagem.nomePersonagem
+            : string.Empty;
+
+        if (nome.IndexOf("Jamanta", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            return portugues
+                ? "Ninguém venceu. Ainda dá para aprender com essa luta."
+                : "No one won. There is still more to learn from this fight.";
+
+        if (nome.IndexOf("Diego", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            return portugues
+                ? "Foi igual para os dois. Vamos decidir na próxima!"
+                : "We were evenly matched. Let's settle it next time!";
+
+        if (nome.IndexOf("Renata", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            return portugues
+                ? "Empatamos! Na próxima, eu vou com tudo."
+                : "It's a draw! Next time, I'll give it my all.";
+
+        return portugues
+            ? "Ficou tudo igual. Quem sabe na próxima?"
+            : "It's a tie. Maybe next time?";
     }
 
     IEnumerator SelecionarBotaoNoProximoFrame(GameObject botao)
@@ -973,6 +1088,7 @@ public class GameManagerLuta : MonoBehaviour
         // Texto 2 — "Nome - P1" ou "Nome - P2"
         if (textoRoundWinNome != null)
         {
+            textoRoundWinNome.fontSize = 64f;
             if (string.IsNullOrEmpty(nomeVencedor) || vencedorObj == null)
             {
                 textoRoundWinNome.text = "";
@@ -991,6 +1107,7 @@ public class GameManagerLuta : MonoBehaviour
             textoRoundWin.text = titulo;
 
         painelRoundWin.SetActive(true);
+        DefinirImagemEmpate(painelRoundWin, string.IsNullOrEmpty(nomeVencedor));
     }
 
     IEnumerator ProximoRoundDepois(float tempoEspera)

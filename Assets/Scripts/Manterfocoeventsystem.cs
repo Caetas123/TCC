@@ -44,10 +44,9 @@ public class ManterFocoEventSystem : MonoBehaviour
     {
         if (EventSystem.current == null) return;
 
-        // A tela refatorada possui rotas independentes para P1 e P2. A
-        // navegação global deste componente faria W/S e setas atravessarem os
-        // controles do outro jogador.
-        if (FindObjectOfType<SelecaoPlayerNavigation>(true) != null)
+        // A seleção desativa a navegação global enquanto controla P1/P2.
+        // Respeita esse estado sem procurar componentes na cena a cada frame.
+        if (!EventSystem.current.sendNavigationEvents)
             return;
 
         // Detecta se o usuário está usando o teclado para navegar

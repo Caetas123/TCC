@@ -1,0 +1,165 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b4522f535474254fbb5f3f171156e92, type: 3}
+  m_Name: Renata
+  m_EditorClassIdentifier: 
+  nomePersonagem: Renata
+  spriteCorpo: {fileID: 1964440940772309354, guid: bdcd2c1940dc49e9bb5b2f2fa7409b8d, type: 3}
+  spriteRosto: {fileID: 3168750426430394534, guid: 8a441070b40b49f39e8d7cf1c4b816c9, type: 3}
+  vidaMax: 100
+  energiaMax: 100
+  velocidade: 9
+  forcaPulo: 12
+  danoAtaque: 10
+  alcanceAtaque: 2.5
+  custoAtaque: 5
+  alcanceAtaqueFollowThrough: 1.2
+  danoEspecial: 25
+  alcanceEspecial: 5.5
+  tipoGastoEspecial: 2
+  custoEspecial: 25
+  usaProjetilTintaEspecial: 1
+  spriteProjetilTinta: {fileID: 0}
+  velocidadeProjetilTinta: 7.5
+  impulsoVerticalProjetilTinta: 1.2
+  gravidadeProjetilTinta: 0.7
+  frameDisparoProjetilTinta: 5
+  spriteRachadura: {fileID: 0}
+  multiplicadorAlturaSaltoRachadura: 3
+  raioRachadura: 1.5
+  quantidadeRachaduras: 3
+  intervaloRachaduras: 0.5
+  multiplicadorDanoRachadura: 1.5
+  duracaoHitboxRachadura: 0.2
+  danoUltimate: 50
+  quantidadePulsosRaioUltimate: 1
+  alcanceUltimate: 3
+  tipoUsoUltimate: 1
+  usaPaletaTintaUltimate: 1
+  framesPaletaUltimate:
+  - {fileID: 3367428129314821105, guid: 413bbd3e2534f624a995bc6b1801878b, type: 3}
+  - {fileID: 2803287904992296979, guid: 03dfb41d30dd052439f53a46cca56637, type: 3}
+  - {fileID: -8028841254751284937, guid: 3f082f3ce5d482d42acedb6b2e9d0f8f, type: 3}
+  indiceCriacaoPaletaUltimate: 4
+  spriteLavaUltimate: {fileID: 0}
+  frameCravarLavaUltimate: 2
+  duracaoVisualLavaUltimate: 3
+  escalaLavaUltimate: 0.6
+  offsetVerticalLavaUltimate: -0.15
+  spriteRaioUltimate: {fileID: 0}
+  frameLancamentoRaioUltimate: 4
+  fracaoAlturaRaioUltimate: 0.7
+  ajusteOrigemRaioUltimate: {x: 0, y: 0}
+  duracaoCrescimentoRaio: 0.08
+  delayRaioUltimate: 0.05
+  duracaoVisualRaioUltimate: 1
+  opacidadeRaioUltimate: 0.75
+  duracaoEnfraquecimentoRaio: 0.75
+  energiaDrenoRaioEnfraquecendo: 15
+  forcaRecuoUltimate: 6
+  duracaoRecuoUltimate: 0.25
+  podeSeMoverDuranteAtaque: 1
+  multiplicadorMovimentoAtaque: 0.35
+  podeSeMoverDuranteEspecial: 1
+  multiplicadorMovimentoEspecial: 0.2
+  podeSeMoverDuranteUltimate: 0
+  multiplicadorMovimentoUltimate: 0
+  podeSeMoverDuranteDefesa: 0
+  multiplicadorMovimentoDefesa: 0
+  podeSeMoverDuranteHit: 0
+  multiplicadorMovimentoHit: 0
+  custoUltimate: 100
+  porcentagemBloqueioDefesa: 1
+  custoDefesa: 20
+  velocidadeRecargaEnergia: 10
+  especialAlternavelComQueimadura: 0
+  custoAtivarEspecialAlternavel: 30
+  drenoPorSegundoEspecialAlternavel: 3
+  danoQueimacaoPorSegundo: 3
+  duracaoQueimacao: 5
+  duracaoQueimacaoDefendendo: 3
+  framesIdle:
+  - {fileID: 1964440940772309354, guid: bdcd2c1940dc49e9bb5b2f2fa7409b8d, type: 3}
+  - {fileID: 1153229753337821043, guid: fa8e2c18feaf447ab2b075d89d9d06dd, type: 3}
+  fpsIdle: 2.5
+  framesIdleFogo: []
+  framesMove:
+  - {fileID: 3025209818162606968, guid: 30cb727ff5df1b94f84c933e7345888f, type: 3}
+  - {fileID: -7743737949119330213, guid: f8edd4bb1d5bbcb4f953f89722c858d3, type: 3}
+  - {fileID: -6652003917807206982, guid: 3969203200ca5c544a4ef03909b79ef5, type: 3}
+  fpsMove: 8
+  framesMoveFogo: []
+  framesJump: []
+  fpsJump: 8
+  framesJumpFogo: []
+  framesDefend:
+  - {fileID: -2698935366554458669, guid: b30b308405dbcb94ea54b15f36ed474c, type: 3}
+  fpsDefend: 8
+  framesDefendFogo: []
+  framesAttack:
+  - {fileID: -7649829353015026699, guid: 03a0a29e56a7d6749a696fb6a96029f7, type: 3}
+  - {fileID: 549075161577085909, guid: fe0c2a50756aea741b25718e0d805737, type: 3}
+  - {fileID: -3862255000356043193, guid: 104bcdcee32d8684f8fc239a45d6e041, type: 3}
+  - {fileID: -147748890835095736, guid: 6b5722efc9b82944f8c6be3903a4bddf, type: 3}
+  fpsAttack: 5
+  frameInicioHitbox: 1
+  frameFollowThrough: -1
+  framesAttackFogo: []
+  framesSpecial:
+  - {fileID: 2099114864549891512, guid: 3f88fc7d2b4c2e546a9d959fb4222239, type: 3}
+  - {fileID: 2099114864549891512, guid: 3f88fc7d2b4c2e546a9d959fb4222239, type: 3}
+  - {fileID: -2678505233381304643, guid: cbc416c203785964f892cb3c11aac92d, type: 3}
+  - {fileID: -2678505233381304643, guid: cbc416c203785964f892cb3c11aac92d, type: 3}
+  - {fileID: 7026690982728969286, guid: 88e48f9c5fe8e784686f4a39bfeb3933, type: 3}
+  - {fileID: -4058381719610887611, guid: 10148b5ea3012f244b1dfb515568bc09, type: 3}
+  - {fileID: 7681473436149767170, guid: 8070081fa4e19184482f08a6a05a7ff5, type: 3}
+  - {fileID: -6670663042626440969, guid: 4af9a5f035210304bb92dd017ff7eab3, type: 3}
+  - {fileID: 7026690982728969286, guid: 88e48f9c5fe8e784686f4a39bfeb3933, type: 3}
+  - {fileID: -2678505233381304643, guid: cbc416c203785964f892cb3c11aac92d, type: 3}
+  - {fileID: 2099114864549891512, guid: 3f88fc7d2b4c2e546a9d959fb4222239, type: 3}
+  fpsSpecial: 12
+  framesUltimate:
+  - {fileID: -8847087940644459900, guid: 285119c27deb96644b4f838f5574593f, type: 3}
+  - {fileID: -4618221744711282803, guid: 7f2ea06eaf906434ab93f67cdb158945, type: 3}
+  - {fileID: 3433749642299026202, guid: 5ec15b5bc70e168418863df7c9b4e160, type: 3}
+  - {fileID: 3433749642299026202, guid: 5ec15b5bc70e168418863df7c9b4e160, type: 3}
+  - {fileID: -6761652269868112684, guid: 8ac55f03987365d4ead36bed7122b1e0, type: 3}
+  - {fileID: 4690387368174237040, guid: 569a401b69f2bec4bbfea0db9f5c76db, type: 3}
+  fpsUltimate: 8
+  framesHit:
+  - {fileID: 1964440940772309354, guid: bdcd2c1940dc49e9bb5b2f2fa7409b8d, type: 3}
+  - {fileID: 1153229753337821043, guid: fa8e2c18feaf447ab2b075d89d9d06dd, type: 3}
+  fpsHit: 12
+  framesDeath:
+  - {fileID: 1964440940772309354, guid: bdcd2c1940dc49e9bb5b2f2fa7409b8d, type: 3}
+  - {fileID: 1153229753337821043, guid: fa8e2c18feaf447ab2b075d89d9d06dd, type: 3}
+  fpsDeath: 8
+  somAtaqueInicio: {fileID: 8300000, guid: edcd733df3926bf428cd44d081fc1b84, type: 3}
+  somAtaqueImpacto: {fileID: 8300000, guid: edcd733df3926bf428cd44d081fc1b84, type: 3}
+  somEspecial: {fileID: 8300000, guid: 5a44e266eb0e4f909825e4574a0c6c07, type: 3}
+  somUltimate: {fileID: 8300000, guid: 072630947a9b069488ec1ff42ce40dc7, type: 3}
+  somHit: {fileID: 8300000, guid: b8e6e10f548e0d54b9532f73369a07d2, type: 3}
+  somMorte: {fileID: 8300000, guid: b8e6e10f548e0d54b9532f73369a07d2, type: 3}
+  somPassos: {fileID: 8300000, guid: ca0356d99355ac14f89529231a913271, type: 3}
+  somPulo: {fileID: 0}
+  somPouso: {fileID: 0}
+  volumeEfeitos: 1
+  pitchEfeitos: 1
+  volumePassos: 0.3
+  volumePulo: 1
+  volumePouso: 1
+  volumeAtaqueInicio: 0.65
+  volumeAtaqueImpacto: 0.8
+  volumeEspecial: 0.8
+  volumeUltimate: 1
+  volumeHit: 1
+  volumeMorte: 1

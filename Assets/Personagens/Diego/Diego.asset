@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Diego
   m_EditorClassIdentifier: 
   nomePersonagem: Diego
-  spriteCorpo: {fileID: -698024394781970378, guid: 8aff1dabfaa2ff04ba8e9cfcd41127f0, type: 3}
+  spriteCorpo: {fileID: -3943748194325502948, guid: a2c48164b293adb408c484f447c41c92, type: 3}
   spriteRosto: {fileID: 5651683182836938599, guid: 9c6a8ae57a2c2584da546f5b938b1ce6, type: 3}
   vidaMax: 100
   energiaMax: 100

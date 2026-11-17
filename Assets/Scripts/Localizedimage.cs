@@ -15,7 +15,14 @@ public class LocalizedImage : MonoBehaviour
     [Tooltip("Sprite exibido quando o idioma é Inglês")]
     public Sprite spriteEN;
 
+    [Tooltip("Sprite de empate exibido quando o idioma é Português")]
+    public Sprite spriteEmpatePT;
+
+    [Tooltip("Sprite de empate exibido quando o idioma é Inglês")]
+    public Sprite spriteEmpateEN;
+
     private Image imagem;
+    private bool exibindoEmpate;
 
     private void Awake()
     {
@@ -41,9 +48,19 @@ public class LocalizedImage : MonoBehaviour
         bool ehPortugues = LanguageManager.Instance.CurrentLanguage
                            == LanguageManager.Language.Portuguese;
 
-        Sprite alvo = ehPortugues ? spritePT : spriteEN;
+        Sprite alvo;
+        if (exibindoEmpate)
+            alvo = ehPortugues ? spriteEmpatePT : spriteEmpateEN;
+        else
+            alvo = ehPortugues ? spritePT : spriteEN;
 
         if (alvo != null)
             imagem.sprite = alvo;
+    }
+
+    public void DefinirEmpate(bool empate)
+    {
+        exibindoEmpate = empate;
+        AtualizarImagem();
     }
 }

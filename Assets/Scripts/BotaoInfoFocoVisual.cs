@@ -70,6 +70,9 @@ public sealed class BotaoInfoFocoVisual : MonoBehaviour,
     public void OnPointerExit(PointerEventData eventData)
     {
         apontado = false;
+        if (EventSystem.current != null &&
+            EventSystem.current.currentSelectedGameObject == gameObject)
+            EventSystem.current.SetSelectedGameObject(null);
         AtualizarVisual();
     }
 

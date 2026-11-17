@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 using System.Collections;
 using System.Collections.Generic;
@@ -335,22 +335,6 @@ public class ConfiguracoesManager : MonoBehaviour
         TMP_Dropdown[] dropdowns = painelVideo.GetComponentsInChildren<TMP_Dropdown>(true);
         for (int i = 0; i < dropdowns.Length; i++)
             DropdownAcessivel.Preparar(dropdowns[i]);
-    }
-
-    private void ConectarPainelAoMenu(GameObject painel, string primeiroControle, string nomeBotaoMenu)
-    {
-        Selectable primeiro = EncontrarSelectable(painel, primeiroControle);
-        Selectable botaoMenu = EncontrarSelectable(painelPrincipal, nomeBotaoMenu);
-        if (primeiro == null || botaoMenu == null)
-            return;
-
-        Navigation navegacaoPrimeiro = primeiro.navigation;
-        navegacaoPrimeiro.selectOnLeft = botaoMenu;
-        primeiro.navigation = navegacaoPrimeiro;
-
-        Navigation navegacaoMenu = botaoMenu.navigation;
-        navegacaoMenu.selectOnRight = primeiro;
-        botaoMenu.navigation = navegacaoMenu;
     }
 
     private static void DefinirNavegacao(Selectable controle, Selectable cima,

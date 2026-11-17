@@ -13,6 +13,7 @@ public class FPSManager : MonoBehaviour
         if (instancia == null)
         {
             instancia = this;
+            if (transform.parent != null) transform.SetParent(null, true);
             DontDestroyOnLoad(gameObject);
 
             int fpsPadrao = ObterFPSPadraoDoMonitor();

@@ -48,6 +48,7 @@ public class LutadorController2D : MonoBehaviour
     [SerializeField] private KeyCode teclaEspecial;
     [SerializeField] private KeyCode teclaUltimate;
     [SerializeField] private KeyCode teclaDefender;
+    [SerializeField] private KeyCode teclaInteracao;
 
     [Header("Controle de videogame")]
     [Tooltip("Deixe vazio para evitar conflito com o teclado.")]
@@ -71,6 +72,7 @@ public class LutadorController2D : MonoBehaviour
     [Tooltip("Mostra dano, bloqueio ou erro diretamente sobre o alvo. Deixe ativo para facilitar a leitura dos golpes.")]
     public bool mostrarFeedbackCombate = true;
     public Color corFeedbackAcerto = new Color(1f, 0.9f, 0.25f, 1f);
+    public Color corFeedbackCura = new Color(0.35f, 0.95f, 0.5f, 1f);
     public Color corFeedbackBloqueado = new Color(0.35f, 0.8f, 1f, 1f);
     public Color corFeedbackErro = new Color(1f, 0.35f, 0.35f, 1f);
 
@@ -93,6 +95,11 @@ public class LutadorController2D : MonoBehaviour
     private int frameAtual = 0;
     private float cronometroFrame = 0f;
     private bool animacaoUmaVezAtiva = false;
+    private bool projetilTintaDisparadoNesteEspecial = false;
+    private bool somPincelTocadoNesteEspecial = false;
+    private bool paletaCriadaNesteUltimate = false;
+    private AudioClip somPincelCurto;
+    private AudioClip origemSomPincelCurto;
 
     // ── Controle de dano do ataque por frame ──────────────────────────────
     private enum FaseAtaque { Windup, Hit, FollowThrough }
@@ -108,6 +115,14 @@ public class LutadorController2D : MonoBehaviour
     // não mexe em nada — a própria coroutine da habilidade controla tudo
     // (estado, frame, física) do início ao fim, sem o resto do script interferir.
     private bool emHabilidadeUnica = false;
+
+    // Interação de cenário: enquanto o círculo de uso é concluído, o lutador
+    // fica parado e os frames de pegar/levantar/preparar/arremessar/retornar
+    // assumem temporariamente o SpriteRenderer principal.
+    private bool emInteracaoObjeto = false;
+    private SpriteRenderer rendererInteracao;
+    private Coroutine rotinaInteracaoObjeto;
+    private bool rendererAtivoAntesInteracao;
 
     // Pedaços de rachadura ainda na tela — destruídos todos juntos e rápido
     // quando a habilidade termina, em vez de cada um sumir sozinho depois de
@@ -128,6 +143,7 @@ public class LutadorController2D : MonoBehaviour
     // Guardada aqui pra poder reiniciar a contagem se levar outro golpe em chamas
     // antes da anterior acabar, em vez de empilhar múltiplas queimações somando dano.
     private Coroutine rotinaQueimacao;
+    private readonly System.Collections.Generic.List<GameObject> particulasFogoAtivas = new System.Collections.Generic.List<GameObject>();
 
     // ── Ultimate único — Raio com Recuo (ex: Jamanta) ────────────────────────
     // Somado à velocidade normal em FixedUpdate; RotinaRecuoUltimate decai isso
@@ -192,6 +208,10 @@ public class LutadorController2D : MonoBehaviour
 
     void OnDestroy()
     {
+        LimparQueimacao();
+        if (somPincelCurto != null)
+            Destroy(somPincelCurto);
+
         if (AudioManager.Instance != null)
             AudioManager.Instance.OnVolumeChanged -= AtualizarVolumeSomEmLoop;
     }
@@ -215,6 +235,15 @@ public class LutadorController2D : MonoBehaviour
         estavaPausadoAntes = false;
 
         if (morreu) return;
+
+        if (emInteracaoObjeto)
+        {
+            movimento = 0f;
+            defendendo = false;
+            if (rb != null)
+                rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            return;
+        }
 
         if (controladoPorIA)
             LerInputsIA();
@@ -273,6 +302,12 @@ public class LutadorController2D : MonoBehaviour
         if (morreu) return;
         if (rb == null || dadosPersonagem == null) return;
 
+        if (emInteracaoObjeto)
+        {
+            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            return;
+        }
+
         float velocidadeX = movimento * dadosPersonagem.velocidade;
         velocidadeX *= ObterMultiplicadorMovimentoAtual();
 
@@ -322,7 +357,13 @@ public class LutadorController2D : MonoBehaviour
     {
         if (dadosPersonagem == null) return;
 
+        ProjetilTintaEspecial.LimparTodos();
+        PaletaUltimateRenata.LimparTodos();
         CancelarUltimateAtivo();
+        CancelarInteracaoObjeto();
+        LimparQueimacao();
+        AIControllerLuta ia = GetComponent<AIControllerLuta>();
+        if (ia != null) ia.ResetarParaNovoRound();
         vidaAtual = dadosPersonagem.vidaMax;
         // Energia começa ZERADA no início da luta — combinado com o time pra ninguém
         // conseguir usar Especial/Ultimate de cara, sem precisar lutar pra carregar energia.
@@ -337,8 +378,6 @@ public class LutadorController2D : MonoBehaviour
         frameAtual = 0;
         cronometroFrame = 0f;
         animacaoUmaVezAtiva = false;
-        if (rotinaQueimacao != null) { StopCoroutine(rotinaQueimacao); rotinaQueimacao = null; }
-
         // Aplica o primeiro frame do Idle imediatamente
         AplicarPrimeiroFrame(dadosPersonagem.framesIdle, dadosPersonagem.spriteCorpo);
     }
@@ -356,7 +395,13 @@ public class LutadorController2D : MonoBehaviour
     {
         if (dadosPersonagem == null) return;
 
+        ProjetilTintaEspecial.LimparTodos();
+        PaletaUltimateRenata.LimparTodos();
         CancelarUltimateAtivo();
+        CancelarInteracaoObjeto();
+        LimparQueimacao();
+        AIControllerLuta ia = GetComponent<AIControllerLuta>();
+        if (ia != null) ia.ResetarParaNovoRound();
         vidaAtual = dadosPersonagem.vidaMax;
         // Mesma regra do início da luta: cada round novo também começa com energia
         // ZERADA, pra ninguém entrar no round já podendo soltar Especial/Ultimate.
@@ -371,8 +416,6 @@ public class LutadorController2D : MonoBehaviour
         espadaEmChamasAtiva = false;
         velocidadeRecuoX = 0f;
         travandoUltimateAteRaioSumir = false;
-        if (rotinaQueimacao != null) { StopCoroutine(rotinaQueimacao); rotinaQueimacao = null; }
-
         movimentoIA = 0f;
         defesaIA = false;
         ataqueIASolicitado = false;
@@ -396,7 +439,10 @@ public class LutadorController2D : MonoBehaviour
 
     public void TravarLutador()
     {
+        PaletaUltimateRenata.LimparTodos();
+        ProjetilTintaEspecial.LimparTodos();
         CancelarUltimateAtivo();
+        CancelarInteracaoObjeto();
         movimento = 0f;
         defendendo = false;
         if (rb != null) rb.linearVelocity = Vector2.zero;
@@ -428,6 +474,7 @@ public class LutadorController2D : MonoBehaviour
             teclaEspecial = StringParaKeyCodeSeguro("P1_Especial", KeyCode.G);
             teclaUltimate = StringParaKeyCodeSeguro("P1_Ultimate", KeyCode.H);
             teclaDefender = StringParaKeyCodeSeguro("P1_Defender", KeyCode.S);
+            teclaInteracao = CarregarTeclaInteracao("P1_Interacao", KeyCode.Q);
         }
         else
         {
@@ -437,6 +484,7 @@ public class LutadorController2D : MonoBehaviour
             teclaEspecial = StringParaKeyCodeSeguro("P2_Especial", KeyCode.L);
             teclaUltimate = StringParaKeyCodeSeguro("P2_Ultimate", KeyCode.M);
             teclaDefender = StringParaKeyCodeSeguro("P2_Defender", KeyCode.DownArrow);
+            teclaInteracao = CarregarTeclaInteracao("P2_Interacao", KeyCode.O);
         }
     }
 
@@ -454,6 +502,23 @@ public class LutadorController2D : MonoBehaviour
         if (string.IsNullOrWhiteSpace(valor)) return padrao;
         try { return (KeyCode)System.Enum.Parse(typeof(KeyCode), valor); }
         catch { Debug.LogWarning("Tecla inválida em " + chave + ": " + valor); return padrao; }
+    }
+
+    KeyCode CarregarTeclaInteracao(string chave, KeyCode padrao)
+    {
+        KeyCode tecla = StringParaKeyCodeSeguro(chave, padrao);
+
+        // A interação usava E/CTRL em versões anteriores. Migra esses valores
+        // para letras únicas, sem obrigar o jogador a combinar teclas.
+        if (tecla == KeyCode.E || tecla == KeyCode.LeftControl ||
+            tecla == KeyCode.RightControl || tecla == KeyCode.None)
+        {
+            PlayerPrefs.SetString(chave, padrao.ToString());
+            PlayerPrefs.Save();
+            return padrao;
+        }
+
+        return tecla;
     }
 
     // ── Inputs ────────────────────────────────────────────────────────────
@@ -621,15 +686,12 @@ public class LutadorController2D : MonoBehaviour
                 float distHit = Vector2.Distance(transform.position, oponente.transform.position);
                 if (EstaDentroDoAlcance(dadosPersonagem.alcanceAtaque))
                 {
-                    int danoEfetivo = oponente.ReceberDano(dadosPersonagem.danoAtaque);
+                    oponente.ReceberDano(dadosPersonagem.danoAtaque);
                     AplicarQueimacaoSeEspadaEmChamas();
                     TocarSom(
                         dadosPersonagem.somAtaqueImpacto,
                         dadosPersonagem.volumeAtaqueImpacto
                     );
-                    oponente.MostrarFeedbackCombate(
-                        danoEfetivo > 0 ? danoEfetivo.ToString() : "BLOQUEADO",
-                        danoEfetivo > 0 ? corFeedbackAcerto : corFeedbackBloqueado);
                 }
                 else
                     MostrarFeedbackCombate("ERRO", corFeedbackErro);
@@ -642,15 +704,12 @@ public class LutadorController2D : MonoBehaviour
                     : dadosPersonagem.alcanceAtaque;
                 if (EstaDentroDoAlcance(alcanceFollowThrough))
                 {
-                    int danoEfetivo = oponente.ReceberDano(Mathf.RoundToInt(dadosPersonagem.danoAtaque * 0.5f));
+                    oponente.ReceberDano(Mathf.RoundToInt(dadosPersonagem.danoAtaque * 0.5f));
                     AplicarQueimacaoSeEspadaEmChamas();
                     TocarSom(
                         dadosPersonagem.somAtaqueImpacto,
                         dadosPersonagem.volumeAtaqueImpacto
                     );
-                    oponente.MostrarFeedbackCombate(
-                        danoEfetivo > 0 ? danoEfetivo.ToString() : "BLOQUEADO",
-                        danoEfetivo > 0 ? corFeedbackAcerto : corFeedbackBloqueado);
                 }
                 else
                     MostrarFeedbackCombate("ERRO", corFeedbackErro);
@@ -762,6 +821,13 @@ public class LutadorController2D : MonoBehaviour
             return;
         }
 
+        if (dadosPersonagem.usaProjetilTintaEspecial)
+        {
+            GastarEnergiaEspecial();
+            IniciarAnimacaoUmaVez(EstadoAnim.Special);
+            return;
+        }
+
         float distancia = Vector2.Distance(transform.position, oponente.transform.position);
         if (distancia <= dadosPersonagem.alcanceEspecial)
         {
@@ -836,9 +902,31 @@ public class LutadorController2D : MonoBehaviour
     public void AplicarQueimadura(int danoPorSegundo, float duracao)
     {
         if (morreu) return;
-        if (rotinaQueimacao != null) StopCoroutine(rotinaQueimacao);
+        LimparQueimacao();
         if (spriteRenderer != null) spriteRenderer.color = CorQueimando;
         rotinaQueimacao = StartCoroutine(RotinaQueimacao(danoPorSegundo, duracao));
+    }
+
+    // Cancela completamente o efeito antes de trocar de round, personagem ou
+    // reiniciar a queimadura. As partículas são independentes do lutador e
+    // podem ficar congeladas quando o round pausa, então também precisam sumir.
+    void LimparQueimacao()
+    {
+        if (rotinaQueimacao != null)
+        {
+            StopCoroutine(rotinaQueimacao);
+            rotinaQueimacao = null;
+        }
+
+        if (spriteRenderer != null)
+            spriteRenderer.color = Color.white;
+
+        for (int i = 0; i < particulasFogoAtivas.Count; i++)
+        {
+            if (particulasFogoAtivas[i] != null)
+                Destroy(particulasFogoAtivas[i]);
+        }
+        particulasFogoAtivas.Clear();
     }
 
     // Enquanto durar: tingido de laranja + partículas de fogo saindo dele (pra
@@ -902,6 +990,7 @@ public class LutadorController2D : MonoBehaviour
         sr.sortingLayerName = layerPersonagem;
         sr.sortingOrder = ordemPersonagem + 10;
         p.transform.localScale = Vector3.one * Random.Range(0.15f, 0.3f) * EscalaVisualDoLutador();
+        particulasFogoAtivas.Add(p);
 
         Vector2 velocidadeInicial = new Vector2(Random.Range(-0.5f, 0.5f), Random.Range(1.5f, 3f));
         StartCoroutine(AnimarParticulaFogo(p, sr, velocidadeInicial));
@@ -925,6 +1014,7 @@ public class LutadorController2D : MonoBehaviour
         }
 
         if (obj != null) Destroy(obj);
+        particulasFogoAtivas.Remove(obj);
     }
 
     // Dano de queimação é aplicado direto na vida, sem passar pela redução de
@@ -935,8 +1025,11 @@ public class LutadorController2D : MonoBehaviour
     {
         if (morreu) return;
 
-        vidaAtual -= dano;
-        if (vidaAtual < 0) vidaAtual = 0;
+        int vidaAntes = vidaAtual;
+        vidaAtual = Mathf.Max(0, vidaAtual - Mathf.Max(0, dano));
+        int danoAplicado = vidaAntes - vidaAtual;
+        if (danoAplicado > 0)
+            MostrarFeedbackCombate("-" + danoAplicado, new Color(1f, 0.55f, 0.18f, 1f));
 
         if (vidaAtual <= 0)
             Morrer();
@@ -1238,6 +1331,14 @@ public class LutadorController2D : MonoBehaviour
         if (!PodeUsarUltimate())
         {
             MostrarIndicadorEnergiaInsuficiente(ObterCustoUltimate());
+            return;
+        }
+
+        if (dadosPersonagem.usaPaletaTintaUltimate)
+        {
+            GastarEnergiaUltimate();
+            TocarSom(dadosPersonagem.somUltimate, dadosPersonagem.volumeUltimate);
+            IniciarAnimacaoUmaVez(EstadoAnim.Ultimate);
             return;
         }
 
@@ -1644,7 +1745,7 @@ public class LutadorController2D : MonoBehaviour
     {
         if (morreu) return 0;
 
-        int danoFinal = dano;
+        int danoFinal = Mathf.Max(0, dano);
 
         if (defendendo && dadosPersonagem != null)
         {
@@ -1672,8 +1773,17 @@ public class LutadorController2D : MonoBehaviour
         energiaAtual = Mathf.Clamp(energiaAtual, 0f,
             dadosPersonagem != null ? dadosPersonagem.energiaMax : 100f);
 
-        vidaAtual -= danoFinal;
-        if (vidaAtual < 0) vidaAtual = 0;
+        int vidaAntes = vidaAtual;
+        vidaAtual = Mathf.Max(0, vidaAtual - danoFinal);
+        int danoAplicado = vidaAntes - vidaAtual;
+        if (danoAplicado > 0 && controladoPorIA)
+        {
+            AIControllerLuta ia = GetComponent<AIControllerLuta>();
+            if (ia != null) ia.NotificarDanoRecebido();
+        }
+        MostrarFeedbackCombate(
+            danoAplicado > 0 ? "-" + danoAplicado : "BLOQUEADO",
+            danoAplicado > 0 ? corFeedbackAcerto : corFeedbackBloqueado);
 
         if (vidaAtual <= 0)
         {
@@ -1681,6 +1791,7 @@ public class LutadorController2D : MonoBehaviour
         }
         else if (!defendendo && !EstaExecutandoUltimate())
         {
+            CancelarInteracaoObjeto();
             // Só entra no stagger de Hit se NÃO estava defendendo. Antes disparava
             // sempre, mesmo com o bloqueio ativo — como Defend é um estado
             // contínuo (não passa por animacaoUmaVezAtiva), o Hit sempre conseguia
@@ -1695,7 +1806,20 @@ public class LutadorController2D : MonoBehaviour
             IniciarAnimacaoUmaVez(EstadoAnim.Hit);
         }
 
-        return danoFinal;
+        return danoAplicado;
+    }
+
+    public int ReceberCura(int quantidade)
+    {
+        if (morreu || dadosPersonagem == null || quantidade <= 0)
+            return 0;
+
+        int vidaAntes = vidaAtual;
+        vidaAtual = Mathf.Min(dadosPersonagem.vidaMax, vidaAtual + quantidade);
+        int curaAplicada = vidaAtual - vidaAntes;
+        if (curaAplicada > 0)
+            MostrarFeedbackCombate("+" + curaAplicada, corFeedbackCura);
+        return curaAplicada;
     }
 
     bool EstaExecutandoUltimate()
@@ -1707,6 +1831,7 @@ public class LutadorController2D : MonoBehaviour
     void Morrer()
     {
         morreu = true;
+        CancelarInteracaoObjeto();
         CancelarUltimateAtivo();
         if (audioSourcePassos != null) audioSourcePassos.Stop();
         if (rb != null) rb.linearVelocity = Vector2.zero;
@@ -1719,18 +1844,6 @@ public class LutadorController2D : MonoBehaviour
     }
 
     // ── Energia ───────────────────────────────────────────────────────────
-    bool TemEnergiaSuficiente(float custo)
-    {
-        if (dadosPersonagem == null) return false;
-        return custo <= 0f || energiaAtual >= custo;
-    }
-
-    void GastarEnergia(float custo)
-    {
-        energiaAtual -= custo;
-        energiaAtual = Mathf.Clamp(energiaAtual, 0f, dadosPersonagem.energiaMax);
-    }
-
     bool PodeUsarEspecial()
     {
         if (dadosPersonagem == null) return false;
@@ -1833,6 +1946,123 @@ public class LutadorController2D : MonoBehaviour
     public bool EstaMorto() => morreu;
     public bool EstaDefendendo() => defendendo;
     public bool EstaNoChao() => estaNoChao;
+    public bool EstaInteragindoComObjeto() => emInteracaoObjeto;
+    public KeyCode ObterTeclaInteracao() => teclaInteracao;
+    public bool PodeInteragirComObjeto()
+    {
+        return isActiveAndEnabled && Time.timeScale > 0f && !morreu && !emInteracaoObjeto &&
+               !emHabilidadeUnica && estaNoChao && dadosPersonagem != null &&
+               !EmAcaoOfensiva() && !EstaLevandoHit() && !defendendo;
+    }
+
+    public bool IniciarAnimacaoObjeto(Sprite[] frames, float fps)
+    {
+        return IniciarAnimacaoObjeto(frames, fps, null);
+    }
+
+    public bool IniciarAnimacaoObjeto(
+        Sprite[] frames,
+        float fps,
+        System.Action aoArremessar)
+    {
+        if (!PodeInteragirComObjeto() || frames == null || frames.Length == 0)
+            return false;
+
+        emInteracaoObjeto = true;
+        movimento = 0f;
+        defendendo = false;
+        if (rb != null)
+            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+
+        IA_LimparComandos();
+        if (audioSourcePassos != null) audioSourcePassos.Stop();
+        PrepararEscalaEPivoAnimacaoObjeto(frames);
+        rotinaInteracaoObjeto = StartCoroutine(RotinaAnimacaoObjeto(frames, fps, aoArremessar));
+        return true;
+    }
+
+    public Vector3 ObterPosicaoCintura()
+    {
+        if (spriteRenderer == null) return transform.position + Vector3.up;
+        Sprite neutro = dadosPersonagem != null && dadosPersonagem.framesIdle != null &&
+            dadosPersonagem.framesIdle.Length > 0 ? dadosPersonagem.framesIdle[0] : spriteRenderer.sprite;
+        if (neutro == null) return spriteRenderer.bounds.center;
+        Bounds corpo = neutro.bounds;
+        return spriteRenderer.transform.TransformPoint(new Vector3(corpo.center.x,
+            Mathf.Lerp(corpo.min.y, corpo.max.y, 0.52f), corpo.center.z));
+    }
+
+    private void PrepararEscalaEPivoAnimacaoObjeto(Sprite[] frames)
+    {
+        if (spriteRenderer == null || frames[0] == null) return;
+        rendererAtivoAntesInteracao = spriteRenderer.enabled;
+        Sprite neutro = dadosPersonagem.framesIdle != null && dadosPersonagem.framesIdle.Length > 0
+            ? dadosPersonagem.framesIdle[0] : spriteRenderer.sprite;
+        float altura = 0f;
+        foreach (Sprite frame in frames)
+            if (frame != null) altura = Mathf.Max(altura, frame.bounds.size.y);
+        float fator = neutro != null && altura > 0.01f ? neutro.bounds.size.y / altura : 1f;
+        // Apenas o desenho muda de escala: o corpo físico e o pivô do lutador
+        // continuam no lugar durante os cinco frames da interação.
+        GameObject visual = new GameObject("AnimacaoInteracao");
+        visual.transform.SetParent(spriteRenderer.transform, false);
+        visual.transform.localScale = Vector3.one * fator;
+        visual.transform.localPosition = Vector3.up * (neutro != null ? neutro.bounds.min.y : 0f);
+        rendererInteracao = visual.AddComponent<SpriteRenderer>();
+        rendererInteracao.sprite = frames[0];
+        rendererInteracao.sharedMaterial = spriteRenderer.sharedMaterial;
+        rendererInteracao.sortingLayerID = spriteRenderer.sortingLayerID;
+        rendererInteracao.sortingOrder = spriteRenderer.sortingOrder;
+        rendererInteracao.color = spriteRenderer.color;
+        rendererInteracao.flipX = spriteRenderer.flipX;
+        spriteRenderer.enabled = false;
+    }
+
+    private void RestaurarSpriteDepoisDaInteracao()
+    {
+        if (rendererInteracao == null) return;
+        Destroy(rendererInteracao.gameObject);
+        rendererInteracao = null;
+        if (spriteRenderer != null) spriteRenderer.enabled = rendererAtivoAntesInteracao;
+    }
+
+    private void CancelarInteracaoObjeto()
+    {
+        if (rotinaInteracaoObjeto != null) StopCoroutine(rotinaInteracaoObjeto);
+        rotinaInteracaoObjeto = null;
+        RestaurarSpriteDepoisDaInteracao();
+        emInteracaoObjeto = false;
+    }
+
+    private IEnumerator RotinaAnimacaoObjeto(
+        Sprite[] frames,
+        float fps,
+        System.Action aoArremessar)
+    {
+        float intervalo = 1f / Mathf.Max(1f, fps);
+        int frameArremesso = Mathf.Clamp(frames.Length - 2, 0, frames.Length - 1);
+        for (int i = 0; i < frames.Length; i++)
+        {
+            if (rendererInteracao != null && frames[i] != null)
+                rendererInteracao.sprite = frames[i];
+
+            if (i == frameArremesso)
+                aoArremessar?.Invoke();
+
+            yield return new WaitForSeconds(intervalo);
+        }
+
+        RestaurarSpriteDepoisDaInteracao();
+        rotinaInteracaoObjeto = null;
+        emInteracaoObjeto = false;
+        estadoAtual = EstadoAnim.Idle;
+        estadoAnterior = EstadoAnim.Idle;
+        frameAtual = 0;
+        cronometroFrame = 0f;
+        animacaoUmaVezAtiva = false;
+        AplicarFrameAtual();
+    }
+
     public bool EstaAtacando() => animacaoUmaVezAtiva &&
         (estadoAtual == EstadoAnim.Attack ||
          estadoAtual == EstadoAnim.Special ||
@@ -1893,6 +2123,15 @@ public class LutadorController2D : MonoBehaviour
         cronometroFrame = 0f;
         animacaoUmaVezAtiva = true;
         frameAtual = 0;
+
+        if (novoEstado == EstadoAnim.Special)
+        {
+            projetilTintaDisparadoNesteEspecial = false;
+            somPincelTocadoNesteEspecial = false;
+        }
+
+        if (novoEstado == EstadoAnim.Ultimate)
+            paletaCriadaNesteUltimate = false;
 
         if (novoEstado == EstadoAnim.Attack)
         {
@@ -2073,6 +2312,92 @@ public class LutadorController2D : MonoBehaviour
         int idx = Mathf.Clamp(frameAtual, 0, frames.Length - 1);
         if (frames[idx] != null)
             spriteRenderer.sprite = frames[idx];
+
+        if (estadoAtual == EstadoAnim.Ultimate && animacaoUmaVezAtiva &&
+            dadosPersonagem.usaPaletaTintaUltimate && !paletaCriadaNesteUltimate &&
+            idx == dadosPersonagem.indiceCriacaoPaletaUltimate)
+        {
+            paletaCriadaNesteUltimate = true;
+            PaletaUltimateRenata.Criar(this, oponente);
+        }
+
+        if (estadoAtual == EstadoAnim.Special && animacaoUmaVezAtiva &&
+            dadosPersonagem.usaProjetilTintaEspecial &&
+            !somPincelTocadoNesteEspecial &&
+            idx == Mathf.Max(0, dadosPersonagem.frameDisparoProjetilTinta - 1))
+        {
+            somPincelTocadoNesteEspecial = true;
+            TocarSom(ObterTrechoPincel(), dadosPersonagem.volumeEspecial);
+        }
+
+        if (estadoAtual == EstadoAnim.Special && animacaoUmaVezAtiva &&
+            dadosPersonagem.usaProjetilTintaEspecial &&
+            !projetilTintaDisparadoNesteEspecial &&
+            idx == dadosPersonagem.frameDisparoProjetilTinta)
+        {
+            projetilTintaDisparadoNesteEspecial = true;
+            ProjetilTintaEspecial.Criar(this, oponente);
+        }
+    }
+
+    AudioClip ObterTrechoPincel()
+    {
+        AudioClip fonte = dadosPersonagem.somEspecial;
+        if (fonte == null) return null;
+        if (origemSomPincelCurto == fonte && somPincelCurto != null) return somPincelCurto;
+
+        if (somPincelCurto != null)
+            Destroy(somPincelCurto);
+        somPincelCurto = null;
+        origemSomPincelCurto = fonte;
+
+        int canais = fonte.channels;
+        int amostrasPorCanal = fonte.samples;
+        int comprimento = Mathf.Min(amostrasPorCanal, Mathf.RoundToInt(fonte.frequency * 0.36f));
+        if (canais <= 0 || comprimento <= 0 || comprimento == amostrasPorCanal)
+            return fonte;
+
+        float[] original = new float[amostrasPorCanal * canais];
+        if (!fonte.GetData(original, 0))
+            return fonte;
+
+        // O MP3 tem mais duração que o gesto. Mantém o trecho em torno do pico
+        // da pincelada e suaviza as bordas para não produzir um estalo no corte.
+        int pico = 0;
+        float maiorAmplitude = 0f;
+        for (int i = 0; i < amostrasPorCanal; i++)
+        for (int canal = 0; canal < canais; canal++)
+        {
+            float amplitude = Mathf.Abs(original[i * canais + canal]);
+            if (amplitude > maiorAmplitude)
+            {
+                maiorAmplitude = amplitude;
+                pico = i;
+            }
+        }
+
+        int inicio = Mathf.Clamp(pico - Mathf.RoundToInt(fonte.frequency * 0.12f),
+            0, amostrasPorCanal - comprimento);
+        float[] trecho = new float[comprimento * canais];
+        System.Array.Copy(original, inicio * canais, trecho, 0, trecho.Length);
+        int rampa = Mathf.Max(1, Mathf.RoundToInt(fonte.frequency * 0.025f));
+        for (int i = 0; i < rampa && i < comprimento; i++)
+        for (int canal = 0; canal < canais; canal++)
+        {
+            trecho[i * canais + canal] *= i / (float)rampa;
+            trecho[(comprimento - 1 - i) * canais + canal] *= i / (float)rampa;
+        }
+
+        somPincelCurto = AudioClip.Create(fonte.name + "_RenataCurto", comprimento,
+            canais, fonte.frequency, false);
+        if (!somPincelCurto.SetData(trecho, 0))
+        {
+            Destroy(somPincelCurto);
+            somPincelCurto = null;
+            return fonte;
+        }
+
+        return somPincelCurto;
     }
 
     // Usa uma pose de outro conjunto de frames sem trocar o estado de combate.

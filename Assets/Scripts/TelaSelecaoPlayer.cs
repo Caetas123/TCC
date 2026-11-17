@@ -113,11 +113,6 @@ public class TelaSelecaoPlayer : MonoBehaviour
     public Button botaoRandomP2;
     public Image destaqueRandomP1;
     public Image destaqueRandomP2;
-    public float tempoInicialRoleta = 0.05f;
-    public int ciclosRoleta = 18;
-
-    private bool sorteandoP1 = false;
-    private bool sorteandoP2 = false;
 
     // A borda usa a cor normal dela (branco) — só a OPACIDADE muda entre foco e
     // selecionado, sem tingir a cor. O amarelo (corHoverBotao) continua só nos botões
@@ -474,8 +469,8 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
     void Update()
     {
-        // A transição para outra cena é global, mas o sorteio não: cada jogador
-        // precisa continuar podendo navegar enquanto o outro está na roleta.
+        // A transição para outra cena é global. O sorteio é instantâneo e não
+        // cria uma etapa de animação que bloqueie a navegação.
         if (estadoAtual == EstadoTela.Transicao)
             return;
 
@@ -831,27 +826,15 @@ public class TelaSelecaoPlayer : MonoBehaviour
         }
     }
 
-    bool PermiteControleHumanoP1()
-    {
-        return modoJogo == "PVP" || modoJogo == "PVC";
-    }
-
-    bool PermiteControleHumanoP2()
-    {
-        return modoJogo == "PVP";
-    }
-
     bool PermiteSelecaoP1()
     {
         if (PainelConfiguracaoIAAberto()) return false;
-        if (sorteandoP1) return false;
         return modoJogo == "PVP" || modoJogo == "PVC" || modoJogo == "CVC";
     }
 
     bool PermiteSelecaoP2()
     {
         if (PainelConfiguracaoIAAberto()) return false;
-        if (sorteandoP2) return false;
         return modoJogo == "PVP" || modoJogo == "PVC" || modoJogo == "CVC";
     }
 
@@ -1424,21 +1407,6 @@ public class TelaSelecaoPlayer : MonoBehaviour
     /// <summary>
     /// Aplica cor no background do dropdown (componente Image do próprio dropdown).
     /// </summary>
-    void SetCorDropdown(TMP_Dropdown dropdown, Color cor)
-    {
-        if (dropdown == null) return;
-        Image img = dropdown.GetComponent<Image>();
-        if (img != null) img.color = cor;
-    }
-
-    void RestaurarCorOriginalBotaoIA(Button botao)
-    {
-        if (botao == null) return;
-        Image img = botao.GetComponent<Image>();
-        // Restaura a cor original guardada — usa branco como fallback seguro
-        if (img != null) img.color = Color.white;
-    }
-
     void TratarTecladoInferior()
     {
         bool esquerdaP1 = UIInputUtility.WasKeyPressed(teclaEsquerdaP1);
@@ -1521,7 +1489,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
             if (EhSlotRandomP1(focoP1))
             {
-                StartCoroutine(RoletaPersonagemP1());
+                SortearPersonagemParaP1();
                 return;
             }
 
@@ -1574,7 +1542,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
             if (EhSlotRandomP2(focoP2))
             {
-                StartCoroutine(RoletaPersonagemP2());
+                SortearPersonagemParaP2(indiceSelecionadoP1);
                 return;
             }
 
@@ -1643,7 +1611,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
                 if (EhSlotRandomP1(index))
                 {
-                    StartCoroutine(RoletaPersonagemP1());
+                    SortearPersonagemParaP1();
                     return;
                 }
 
@@ -1724,7 +1692,7 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
                 if (EhSlotRandomP2(index))
                 {
-                    StartCoroutine(RoletaPersonagemP2());
+                    SortearPersonagemParaP2(indiceSelecionadoP1);
                     return;
                 }
 
@@ -2077,122 +2045,21 @@ public class TelaSelecaoPlayer : MonoBehaviour
             && botoesPlayer2[index] == botaoRandomP2;
     }
 
-    IEnumerator RoletaPersonagemP1()
-    {
-        if (PainelConfiguracaoIAAberto()) yield break;
-        if (sorteandoP1) yield break;
-
-        List<int> validos = ObterIndicesValidosP1();
-        if (validos.Count == 0) yield break;
-
-        sorteandoP1 = true;
-        ultimoLadoAtivo = 1;
-
-        // Limpa o destaque do próprio botão Random — sem isso ele fica "preso"
-        // com a cor de hover depois que a roleta seleciona um personagem real
-        if (destaqueRandomP1 != null) destaqueRandomP1.color = corDestaqueInvisivel;
-
-        if (indiceSelecionadoP1 >= 0)
-        {
-            SetDestaqueP1(indiceSelecionadoP1, corDestaqueInvisivel);
-            SetEngrenagemP1(indiceSelecionadoP1, false);
-            indiceSelecionadoP1 = -1;
-            PlayerPrefs.DeleteKey("PersonagemP1");
-        }
-
-        float tempo = tempoInicialRoleta;
-        int indiceAtual = validos[0];
-
-        for (int i = 0; i < ciclosRoleta; i++)
-        {
-            if (i > 0)
-                SetDestaqueP1(indiceAtual, corDestaqueInvisivel);
-
-            indiceAtual = validos[Random.Range(0, validos.Count)];
-            focoP1 = indiceAtual;
-
-            PreviewPersonagemP1(indiceAtual);
-            SetDestaqueP1(indiceAtual, corHoverSuave);
-
-            yield return new WaitForSeconds(tempo);
-            tempo += 0.015f;
-        }
-
-        SetDestaqueP1(indiceAtual, corDestaqueInvisivel);
-
-        int final = validos[Random.Range(0, validos.Count)];
-        SelecionarPersonagemP1(final);
-        AtualizarFocoVisualP1(); // garante que nenhum destaque antigo (inclusive do Random) fique preso
-
-        sorteandoP1 = false;
-        estadoAtual = EstadoTela.SelecionandoPersonagens;
-    }
-
-    IEnumerator RoletaPersonagemP2()
-    {
-        if (PainelConfiguracaoIAAberto()) yield break;
-        if (sorteandoP2) yield break;
-
-        List<int> validos = ObterIndicesValidosP2();
-        if (validos.Count == 0) yield break;
-
-        if (!cpuPodeRepetirMesmoPersonagem && indiceSelecionadoP1 >= 0)
-        {
-            validos.Remove(indiceSelecionadoP1);
-
-            if (validos.Count == 0)
-                validos = ObterIndicesValidosP2();
-        }
-
-        sorteandoP2 = true;
-        ultimoLadoAtivo = 2;
-
-        // Limpa o destaque do próprio botão Random — sem isso ele fica "preso"
-        // com a cor de hover depois que a roleta seleciona um personagem real
-        if (destaqueRandomP2 != null) destaqueRandomP2.color = corDestaqueInvisivel;
-
-        if (indiceSelecionadoP2 >= 0)
-        {
-            SetDestaqueP2(indiceSelecionadoP2, corDestaqueInvisivel);
-            SetEngrenagemP2(indiceSelecionadoP2, false);
-            indiceSelecionadoP2 = -1;
-            PlayerPrefs.DeleteKey("PersonagemP2");
-        }
-
-        float tempo = tempoInicialRoleta;
-        int indiceAtual = validos[0];
-
-        for (int i = 0; i < ciclosRoleta; i++)
-        {
-            if (i > 0)
-                SetDestaqueP2(indiceAtual, corDestaqueInvisivel);
-
-            indiceAtual = validos[Random.Range(0, validos.Count)];
-            focoP2 = indiceAtual;
-
-            PreviewPersonagemP2(indiceAtual);
-            SetDestaqueP2(indiceAtual, corHoverSuave);
-
-            yield return new WaitForSeconds(tempo);
-            tempo += 0.015f;
-        }
-
-        SetDestaqueP2(indiceAtual, corDestaqueInvisivel);
-
-        int final = validos[Random.Range(0, validos.Count)];
-        SelecionarPersonagemP2(final);
-        AtualizarFocoVisualP2(); // garante que nenhum destaque antigo (inclusive do Random) fique preso
-
-        sorteandoP2 = false;
-        estadoAtual = EstadoTela.SelecionandoPersonagens;
-    }
-
     void SortearPersonagemParaP1()
     {
+        if (!PermiteSelecaoP1())
+            return;
+
         List<int> validos = ObterIndicesValidosP1();
 
         if (validos.Count == 0)
             return;
+
+        // Um novo clique deve representar um novo sorteio de verdade. Evita
+        // repetir imediatamente o personagem anterior quando há outra opção
+        // válida, sem eliminar a única opção disponível.
+        if (validos.Count > 1 && validos.Contains(indiceSelecionadoP1))
+            validos.Remove(indiceSelecionadoP1);
 
         int sorteado = validos[Random.Range(0, validos.Count)];
         SelecionarPersonagemP1(sorteado);
@@ -2200,6 +2067,9 @@ public class TelaSelecaoPlayer : MonoBehaviour
 
     void SortearPersonagemParaP2(int evitarIndiceP1 = -1)
     {
+        if (!PermiteSelecaoP2())
+            return;
+
         List<int> validos = ObterIndicesValidosP2();
 
         if (validos.Count == 0)
@@ -2213,18 +2083,38 @@ public class TelaSelecaoPlayer : MonoBehaviour
                 validos = ObterIndicesValidosP2();
         }
 
+        // Evita repetir o resultado imediatamente anterior do P2 sempre que
+        // ainda houver uma alternativa compatível com a regra do P1.
+        if (validos.Count > 1 && validos.Contains(indiceSelecionadoP2))
+            validos.Remove(indiceSelecionadoP2);
+
         int sorteado = validos[Random.Range(0, validos.Count)];
         SelecionarPersonagemP2(sorteado);
+    }
+
+    /// <summary>
+    /// Sorteia e confirma o personagem imediatamente. A seleção já aparece no
+    /// cartão do lado correspondente; não há animação de roleta nem bloqueio de
+    /// navegação.
+    /// </summary>
+    public void SortearPersonagemPublicamente(int lado)
+    {
+        if (lado == 1)
+            SortearPersonagemParaP1();
+        else if (lado == 2)
+            SortearPersonagemParaP2(indiceSelecionadoP1);
     }
 
     List<int> ObterIndicesValidosP1()
     {
         List<int> lista = new List<int>();
 
-        for (int i = 0; i < botoesPlayer1.Length; i++)
+        int total = Mathf.Max(corposPlayer1 != null ? corposPlayer1.Length : 0,
+                              nomesPlayer1 != null ? nomesPlayer1.Length : 0);
+        for (int i = 0; i < total; i++)
         {
-            bool valido = i < corposPlayer1.Length && corposPlayer1[i] != null
-                       && i < nomesPlayer1.Length && !string.IsNullOrEmpty(nomesPlayer1[i]);
+            bool valido = corposPlayer1 != null && i < corposPlayer1.Length && corposPlayer1[i] != null
+                       && nomesPlayer1 != null && i < nomesPlayer1.Length && !string.IsNullOrEmpty(nomesPlayer1[i]);
 
             if (valido)
                 lista.Add(i);
@@ -2237,23 +2127,18 @@ public class TelaSelecaoPlayer : MonoBehaviour
     {
         List<int> lista = new List<int>();
 
-        for (int i = 0; i < botoesPlayer2.Length; i++)
+        int total = Mathf.Max(corposPlayer2 != null ? corposPlayer2.Length : 0,
+                              nomesPlayer2 != null ? nomesPlayer2.Length : 0);
+        for (int i = 0; i < total; i++)
         {
-            bool valido = i < corposPlayer2.Length && corposPlayer2[i] != null
-                       && i < nomesPlayer2.Length && !string.IsNullOrEmpty(nomesPlayer2[i]);
+            bool valido = corposPlayer2 != null && i < corposPlayer2.Length && corposPlayer2[i] != null
+                       && nomesPlayer2 != null && i < nomesPlayer2.Length && !string.IsNullOrEmpty(nomesPlayer2[i]);
 
             if (valido)
                 lista.Add(i);
         }
 
         return lista;
-    }
-
-    Button PrimeiroBotaoValidoP1()
-    {
-        foreach (Button b in botoesPlayer1)
-            if (b != null && b.interactable) return b;
-        return null;
     }
 
     int ProximoIndiceValidoP1(int atual, int direcao)
@@ -2343,11 +2228,6 @@ public class TelaSelecaoPlayer : MonoBehaviour
         // Engrenagem P2 — só aparece no slot selecionado do P2, se P2 usa IA
         for (int i = 0; i < (engrenagensP2 != null ? engrenagensP2.Length : 0); i++)
             SetEngrenagemP2(i, UsaIAP2() && i == indiceSelecionadoP2);
-    }
-
-    Color CorHoverDoInspector(Selectable s)
-    {
-        return s != null ? s.colors.highlightedColor : corHoverBotao;
     }
 
     // ── Sistema próprio de sprites de Foco/Hover ───────────────────────────

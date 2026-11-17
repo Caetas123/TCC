@@ -41,6 +41,16 @@ public class DadosPersonagem : ScriptableObject
     public TipoGastoEspecial tipoGastoEspecial = TipoGastoEspecial.GastoFixo;
     public float custoEspecial = 25f;
 
+    [Header("Especial — Projétil de tinta (Renata)")]
+    public bool usaProjetilTintaEspecial = false;
+    [Tooltip("Opcional. Vazio usa uma bola de tinta pixelada gerada em tempo de execução.")]
+    public Sprite spriteProjetilTinta;
+    public float velocidadeProjetilTinta = 7.5f;
+    public float impulsoVerticalProjetilTinta = 1.2f;
+    public float gravidadeProjetilTinta = 0.7f;
+    [Tooltip("Índice na sequência framesSpecial (começa em zero). Na sequência da Renata, 5 corresponde ao desenho 4.")]
+    public int frameDisparoProjetilTinta = 5;
+
     [Header("Especial Única — Salto + Rachadura (ex: Jamanta)")]
     [Tooltip("Sprite da rachadura que aparece no chão. Deixe VAZIO pra esse personagem usar o especial padrão (dano simples à distância).")]
     public Sprite spriteRachadura;
@@ -64,6 +74,12 @@ public class DadosPersonagem : ScriptableObject
     public int quantidadePulsosRaioUltimate = 1;
     public float alcanceUltimate = 3f;
     public TipoUsoUltimate tipoUsoUltimate = TipoUsoUltimate.BarraCheia;
+
+    [Header("Ultimate único — Paleta de tinta (Renata)")]
+    public bool usaPaletaTintaUltimate = false;
+    public Sprite[] framesPaletaUltimate;
+    [Tooltip("Índice na sequência de framesUltimate (começa em zero). Na sequência 1,2,3,3,4,5, o índice 4 mostra o sprite 4.")]
+    [Min(0)] public int indiceCriacaoPaletaUltimate = 4;
 
     // ── Ultimate Único — Espada Cravada + Lava (ex: Diego) ───────────────────
     // Diferente do ultimate padrão, esse crava a espada em chamas no chão (a

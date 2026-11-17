@@ -36,7 +36,9 @@ using UnityEngine;
 public class AIControllerLuta : MonoBehaviour
 {
     // ── Enums públicos ────────────────────────────────────────────────────
-    public enum PerfilIA    { Equilibrado, Agressivo, Defensivo }
+    // A ordem precisa acompanhar os valores gravados pela tela de seleção:
+    // 0 = Agressivo, 1 = Equilibrado, 2 = Defensivo.
+    public enum PerfilIA    { Agressivo = 0, Equilibrado = 1, Defensivo = 2 }
     public enum DificuldadeIA { Facil, Medio, Dificil }
 
     // ── Estados comportamentais internos ──────────────────────────────────
@@ -121,6 +123,8 @@ public class AIControllerLuta : MonoBehaviour
     private float cronometroFintaCooldown;
     private float cronometroEstado;       // quanto tempo fica nesse estado
     private float cronometroCombo;        // janela para segundo hit do combo
+    private float cronometroEvasao;
+    private float limiteEsperaCombo;
 
     // ── Estado comportamental ─────────────────────────────────────────────
     private EstadoComportamento estadoAtual = EstadoComportamento.Aproximar;
@@ -212,6 +216,7 @@ public class AIControllerLuta : MonoBehaviour
         if (Time.timeScale == 0f) return;
         if (lutador.EstaMorto())  { lutador.IA_LimparComandos(); return; }
         if (oponente.EstaMorto()) { lutador.IA_LimparComandos(); return; }
+        if (lutador.EstaInteragindoComObjeto()) { lutador.IA_LimparComandos(); return; }
 
         CalcularDistancias();
         if (!distanciasCalculadas) return; // dadosPersonagem ainda não disponível
@@ -226,11 +231,9 @@ public class AIControllerLuta : MonoBehaviour
         cronometroFintaCooldown    -= Time.deltaTime;
         cronometroEstado           -= Time.deltaTime;
         cronometroCombo            -= Time.deltaTime;
+        cronometroEvasao           -= Time.deltaTime;
 
         AtualizarMemoria();
-
-        // Reação imediata a ataques do oponente (independente do ciclo de decisão)
-        if (usaEvasao) TentarEsquivar();
 
         // ── CAMADA 1 — PENSAR: escolhe o estado (baixa frequência) ────────
         if (cronometroDecisao <= 0f)
@@ -241,13 +244,31 @@ public class AIControllerLuta : MonoBehaviour
 
         // ── CAMADA 2 — MOVER: recalculado TODO frame ──────────────────────
         AtualizarMovimentoDoEstado();
+        // Uma tentativa por intervalo de reação. Sortear a cada frame fazia
+        // o bloqueio tender a 100% em monitores com FPS alto.
+        if (usaEvasao && cronometroEvasao <= 0f)
+        {
+            TentarEsquivar();
+            cronometroEvasao = Random.Range(tempoReacaoMin, tempoReacaoMax);
+        }
 
         // ── CAMADA 3 — BOTÕES: limitada pelo relógio de reação ────────────
         bool acaoSolicitadaNesteCiclo = false;
         if (cronometroAcao <= 0f)
         {
-            acaoSolicitadaNesteCiclo = ExecutarAcoesDoEstado();
+            // A IA usa um objeto disponível no alcance antes de escolher um
+            // golpe comum. A mesma animação e o mesmo reset valem para PvC/CvC.
+            acaoSolicitadaNesteCiclo = (!ComprometidaComBloqueio() &&
+                ObjetoInterativoLuta.TentarUsoPelaIA(lutador)) || ExecutarAcoesDoEstado();
             cronometroAcao = Random.Range(tempoReacaoMin, tempoReacaoMax) * 0.6f;
+        }
+
+        if (lutador.EstaInteragindoComObjeto())
+        {
+            comboSegundoHitPendente = false;
+            emFinta = false;
+            lutador.IA_LimparComandos();
+            return;
         }
 
         // Aplica movimento (finta tem prioridade)
@@ -266,8 +287,35 @@ public class AIControllerLuta : MonoBehaviour
         lutador.IA_DefinirDefesa(cronometroDefesa > 0f);
 
         // Combo: segundo hit pendente dentro da janela
-        if (!acaoSolicitadaNesteCiclo && comboSegundoHitPendente && cronometroCombo > 0f)
+        if (comboSegundoHitPendente && Time.time > limiteEsperaCombo)
+            comboSegundoHitPendente = false;
+        if (!acaoSolicitadaNesteCiclo && comboSegundoHitPendente && cronometroCombo <= 0f &&
+            !lutador.EstaAtacando() && !lutador.EstaLevandoHit())
             TentarSegundoHitCombo();
+    }
+
+    public void ResetarParaNovoRound()
+    {
+        estadoAtual = EstadoComportamento.Aproximar;
+        movimentoAtual = 0f;
+        emFinta = false;
+        comboSegundoHitPendente = false;
+        hitsDoComboAtual = 0;
+        cronometroDefesa = cronometroAtaqueCooldown = cronometroEspecialCooldown = 0f;
+        cronometroUltimateCooldown = cronometroFintaCooldown = cronometroFintaAcao = 0f;
+        cronometroEstado = cronometroCombo = cronometroEvasao = 0f;
+        cronometroAcao = 0f;
+        cronometroDecisao = Random.Range(0.05f, 0.25f);
+        distanciasCalculadas = false;
+        historicoOponente.Clear();
+        ultimoEstadoOponenteObservado = LutadorController2D.EstadoAnim.Idle;
+        oponenteEstavaAtacando = oponenteEstavaNoAr = false;
+        janelaPunicao = janelaAntiAereo = 0f;
+        danoRecebidoConsecutivo = 0;
+        tempoUltimoDanoRecebido = tempoUltimoAtaqueBemSucedido = -99f;
+        tempoUltimaTrocaDeDano = Time.time;
+        if (oponente != null) vidaAnteriorOponente = oponente.vidaAtual;
+        if (lutador != null) lutador.IA_LimparComandos();
     }
 
     // ── Distâncias baseadas no alcance real do personagem ─────────────────
@@ -732,6 +780,7 @@ public class AIControllerLuta : MonoBehaviour
             comboSegundoHitPendente = true;
             hitsDoComboAtual = 1;
             cronometroCombo = Random.Range(0.15f, 0.35f);
+            limiteEsperaCombo = Time.time + 1.5f;
         }
 
         return true;
@@ -781,6 +830,7 @@ public class AIControllerLuta : MonoBehaviour
         {
             comboSegundoHitPendente = true;
             cronometroCombo = Random.Range(0.15f, 0.30f);
+            limiteEsperaCombo = Time.time + 1.5f;
         }
         else
         {
@@ -891,7 +941,8 @@ public class AIControllerLuta : MonoBehaviour
         // "normal". Sem isso a IA praticamente nunca soltava o golpe mais vistoso
         // do personagem, só quando por acaso já estava perto.
         bool ultimateGlobal = lutador.dadosPersonagem.spriteRaioUltimate != null ||
-                              lutador.dadosPersonagem.spriteLavaUltimate != null;
+                              lutador.dadosPersonagem.spriteLavaUltimate != null ||
+                              lutador.dadosPersonagem.usaPaletaTintaUltimate;
         if (!ultimateGlobal && distancia > lutador.dadosPersonagem.alcanceUltimate) return false;
         if (cronometroUltimateCooldown > 0f) return false;
         if (!lutador.IA_PodeUsarUltimate()) return false;
@@ -928,7 +979,11 @@ public class AIControllerLuta : MonoBehaviour
         if (r < chanceBloqueio)
             cronometroDefesa = Random.Range(0.25f, 0.55f);
         else if (r < chanceBloqueio + chanceRecuoBase)
-            movimentoAtual = -DirecaoParaOponente();
+        {
+            emFinta = true;
+            direcaoFinta = -DirecaoParaOponente();
+            cronometroFintaAcao = 0.18f;
+        }
     }
 
     void IniciarFinta(float dir, float recuo)
@@ -973,7 +1028,21 @@ public class AIControllerLuta : MonoBehaviour
         estilo      = Mathf.Clamp(estilo,      0, 2);
         dificuldade = Mathf.Clamp(dificuldade, 0, 2);
 
-        perfilIA    = (PerfilIA)estilo;
+        // Não usar cast direto aqui: a tela e a IA são módulos independentes e
+        // uma alteração futura na ordem de qualquer enum não pode trocar o
+        // comportamento escolhido pelo jogador. Esta conversão vale para P1 e P2.
+        switch (estilo)
+        {
+            case 0:
+                perfilIA = PerfilIA.Agressivo;
+                break;
+            case 2:
+                perfilIA = PerfilIA.Defensivo;
+                break;
+            default:
+                perfilIA = PerfilIA.Equilibrado;
+                break;
+        }
         dificuldadeIA = (DificuldadeIA)dificuldade;
 
         Debug.Log($"[IA] {(ehP1 ? "P1" : "P2")} — Perfil: {perfilIA} | Dificuldade: {dificuldadeIA}");

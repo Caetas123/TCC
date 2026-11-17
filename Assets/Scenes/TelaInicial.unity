@@ -4215,7 +4215,6 @@ GameObject:
   - component: {fileID: 1941036834}
   - component: {fileID: 1941036833}
   - component: {fileID: 1941036836}
-  - component: {fileID: 1941036837}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -4341,18 +4340,6 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
---- !u!114 &1941036837
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1941036832}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eb242b2c18937d14d919c48ddfabaca6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &2021319928 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5820093480485459720, guid: d01f928fa4eabe1459846f9d29d93e4c, type: 3}
@@ -4452,6 +4439,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1781329714}
     m_Modifications:
+    - target: {fileID: 2253481115226554421, guid: d01f928fa4eabe1459846f9d29d93e4c, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value:
+      objectReference: {fileID: 1499807185}
     - target: {fileID: 569224469331320197, guid: d01f928fa4eabe1459846f9d29d93e4c, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 

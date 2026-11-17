@@ -104,8 +104,6 @@ public class PainelInfoPersonagem : MonoBehaviour
     [SerializeField] private int quantidadeSegmentosGrafico = 10;
     [SerializeField] private Vector2 tamanhoSegmentoGrafico = new Vector2(17f, 14f);
     [SerializeField] private float espacamentoSegmentoGrafico = 3f;
-    [SerializeField] private float multiplicadorVelocidadePreview = 1f;
-    [SerializeField] private float fpsMinimoPreview = 0.01f;
     [SerializeField] private Color corBotaoInfoNormal = new Color(0.04f, 0.12f, 0.24f, 0.96f);
     [SerializeField] private Color corBotaoAcaoNormal = new Color(0.015f, 0.015f, 0.02f, 0.98f);
     [SerializeField] private Color corBotaoHoverSelecionado = new Color(1f, 0.85f, 0.2f, 1f);
@@ -814,7 +812,8 @@ public class PainelInfoPersonagem : MonoBehaviour
                         ? Mathf.Max(1f, dadosAtuais.multiplicadorDanoRachadura)
                         : 1f);
             case AcaoInfo.Ultimate:
-                return dadosAtuais.danoUltimate;
+                return dadosAtuais.usaPaletaTintaUltimate
+                    ? dadosAtuais.danoEspecial : dadosAtuais.danoUltimate;
             case AcaoInfo.Defesa:
                 // Defesa não causa dano: o primeiro indicador passa a mostrar
                 // a porcentagem de bloqueio configurada para ela.
@@ -848,7 +847,9 @@ public class PainelInfoPersonagem : MonoBehaviour
             case AcaoInfo.Especial:
                 return dadosAtuais.alcanceEspecial;
             case AcaoInfo.Ultimate:
-                return dadosAtuais.alcanceUltimate;
+                return dadosAtuais.usaPaletaTintaUltimate
+                    ? Mathf.Max(dadosAtuais.alcanceEspecial, dadosAtuais.alcanceUltimate)
+                    : dadosAtuais.alcanceUltimate;
             case AcaoInfo.Defesa:
                 return 0f;
             default:
@@ -1543,7 +1544,9 @@ public class PainelInfoPersonagem : MonoBehaviour
 
             case AcaoInfo.Ultimate:
                 nomeAcao = Traduzir("CHAR_ULTIMATE", "ULTIMATE");
-                textoAcao = dadosAtuais.spriteLavaUltimate != null
+                textoAcao = dadosAtuais.usaPaletaTintaUltimate
+                    ? Traduzir("CHAR_PALETTE_DESC", "Paleta acompanha o rival e derrama tinta por 30 segundos.")
+                    : dadosAtuais.spriteLavaUltimate != null
                     ? Traduzir("CHAR_LAVA_DESC", "Espada cravada: lava no ponto de impacto.")
                     : dadosAtuais.spriteRaioUltimate != null
                         ? Traduzir("CHAR_RAY_DESC", "Raio concentrado com impacto e recuo.")
@@ -1577,28 +1580,6 @@ public class PainelInfoPersonagem : MonoBehaviour
     string Numero(float valor)
     {
         return valor.ToString("0.##");
-    }
-
-    string TraduzirGastoEspecial(TipoGastoEspecial tipo)
-    {
-        switch (tipo)
-        {
-            case TipoGastoEspecial.BarraCheia:
-                return Traduzir("CHAR_SPEND_FULL_BAR", "Barra cheia");
-            case TipoGastoEspecial.ZeraTudo:
-                return Traduzir("CHAR_SPEND_EMPTY_ALL", "Zera tudo");
-            case TipoGastoEspecial.GastoGradual:
-                return Traduzir("CHAR_SPEND_GRADUAL", "Gasto gradual");
-            default:
-                return Traduzir("CHAR_SPEND_FIXED", "Gasto fixo");
-        }
-    }
-
-    string TraduzirUsoUltimate(TipoUsoUltimate tipo)
-    {
-        return tipo == TipoUsoUltimate.BarraCheia
-            ? Traduzir("CHAR_USAGE_FULL_BAR", "Barra cheia")
-            : Traduzir("CHAR_USAGE_FIXED", "Gasto fixo");
     }
 
     string Traduzir(string chave, string fallback)

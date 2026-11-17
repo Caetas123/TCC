@@ -19,6 +19,12 @@ using UnityEditor.SceneManagement;
 [ExecuteAlways]
 public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
 {
+    private const int CategoriaInfo = 1;
+    private const int CategoriaRandom = 2;
+    private const int CategoriaDificuldade = 3;
+    private const int CategoriaEstilo = 4;
+    private const int CategoriaPersonagens = 5;
+
     [Header("Composição")]
     [SerializeField] private Vector2 tamanhoReferencia = new Vector2(1920f, 1080f);
     [SerializeField] private Vector2 margemHorizontal = new Vector2(55f, 55f);
@@ -44,6 +50,8 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
     [SerializeField] private Sprite spriteInfoP1;
     [Tooltip("PNG único do botão de informação do Player 2.")]
     [SerializeField] private Sprite spriteInfoP2;
+    [Tooltip("Ícone pequeno do botão de personagem aleatório. Se vazio, usa o ícone de aleatório da tela antiga.")]
+    [SerializeField] private Sprite spriteBotaoRandom;
     [Tooltip("Faixa vermelha do título, sem texto embutido.")]
     [SerializeField] private Sprite fundoTitulo;
     [Tooltip("Fundo horizontal do rodapé. Os badges e textos ficam separados.")]
@@ -99,6 +107,8 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
     private Button botaoInfoOriginalP2;
     private BotaoInfoFocoVisual visualInfoP1;
     private BotaoInfoFocoVisual visualInfoP2;
+    private BotaoInfoFocoVisual visualRandomP1;
+    private BotaoInfoFocoVisual visualRandomP2;
     private ButtonVisualPersonalizado visualVoltar;
     private Image fundoAlternativoP1;
     private Image fundoAlternativoP2;
@@ -139,8 +149,8 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
     private Outline focoCardP2;
     private readonly Dictionary<TMP_Dropdown, Sprite> spritesNormaisDropdown =
         new Dictionary<TMP_Dropdown, Sprite>();
-    private int categoriaFocoP1 = 4;
-    private int categoriaFocoP2 = 4;
+    private int categoriaFocoP1 = CategoriaPersonagens;
+    private int categoriaFocoP2 = CategoriaPersonagens;
     private int indiceFocoP1;
     private int indiceFocoP2 = 1;
     private bool idiomaInscrito;
@@ -240,6 +250,7 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
             AplicarFundosDosCartoesPorModo();
             ReconectarIndicadoresRodape();
             AplicarTextosRodape(rodapeUsandoControle);
+            AtualizarVisual();
             return;
         }
 
@@ -271,6 +282,7 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
         roster = layoutRoot.Find("RosterPersonagens") as RectTransform;
         textoInstrucaoEnter = layoutRoot.Find("InstrucaoEnter")?.GetComponent<TextMeshProUGUI>();
         ReconectarIndicadoresRodape();
+        GarantirSlotsRosterDesbloqueados();
 
         if (painelP1 != null)
         {
@@ -280,6 +292,7 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
             dificuldadeP1 = painelP1.Find("DificuldadeBotP1")?.GetComponent<TMP_Dropdown>();
             VincularBotaoDoLado(painelP1, 1);
             VincularBotaoInfo(painelP1, 1);
+            PrepararBotaoAleatorio(painelP1, 1);
         }
 
         if (painelP2 != null)
@@ -290,6 +303,7 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
             dificuldadeP2 = painelP2.Find("DificuldadeBotP2")?.GetComponent<TMP_Dropdown>();
             VincularBotaoDoLado(painelP2, 2);
             VincularBotaoInfo(painelP2, 2);
+            PrepararBotaoAleatorio(painelP2, 2);
         }
 
         focoCardP1 = painelP1 != null ? painelP1.GetComponent<Outline>() : null;
@@ -618,8 +632,84 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
             info.onClick.AddListener(() => tela.AbrirInfoPublicamente(lado));
         }
 
+        PrepararBotaoAleatorio(cartao, lado);
+
         AdicionarListenerConfiguracao(dropdownEstilo, dropdownDificuldade, lado);
         return cartao;
+    }
+
+    private void PrepararBotaoAleatorio(Transform cartao, int lado)
+    {
+        if (cartao == null || tela == null)
+            return;
+
+        string rotulo = lado == 1 ? "P1" : "P2";
+        string nome = "BotaoRandom" + rotulo;
+        Button botao = cartao.Find(nome)?.GetComponent<Button>();
+
+        if (botao == null)
+        {
+            GameObject objeto = new GameObject(nome,
+                typeof(RectTransform), typeof(Image), typeof(Button));
+            objeto.transform.SetParent(cartao, false);
+            botao = objeto.GetComponent<Button>();
+        }
+
+        Image imagem = botao.GetComponent<Image>();
+        if (imagem == null)
+            imagem = botao.gameObject.AddComponent<Image>();
+
+        Sprite sprite = spriteBotaoRandom != null ? spriteBotaoRandom : tela.spriteRandom;
+        imagem.sprite = sprite;
+        imagem.type = Image.Type.Simple;
+        imagem.preserveAspect = true;
+        imagem.color = Color.white;
+        imagem.raycastTarget = true;
+
+        botao.targetGraphic = imagem;
+        // O botão não usa ColorTint nem roleta. O componente visual próprio
+        // mostra apenas uma borda amarela quando ele recebe foco.
+        botao.transition = Selectable.Transition.None;
+        botao.interactable = true;
+
+        BotaoInfoFocoVisual visual = botao.GetComponent<BotaoInfoFocoVisual>();
+        if (visual == null)
+            visual = botao.gameObject.AddComponent<BotaoInfoFocoVisual>();
+        // O clique não troca a arte nem cria uma roleta; somente a borda de
+        // foco muda de estado.
+        visual.Configurar(imagem, sprite, sprite, new Color(1f, 0.82f, 0.12f, 1f));
+        visual.DefinirFocoDaNavegacao(false);
+        if (lado == 1) visualRandomP1 = visual;
+        else visualRandomP2 = visual;
+
+        botao.onClick.RemoveAllListeners();
+        botao.onClick.AddListener(() =>
+        {
+            ladoAtivo = lado;
+            tela.SortearPersonagemPublicamente(lado);
+            AtualizarVisual();
+        });
+
+        PosicionarBotaoAleatorio(cartao, lado);
+        // O cartão possui uma área de clique grande; o botão aleatório precisa
+        // permanecer acima dela para receber o clique sem alterar a área do cartão.
+        botao.transform.SetAsLastSibling();
+    }
+
+    private void PosicionarBotaoAleatorio(Transform cartao, int lado)
+    {
+        if (cartao == null)
+            return;
+
+        RectTransform botao = cartao.Find("BotaoRandom" + (lado == 1 ? "P1" : "P2")) as RectTransform;
+        RectTransform info = cartao.Find("InfoI" + (lado == 1 ? "P1" : "P2")) as RectTransform;
+        if (botao == null)
+            return;
+
+        Vector2 posicao = info != null
+            ? info.anchoredPosition + new Vector2(0f, -66f)
+            : new Vector2(lado == 1 ? 270f : -270f, 139f);
+        Posicionar(botao, posicao, new Vector2(58f, 52f));
     }
 
     private Button PrepararBotaoInfo(int lado, string rotulo, Transform cartao)
@@ -710,6 +800,41 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
                 CriarSlotPersonagem(roster, slotIndex, x);
             else
                 CriarSlotBloqueado(roster, slotIndex, x);
+        }
+    }
+
+    private void GarantirSlotsRosterDesbloqueados()
+    {
+        if (roster == null || tela == null)
+            return;
+
+        int totalSlots = Mathf.Max(4, quantidadeSlotsRoster);
+        float larguraTotal = totalSlots * larguraSlotRoster + (totalSlots - 1) * espacamentoRoster;
+
+        for (int indice = 0; indice < totalSlots; indice++)
+        {
+            if (!tela.PersonagemValidoPublicamente(indice))
+                continue;
+
+            if (roster.Find("SlotPersonagem" + indice) != null)
+                continue;
+
+            Transform bloqueado = roster.Find("SlotPersonagemBloqueado" + indice);
+            if (bloqueado != null)
+            {
+#if UNITY_EDITOR
+                if (!Application.isPlaying)
+                    DestroyImmediate(bloqueado.gameObject);
+                else
+                    Destroy(bloqueado.gameObject);
+#else
+                Destroy(bloqueado.gameObject);
+#endif
+            }
+
+            float x = -larguraTotal * 0.5f + larguraSlotRoster * 0.5f +
+                      indice * (larguraSlotRoster + espacamentoRoster);
+            CriarSlotPersonagem(roster, indice, x);
         }
     }
 
@@ -963,13 +1088,13 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
     private void AtualizarFocosDropdowns()
     {
         DefinirFocoDropdown(dificuldadeP1,
-            categoriaFocoP1 == 2 && dificuldadeP1 != null && dificuldadeP1.interactable);
+            categoriaFocoP1 == CategoriaDificuldade && dificuldadeP1 != null && dificuldadeP1.interactable);
         DefinirFocoDropdown(estiloP1,
-            categoriaFocoP1 == 3 && estiloP1 != null && estiloP1.interactable);
+            categoriaFocoP1 == CategoriaEstilo && estiloP1 != null && estiloP1.interactable);
         DefinirFocoDropdown(dificuldadeP2,
-            categoriaFocoP2 == 2 && dificuldadeP2 != null && dificuldadeP2.interactable);
+            categoriaFocoP2 == CategoriaDificuldade && dificuldadeP2 != null && dificuldadeP2.interactable);
         DefinirFocoDropdown(estiloP2,
-            categoriaFocoP2 == 3 && estiloP2 != null && estiloP2.interactable);
+            categoriaFocoP2 == CategoriaEstilo && estiloP2 != null && estiloP2.interactable);
     }
 
     private void PosicionarDropdown(TMP_Dropdown dropdown, Transform pai, Vector2 posicao)
@@ -1079,6 +1204,7 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
         AplicarRectSalvo(painel, "RotuloP" + lado, composicao.posicaoRotulo, composicao.tamanhoRotulo);
         AplicarRectSalvo(painel, "InfoIP" + lado, composicao.posicaoInfo, composicao.tamanhoInfo);
         AplicarRectSalvo(painel, "SelecionarLadoP" + lado, composicao.posicaoClique, composicao.tamanhoClique);
+        PosicionarBotaoAleatorio(painel, lado);
     }
 
     private void AplicarRectSalvo(Transform painel, string nome, Vector2 posicao, Vector2 tamanho)
@@ -1148,8 +1274,8 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
             int indice = indicesRoster[i];
             bool selecionadoP1 = tela.ObterIndiceSelecionadoPublicamente(1) == indice;
             bool selecionadoP2 = tela.ObterIndiceSelecionadoPublicamente(2) == indice;
-            bool focadoP1 = categoriaFocoP1 == 4 && indiceFocoP1 == indice;
-            bool focadoP2 = categoriaFocoP2 == 4 && indiceFocoP2 == indice;
+            bool focadoP1 = categoriaFocoP1 == CategoriaPersonagens && indiceFocoP1 == indice;
+            bool focadoP2 = categoriaFocoP2 == CategoriaPersonagens && indiceFocoP2 == indice;
 
             // A borda PNG da própria Hierarchy é o visual oficial. O Outline
             // antigo fica invisível para não duplicar a moldura.
@@ -1160,12 +1286,16 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
 
         AtualizarBordasRoster();
 
-        AtualizarFocoCard(focoCardP1, categoriaFocoP1 >= 1);
-        AtualizarFocoCard(focoCardP2, categoriaFocoP2 >= 1);
+        AtualizarFocoCard(focoCardP1, categoriaFocoP1 >= CategoriaInfo);
+        AtualizarFocoCard(focoCardP2, categoriaFocoP2 >= CategoriaInfo);
         if (visualInfoP1 != null)
-            visualInfoP1.DefinirFocoDaNavegacao(categoriaFocoP1 == 1);
+            visualInfoP1.DefinirFocoDaNavegacao(categoriaFocoP1 == CategoriaInfo);
         if (visualInfoP2 != null)
-            visualInfoP2.DefinirFocoDaNavegacao(categoriaFocoP2 == 1);
+            visualInfoP2.DefinirFocoDaNavegacao(categoriaFocoP2 == CategoriaInfo);
+        if (visualRandomP1 != null)
+            visualRandomP1.DefinirFocoDaNavegacao(categoriaFocoP1 == CategoriaRandom);
+        if (visualRandomP2 != null)
+            visualRandomP2.DefinirFocoDaNavegacao(categoriaFocoP2 == CategoriaRandom);
         AtualizarFocosDropdowns();
     }
 
@@ -1329,11 +1459,17 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
             // A moldura é foco/hover da rota de personagens. Ao ir para I,
             // dificuldade, estilo ou voltar, ela some; a seleção continua
             // guardada internamente sem deixar uma borda presa no slot.
-            bool p1 = categoriaFocoP1 == 4 &&
-                (tela.ObterIndiceSelecionadoPublicamente(1) == indice || indiceFocoP1 == indice);
-            bool p2 = categoriaFocoP2 == 4 &&
-                (tela.ObterIndiceSelecionadoPublicamente(2) == indice || indiceFocoP2 == indice);
+            bool p1NaGrade = categoriaFocoP1 == CategoriaPersonagens;
+            bool p2NaGrade = categoriaFocoP2 == CategoriaPersonagens;
+            bool focoP1 = p1NaGrade && indiceFocoP1 == indice;
+            bool focoP2 = p2NaGrade && indiceFocoP2 == indice;
 
+            // A borda acompanha o foco/seleção de cada jogador na grade. Se
+            // os dois destacarem o mesmo slot, usa a moldura dupla.
+            bool p1 = p1NaGrade &&
+                (tela.ObterIndiceSelecionadoPublicamente(1) == indice || focoP1);
+            bool p2 = p2NaGrade &&
+                (tela.ObterIndiceSelecionadoPublicamente(2) == indice || focoP2);
             bool mesmaPersonagem = p1 && p2 && spriteBordaDupla != null;
             if (mesmaPersonagem)
             {
@@ -1426,7 +1562,9 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
     private void AtualizarCard(int lado, Image imagem, TextMeshProUGUI nome,
         TMP_Dropdown estilo, TMP_Dropdown dificuldade)
     {
-        bool estaNoRoster = lado == 1 ? categoriaFocoP1 == 4 : categoriaFocoP2 == 4;
+        bool estaNoRoster = lado == 1
+            ? categoriaFocoP1 == CategoriaPersonagens
+            : categoriaFocoP2 == CategoriaPersonagens;
         int indiceFoco = lado == 1 ? indiceFocoP1 : indiceFocoP2;
         int indicePreview = estaNoRoster ? indiceFoco : tela.ObterIndiceSelecionadoPublicamente(lado);
         Sprite corpo = indicePreview >= 0
@@ -1565,18 +1703,11 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
 
     private bool TeclaLegadaEstaSendoUsada(KeyCode tecla)
     {
-        try
-        {
-            // A navegação de SelecaoPlayerNavigation usa esta mesma API. O
-            // GetKey cobre também o caso em que o outro Update já consumiu o
-            // frame de GetKeyDown antes de o layout ser atualizado.
-            return Input.GetKeyDown(tecla) || Input.GetKey(tecla);
-        }
-        catch (System.InvalidOperationException)
-        {
-            // O projeto pode alternar para o Input System novo no Inspector.
-            return false;
-        }
+#if ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetKey(tecla);
+#else
+        return false;
+#endif
     }
 
     private bool ControleFoiUsadoNesteFrame()
@@ -1735,10 +1866,10 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
         string tecla = PlayerPrefs.GetString(chave, padrao);
         switch (tecla)
         {
-            case "LeftArrow": return "←";
-            case "RightArrow": return "→";
-            case "UpArrow": return "↑";
-            case "DownArrow": return "↓";
+            case "LeftArrow": return "<";
+            case "RightArrow": return ">";
+            case "UpArrow": return "^";
+            case "DownArrow": return "v";
             case "Escape": return "ESC";
             case "Return": return "ENTER";
             case "KeypadEnter": return "ENTER";
@@ -1860,20 +1991,6 @@ public sealed class TelaSelecaoPlayerLayout : MonoBehaviour
         TextMeshProUGUI label = CriarTexto("Texto", objeto.transform, texto, 20f, cor);
         Posicionar(label.rectTransform, Vector2.zero, tamanho);
         return botao;
-    }
-
-    private void AplicarSpriteBotao(Button botao, Sprite sprite)
-    {
-        if (botao == null || sprite == null)
-            return;
-
-        Image imagem = botao.GetComponent<Image>();
-        if (imagem == null)
-            return;
-
-        imagem.sprite = sprite;
-        imagem.color = Color.white;
-        imagem.preserveAspect = false;
     }
 
     private Button CriarBotaoVoltar(string nome, Transform pai)

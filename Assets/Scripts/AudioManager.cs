@@ -73,6 +73,7 @@ public class AudioManager : MonoBehaviour
         }
 
         Instance = this;
+        if (transform.parent != null) transform.SetParent(null, true);
         DontDestroyOnLoad(gameObject);
         SceneManager.sceneLoaded += AoCarregarCena;
     }

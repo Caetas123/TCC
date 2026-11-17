@@ -114,6 +114,9 @@ public class ButtonVisualPersonalizado :
     /// </summary>
     public void DefinirFocoExterno(bool focado)
     {
+        if (focado && !focoExterno && PodeInteragir())
+            SonsBotoesUI.TocarSelecao(gameObject);
+
         focoExterno = focado;
         AtualizarVisual();
     }

@@ -381,10 +381,10 @@ public class ControleManager : MonoBehaviour
     {
         switch (tecla)
         {
-            case "LeftArrow": return "←";
-            case "RightArrow": return "→";
-            case "UpArrow": return "↑";
-            case "DownArrow": return "↓";
+            case "LeftArrow": return "<";
+            case "RightArrow": return ">";
+            case "UpArrow": return "^";
+            case "DownArrow": return "v";
             case "Semicolon": return ";";
             default: return tecla;
         }

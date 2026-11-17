@@ -21,15 +21,18 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
 {
     private const int CategoriaVoltar = 0;
     private const int CategoriaInfo = 1;
-    private const int CategoriaDificuldade = 2;
-    private const int CategoriaEstilo = 3;
-    private const int CategoriaPersonagens = 4;
+    private const int CategoriaRandom = 2;
+    private const int CategoriaDificuldade = 3;
+    private const int CategoriaEstilo = 4;
+    private const int CategoriaPersonagens = 5;
 
     [Header("Referências da tela nova")]
     [SerializeField] private Button botaoLadoP1;
     [SerializeField] private Button botaoLadoP2;
     [SerializeField] private Button botaoInfoP1;
     [SerializeField] private Button botaoInfoP2;
+    [SerializeField] private Button botaoRandomP1;
+    [SerializeField] private Button botaoRandomP2;
     [SerializeField] private Button botaoVoltar;
     [SerializeField] private TMP_Dropdown dificuldadeP1;
     [SerializeField] private TMP_Dropdown estiloP1;
@@ -170,6 +173,8 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
         botaoLadoP2 = Encontrar<Button>("PainelP2/SelecionarLadoP2");
         botaoInfoP1 = Encontrar<Button>("PainelP1/InfoIP1");
         botaoInfoP2 = Encontrar<Button>("PainelP2/InfoIP2");
+        botaoRandomP1 = Encontrar<Button>("PainelP1/BotaoRandomP1");
+        botaoRandomP2 = Encontrar<Button>("PainelP2/BotaoRandomP2");
         botaoVoltar = Encontrar<Button>("BotaoVoltarSelecao");
         dificuldadeP1 = Encontrar<TMP_Dropdown>("PainelP1/DificuldadeBotP1");
         estiloP1 = Encontrar<TMP_Dropdown>("PainelP1/EstiloBotP1");
@@ -195,6 +200,15 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
                 }
             }
         }
+
+        // A ordem na Hierarchy pode mudar quando um personagem é adicionado.
+        // A rota das setas deve seguir a posição visível, da esquerda para a direita.
+        slots.Sort((a, b) =>
+            ((RectTransform)a.transform).anchoredPosition.x.CompareTo(
+                ((RectTransform)b.transform).anchoredPosition.x));
+        indices.Clear();
+        foreach (Button slot in slots)
+            indices.Add(int.Parse(slot.gameObject.name.Substring("SlotPersonagem".Length)));
 
         slotsPersonagens = slots.ToArray();
         indicesPersonagens = indices.ToArray();
@@ -250,6 +264,8 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
         PrepararSelectable(botaoLadoP2);
         PrepararSelectable(botaoInfoP1);
         PrepararSelectable(botaoInfoP2);
+        PrepararSelectable(botaoRandomP1);
+        PrepararSelectable(botaoRandomP2);
         PrepararSelectable(botaoVoltar);
         for (int i = 0; i < slotsPersonagens.Length; i++)
             PrepararSelectable(slotsPersonagens[i]);
@@ -314,6 +330,16 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
 
     private void ConfigurarNavegacaoExplicita()
     {
+        // O layout cria os dois botões aleatórios em runtime. Reconsulta os
+        // objetos antes de montar a rota para não depender da ordem de Start()
+        // entre os componentes da tela.
+        if (botaoRandomP1 == null)
+            botaoRandomP1 = Encontrar<Button>("PainelP1/BotaoRandomP1");
+        if (botaoRandomP2 == null)
+            botaoRandomP2 = Encontrar<Button>("PainelP2/BotaoRandomP2");
+        PrepararSelectable(botaoRandomP1);
+        PrepararSelectable(botaoRandomP2);
+
         ConfigurarRota(1);
         ConfigurarRota(2);
     }
@@ -321,12 +347,14 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
     private void ConfigurarRota(int lado)
     {
         Button info = lado == 1 ? botaoInfoP1 : botaoInfoP2;
+        Button random = lado == 1 ? botaoRandomP1 : botaoRandomP2;
         TMP_Dropdown dificuldade = lado == 1 ? dificuldadeP1 : dificuldadeP2;
         TMP_Dropdown estilo = lado == 1 ? estiloP1 : estiloP2;
 
         List<Selectable> controles = new List<Selectable>();
         if (botaoVoltar != null) controles.Add(botaoVoltar);
         if (info != null) controles.Add(info);
+        if (random != null) controles.Add(random);
         if (dificuldade != null && dificuldade.interactable) controles.Add(dificuldade);
         if (estilo != null && estilo.interactable) controles.Add(estilo);
 
@@ -367,7 +395,9 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
             Configurar(slot,
                 i > 0 ? slotsPersonagens[i - 1] : null,
                 i + 1 < slotsPersonagens.Length ? slotsPersonagens[i + 1] : null,
-                PrimeiroDisponivel(estilo, dificuldade, info, botaoVoltar),
+                // Mantém a rota dos dropdowns do BOT. O aleatório entra como
+                // o novo controle imediatamente antes do Info quando se sobe.
+                PrimeiroDisponivel(estilo, dificuldade, random, info, botaoVoltar),
                 null);
         }
     }
@@ -586,7 +616,7 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
     private void MoverCategoria(int lado, int delta)
     {
         int categoria = lado == 1 ? categoriaP1 : categoriaP2;
-        for (int tentativas = 0; tentativas < 5; tentativas++)
+        for (int tentativas = 0; tentativas < 6; tentativas++)
         {
             categoria += delta;
             if (categoria < CategoriaVoltar) categoria = CategoriaPersonagens;
@@ -606,6 +636,11 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
             return botaoVoltar != null;
         if (categoria == CategoriaInfo)
             return ObterInfo(lado) != null;
+        if (categoria == CategoriaRandom)
+        {
+            Button random = lado == 1 ? botaoRandomP1 : botaoRandomP2;
+            return random != null && random.interactable;
+        }
         if (categoria == CategoriaDificuldade)
             return ObterDificuldade(lado) != null && ObterDificuldade(lado).interactable;
         if (categoria == CategoriaEstilo)
@@ -641,6 +676,11 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
         {
             Button info = ObterInfo(lado);
             if (info != null) info.onClick.Invoke();
+        }
+        else if (categoria == CategoriaRandom)
+        {
+            Button random = lado == 1 ? botaoRandomP1 : botaoRandomP2;
+            if (random != null) random.onClick.Invoke();
         }
         else if (categoria == CategoriaDificuldade)
         {
@@ -692,7 +732,9 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
         if (layout != null)
         {
             layout.DefinirFocoNavegacao(lado, categoria,
-                slotsPersonagens.Length > 0 ? indicesPersonagens[indiceSlot] : -1);
+                slotsPersonagens.Length > 0 && indiceSlot < indicesPersonagens.Length
+                    ? indicesPersonagens[indiceSlot]
+                    : -1);
             layout.DefinirFocoVoltar(categoriaP1 == CategoriaVoltar || categoriaP2 == CategoriaVoltar);
         }
 
@@ -705,6 +747,7 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
     {
         if (categoria == CategoriaVoltar) return botaoVoltar;
         if (categoria == CategoriaInfo) return ObterInfo(lado);
+        if (categoria == CategoriaRandom) return lado == 1 ? botaoRandomP1 : botaoRandomP2;
         if (categoria == CategoriaDificuldade) return ObterDificuldade(lado);
         if (categoria == CategoriaEstilo) return ObterEstilo(lado);
         if (categoria == CategoriaPersonagens && slotsPersonagens.Length > 0)
@@ -712,43 +755,4 @@ public sealed class SelecaoPlayerNavigation : MonoBehaviour
         return null;
     }
 
-    private void AtualizarFocoPeloObjetoSelecionado()
-    {
-        if (eventSystem == null || eventSystem.currentSelectedGameObject == null)
-            return;
-
-        GameObject objeto = eventSystem.currentSelectedGameObject;
-        if (objeto == (botaoInfoP1 != null ? botaoInfoP1.gameObject : null))
-            DefinirFocoVisual(1, CategoriaInfo, indiceSlotP1, false);
-        else if (objeto == (botaoInfoP2 != null ? botaoInfoP2.gameObject : null))
-            DefinirFocoVisual(2, CategoriaInfo, indiceSlotP2, false);
-        else if (objeto == (dificuldadeP1 != null ? dificuldadeP1.gameObject : null))
-            DefinirFocoVisual(1, CategoriaDificuldade, indiceSlotP1, false);
-        else if (objeto == (dificuldadeP2 != null ? dificuldadeP2.gameObject : null))
-            DefinirFocoVisual(2, CategoriaDificuldade, indiceSlotP2, false);
-        else if (objeto == (estiloP1 != null ? estiloP1.gameObject : null))
-            DefinirFocoVisual(1, CategoriaEstilo, indiceSlotP1, false);
-        else if (objeto == (estiloP2 != null ? estiloP2.gameObject : null))
-            DefinirFocoVisual(2, CategoriaEstilo, indiceSlotP2, false);
-        else if (objeto == (botaoVoltar != null ? botaoVoltar.gameObject : null))
-        {
-            DefinirFocoVisual(1, CategoriaVoltar, indiceSlotP1, false);
-            DefinirFocoVisual(2, CategoriaVoltar, indiceSlotP2, false);
-        }
-        else
-        {
-            for (int i = 0; i < slotsPersonagens.Length; i++)
-            {
-                if (objeto != slotsPersonagens[i].gameObject)
-                    continue;
-
-                // O mouse trabalha com o lado que está ativo. A seleção
-                // continua independente para os dois jogadores, então as
-                // duas bordas aparecem quando ambos escolherem o mesmo slot.
-                int ladoMouse = layout != null ? layout.ObterLadoAtivo() : 1;
-                DefinirFocoVisual(ladoMouse, CategoriaPersonagens, i, false);
-                break;
-            }
-        }
-    }
 }
